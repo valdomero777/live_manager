@@ -2,12 +2,13 @@
  * Restores the database from a backup. STOP THE SERVER FIRST.
  *
  *   npm run restore -- data/backups/app-20261008T040000Z.db [--db ./data/app.db]
+ *   node apps\server\dist\main\restore.js <backup> --db C:\TikLive\data\app.db   (deployed)
  *
  * The current database is kept as "<db>.before-restore". Migrations run on the next start.
  */
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { restoreDatabase } from '../apps/server/src/infrastructure/sqlite/restore.js';
+import { restoreDatabase } from '../infrastructure/sqlite/restore.js';
 
 const { positionals, values } = parseArgs({
   allowPositionals: true,

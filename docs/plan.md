@@ -25,7 +25,7 @@ Los IDs (RF/RNF) refieren a la sección 2 de la especificación.
 | 1 | Monorepo + CI, `contracts`, dominio, `LiveEventSource` (conector + simulador), normalizador, SQLite + migraciones, pestaña de audio | **Hecha** (falta validar con un live real) |
 | 2 | Motor de reglas, condiciones/acciones, cola con prioridad, limitadores, TTS + filtros, assets, overlay de alertas | **Hecha** (acciones `webhook` y `updateGoal` el 2026-10-08) |
 | 3 | Proyecciones, leaderboards, metas, stats, rotator | **Hecha** (ver abajo) |
-| 4 | Dashboard Angular, auth, respaldos, `/health` completo, métricas, runbook, despliegue | **En curso**: hechos respaldos, restauración, retención, `/health`, `/metrics` y alertas (ver `docs/operacion.md`); falta despliegue (systemd/Windows), rollback y ensayo de 4 h |
+| 4 | Dashboard Angular, auth, respaldos, `/health` completo, métricas, runbook, despliegue | **En curso**: hechos respaldos, restauración, retención, `/health`, `/metrics`, alertas y despliegue en Windows (ver `docs/operacion.md`, `docs/despliegue-windows.md`); falta ensayo en la laptop y de 4 h |
 | 5 | v2/v3 | Pendiente |
 
 ## Fase 1 — tareas
@@ -158,6 +158,9 @@ Pendiente o diferido:
   base anterior. Probado: respaldo con la base en uso → restauración → mismas filas.
 - `/health` ampliado (memoria, retraso del bucle, disco, último respaldo, alertas de la spec §15) y
   `/metrics` en formato Prometheus (detrás de la sesión). Alertas visibles en Estado.
-- Pendiente: unidad systemd o servicio de Windows según el SO elegido en la fase 0, empaquetado
-  versionado con rollback, runbook de incidentes completo, textos i18n, e2e con Playwright y el
-  ensayo de 4 horas continuas.
+- Despliegue en **Windows** (elegido): `npm run package` genera `release/tiklive-*.tgz`; los
+  scripts de `deploy/windows` instalan una tarea de arranque con reinicio en ~3 s, despliegan con
+  copia previa de la base y rollback automático. El paquete se probó en Linux (extraer, `npm ci
+  --omit=dev`, arrancar, `/health`, panel y overlays); **los scripts de PowerShell no se han
+  podido ejecutar** y hay que ensayarlos (lista al final de `despliegue-windows.md`).
+- Pendiente: runbook de incidentes completo, textos i18n, e2e con Playwright y el ensayo de 4 h.

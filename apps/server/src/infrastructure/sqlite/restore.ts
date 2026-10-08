@@ -10,11 +10,18 @@ export class RestoreError extends Error {}
  */
 export function restoreDatabase(backupPath: string, dbPath: string): string | undefined {
   if (!existsSync(backupPath)) throw new RestoreError(`No existe el respaldo ${backupPath}`);
-  verifyBackup(backupPath);
+  try {
+    verifyBackup(backupPath);
+  } catch (error) {
+    if (error instanceof RestoreError) throw error;
+    throw new RestoreError(`${backupPath} no es una base de datos válida (${String(error)})`);
+  }
   let safety: string | undefined;
   if (existsSync(dbPath)) {
     safety = `${dbPath}.before-restore`;
     copyFileSync(dbPath, safety);
+    // Writes not yet checkpointed live in the -wal file; SQLite pairs it with the same name.
+    if (existsSync(`${dbPath}-wal`)) copyFileSync(`${dbPath}-wal`, `${safety}-wal`);
   }
   for (const suffix of ['-wal', '-shm']) rmSync(`${dbPath}${suffix}`, { force: true });
   copyFileSync(backupPath, dbPath);

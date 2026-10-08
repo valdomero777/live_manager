@@ -1,9 +1,14 @@
 import { statfs } from 'node:fs/promises';
 import { monitorEventLoopDelay, type IntervalHistogram } from 'node:perf_hooks';
 
+/** The histogram's timer fires every RESOLUTION_MS, so an idle loop already reads about that. */
+const RESOLUTION_MS = 20;
+
 /** Event-loop lag since the last read (mean, ms): the earliest sign of an overloaded laptop. */
 export class EventLoopLag {
-  private readonly histogram: IntervalHistogram = monitorEventLoopDelay({ resolution: 20 });
+  private readonly histogram: IntervalHistogram = monitorEventLoopDelay({
+    resolution: RESOLUTION_MS,
+  });
 
   constructor() {
     this.histogram.enable();
@@ -20,7 +25,8 @@ export class EventLoopLag {
 
   /** Mean delay so far in the current window, without ending it (used by /health). */
   peek(): number {
-    const mean = this.histogram.count > 0 ? this.histogram.mean / 1e6 : this.last;
+    const mean =
+      this.histogram.count > 0 ? Math.max(0, this.histogram.mean / 1e6 - RESOLUTION_MS) : this.last;
     return Math.round(mean * 10) / 10;
   }
 
