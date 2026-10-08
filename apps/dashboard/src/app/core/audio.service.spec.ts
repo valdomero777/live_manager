@@ -68,6 +68,33 @@ describe('AudioService', () => {
     expect((FakeAudio.instances[0] as FakeAudio).paused).toBe(true);
   });
 
+  it('pauses and resumes the same sound without starting over', async () => {
+    const service = new AudioService();
+    await service.playSound(url);
+    const audio = FakeAudio.instances[0] as FakeAudio;
+    audio.currentTime = 2;
+    service.pause();
+    expect(service.playingUrl()).toBeUndefined();
+    expect(service.pausedUrl()).toBe(url);
+    await service.resume();
+    expect(service.playingUrl()).toBe(url);
+    expect(service.pausedUrl()).toBeUndefined();
+    expect(audio.currentTime).toBe(2);
+    service.stopSound();
+    expect(service.pausedUrl()).toBeUndefined();
+  });
+
+  it('reports loading until playback starts', async () => {
+    let start: () => void = () => undefined;
+    FakeAudio.playResult = () => new Promise<void>((resolve) => (start = resolve));
+    const service = new AudioService();
+    const playing = service.playSound(url);
+    expect(service.loadingUrl()).toBe(url);
+    start();
+    await playing;
+    expect(service.loadingUrl()).toBeUndefined();
+  });
+
   it('asks the user to enable audio when the browser blocks autoplay', async () => {
     FakeAudio.playResult = () => Promise.reject(new DOMException('blocked', 'NotAllowedError'));
     const service = new AudioService();

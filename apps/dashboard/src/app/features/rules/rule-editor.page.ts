@@ -2,16 +2,37 @@ import { JsonPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import {
-  LIVE_EVENT_TYPES,
-  type GiftInfo,
-  type LiveEventType,
-  type Rule,
-  type RuleTestRequest,
-  type RuleTestResult,
+  LucideArrowLeft,
+  LucideChevronRight,
+  LucideCircleAlert,
+  LucideCircleCheck,
+  LucideCircleX,
+  LucideFlaskConical,
+  LucideSave,
+  LucideTriangleAlert,
+} from '@lucide/angular';
+import type {
+  GiftInfo,
+  LiveEventType,
+  Rule,
+  RuleTestRequest,
+  RuleTestResult,
 } from '@tiklive/contracts';
-import { AssetsStore } from '../../core/assets.store';
+import { AutomationBuilder } from '../../components/automations/automation-builder';
+import type { RuleOp } from '../../components/automations/rule-ops';
 import { GiftGrid } from '../../components/shared/gift-grid/gift-grid';
-import { EVENT_LABELS, errorMessage } from '../../lib/labels';
+import { PageHeader } from '../../components/shared/page-header';
+import { UI_ALERT } from '../../components/ui/alert';
+import { UiBadge } from '../../components/ui/badge';
+import { UiButton } from '../../components/ui/button';
+import { UI_CARD } from '../../components/ui/card';
+import { UiSpinner } from '../../components/ui/feedback';
+import { UiFormField } from '../../components/ui/form-field';
+import { UiInput, UiNativeSelect } from '../../components/ui/input';
+import { UiSwitch } from '../../components/ui/switch';
+import { ToastService } from '../../components/ui/toast';
+import { AssetsStore } from '../../core/assets.store';
+import { errorMessage } from '../../lib/labels';
 import {
   ACTION_TYPES,
   CONDITION_TYPES,
@@ -20,7 +41,7 @@ import {
   typeDef,
   type ParamDef,
   type TypeDef,
-} from './rule-catalog';
+} from '../../components/automations/rule-catalog';
 import {
   EMPTY_DRAFT,
   draftFromRule,
@@ -29,7 +50,7 @@ import {
   type ItemDraft,
   type ParamValue,
   type RuleDraft,
-} from './rule-draft';
+} from '../../components/automations/rule-draft';
 import { RulesStore } from '../../core/rules.store';
 
 type ListKey = 'conditions' | 'actions';
@@ -45,10 +66,33 @@ const CATALOG: Readonly<Record<ListKey, readonly TypeDef[]>> = {
  */
 @Component({
   selector: 'app-rule-editor-page',
-  imports: [RouterLink, JsonPipe, GiftGrid],
+  imports: [
+    RouterLink,
+    JsonPipe,
+    GiftGrid,
+    PageHeader,
+    AutomationBuilder,
+    UiBadge,
+    UiButton,
+    UiSpinner,
+    UiFormField,
+    UiInput,
+    UiNativeSelect,
+    UiSwitch,
+    ...UI_CARD,
+    ...UI_ALERT,
+    LucideArrowLeft,
+    LucideSave,
+    LucideFlaskConical,
+    LucideCircleAlert,
+    LucideCircleCheck,
+    LucideCircleX,
+    LucideTriangleAlert,
+    LucideChevronRight,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'page pb-24' },
   templateUrl: './rule-editor.page.html',
-  styleUrl: './rule-editor.page.css',
 })
 export class RuleEditorPage {
   /** Route param; undefined on /reglas/nueva. */
@@ -56,9 +100,8 @@ export class RuleEditorPage {
 
   private readonly store = inject(RulesStore);
   private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
   protected readonly assets = inject(AssetsStore);
-  protected readonly triggers = LIVE_EVENT_TYPES;
-  protected readonly eventLabels = EVENT_LABELS;
   protected readonly catalog = CATALOG;
 
   protected readonly draft = signal<RuleDraft>(EMPTY_DRAFT);
@@ -71,6 +114,11 @@ export class RuleEditorPage {
 
   protected readonly isNew = computed(() => this.id() === undefined || this.id() === 'nueva');
   protected readonly validation = computed(() => validateDraft(this.draft()));
+  /** Errors shown next to their field (the rest are listed by the save bar). */
+  protected readonly nameError = computed(() => {
+    if (!this.showErrors()) return undefined;
+    return this.validation().errors.find((e) => e.startsWith('Nombre'))?.replace(/^Nombre: /, '');
+  });
   protected readonly variables = computed(() => TEMPLATE_VARIABLES[this.draft().trigger] ?? []);
   protected readonly conditionTypes = computed(() =>
     CONDITION_TYPES.filter((c) => !c.appliesTo || c.appliesTo.includes(this.draft().trigger)),
@@ -95,8 +143,24 @@ export class RuleEditorPage {
     void this.init();
   }
 
-  protected typeDef(list: ListKey, type: string): TypeDef | undefined {
-    return typeDef(CATALOG[list], type);
+  /** Applies an edit coming from the automation builder. */
+  protected apply(op: RuleOp): void {
+    switch (op.kind) {
+      case 'trigger':
+        return this.setTrigger(op.trigger);
+      case 'add':
+        return this.addItem(op.list, op.type);
+      case 'remove':
+        return this.removeItem(op.list, op.index);
+      case 'move':
+        return this.moveItem(op.list, op.index, op.delta);
+      case 'type':
+        return this.changeType(op.list, op.index, op.type);
+      case 'param':
+        return this.setParam(op.list, op.index, op.param, op.raw);
+      case 'gift':
+        return this.pickGift(op.index, op.gift);
+    }
   }
 
   protected update<K extends keyof RuleDraft>(key: K, value: RuleDraft[K]): void {
@@ -147,12 +211,6 @@ export class RuleEditorPage {
     });
   }
 
-  protected display(item: ItemDraft, param: ParamDef): string {
-    const value = item.params[param.key];
-    if (value === null || value === undefined) return '';
-    return param.kind === 'percent' ? String(Math.round(Number(value) * 100)) : String(value);
-  }
-
   protected setTest(key: keyof RuleTestRequest, raw: string): void {
     const numeric = key === 'quantity' || key === 'diamonds' || key === 'likes' || key === 'giftId';
     const value = raw === '' ? undefined : numeric ? Number(raw) : raw;
@@ -193,6 +251,7 @@ export class RuleEditorPage {
       const rule = await this.store.save(this.saved()?.id, definition);
       this.saved.set(rule);
       this.draft.set(draftFromRule(rule));
+      this.toast.success('Regla guardada', 'Los cambios ya están activos.');
       if (this.isNew()) await this.router.navigate(['/reglas', rule.id], { replaceUrl: true });
     });
   }
