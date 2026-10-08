@@ -20,7 +20,15 @@ const ROW_PX = 60;
  */
 @Component({
   selector: 'app-event-feed',
-  imports: [ScrollingModule, DatePipe, LucideDynamicIcon, LucideWifiOff, UiSkeleton, EmptyState, ...UI_ALERT],
+  imports: [
+    ScrollingModule,
+    DatePipe,
+    LucideDynamicIcon,
+    LucideWifiOff,
+    UiSkeleton,
+    EmptyState,
+    ...UI_ALERT,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'flex min-h-0 flex-col' },
   template: `
@@ -110,7 +118,9 @@ export class EventFeed {
   readonly height = input('24rem');
   readonly label = input('Eventos en vivo');
   readonly emptyTitle = input('Aún no llegan eventos');
-  readonly emptyDescription = input('Inicia tu live o usa el Simulador para ver la actividad aquí.');
+  readonly emptyDescription = input(
+    'Inicia tu live o usa el Simulador para ver la actividad aquí.',
+  );
 
   protected readonly rowPx = ROW_PX;
   protected readonly eventMeta = EVENT_META;

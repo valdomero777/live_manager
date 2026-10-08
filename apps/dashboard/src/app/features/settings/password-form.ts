@@ -1,75 +1,96 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MIN_PASSWORD_LENGTH } from '@tiklive/contracts';
+import { LucideCircleAlert, LucideCircleCheck } from '@lucide/angular';
+import { UI_ALERT } from '../../components/ui/alert';
+import { UiButton } from '../../components/ui/button';
+import { UI_CARD } from '../../components/ui/card';
+import { UiSpinner } from '../../components/ui/feedback';
+import { UiFormField } from '../../components/ui/form-field';
+import { UiInput } from '../../components/ui/input';
 import { ApiError } from '../../core/api-client';
 import { AuthStore } from '../../core/auth.store';
 
 /** Changing the password signs out every other session (server side). */
 @Component({
   selector: 'app-password-form',
-  imports: [ReactiveFormsModule],
+  imports: [
+    ReactiveFormsModule,
+    UiButton,
+    UiFormField,
+    UiInput,
+    UiSpinner,
+    ...UI_CARD,
+    ...UI_ALERT,
+    LucideCircleAlert,
+    LucideCircleCheck,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <form
-      class="card stack"
-      [formGroup]="form"
-      (ngSubmit)="save()"
-      aria-labelledby="pw-title"
-      novalidate
-    >
-      <div>
-        <h2 id="pw-title">Contraseña del panel</h2>
-        <p class="muted">Al cambiarla se cierran las demás sesiones abiertas.</p>
-      </div>
-      <div class="grid">
-        <div class="field">
-          <label for="pw-current">Contraseña actual</label>
+    <form uiCard [formGroup]="form" (ngSubmit)="save()" aria-labelledby="pw-title" novalidate>
+      <header uiCardHeader>
+        <h2 uiCardTitle id="pw-title">Contraseña del panel</h2>
+        <p uiCardDescription>Al cambiarla se cierran las demás sesiones abiertas.</p>
+      </header>
+      <div uiCardContent class="grid max-w-md gap-4">
+        <ui-form-field label="Contraseña actual" for="pw-current">
           <input
+            uiInput
             id="pw-current"
             type="password"
             autocomplete="current-password"
             formControlName="current"
           />
-        </div>
-        <div class="field">
-          <label for="pw-next">Nueva contraseña</label>
+        </ui-form-field>
+        <ui-form-field
+          label="Nueva contraseña"
+          for="pw-next"
+          [description]="'Mínimo ' + minLength + ' caracteres.'"
+        >
           <input
+            uiInput
             id="pw-next"
             type="password"
             autocomplete="new-password"
             formControlName="next"
-            aria-describedby="pw-help"
+            aria-describedby="pw-next-description"
           />
-          <small id="pw-help" class="muted">Mínimo {{ minLength }} caracteres.</small>
-        </div>
-        <div class="field">
-          <label for="pw-confirm">Repite la nueva contraseña</label>
+        </ui-form-field>
+        <ui-form-field label="Repite la nueva contraseña" for="pw-confirm">
           <input
+            uiInput
             id="pw-confirm"
             type="password"
             autocomplete="new-password"
             formControlName="confirm"
           />
-        </div>
+        </ui-form-field>
       </div>
       @if (message(); as m) {
-        <p class="notice" [class.ok]="m.ok" [class.danger]="!m.ok" role="status">{{ m.text }}</p>
+        <div uiCardContent>
+          <div
+            uiAlert
+            [variant]="m.ok ? 'success' : 'destructive'"
+            [attr.role]="m.ok ? 'status' : 'alert'"
+          >
+            @if (m.ok) {
+              <svg lucideCircleCheck />
+            } @else {
+              <svg lucideCircleAlert />
+            }
+            <p uiAlertDescription>{{ m.text }}</p>
+          </div>
+        </div>
       }
-      <div class="row">
-        <button type="submit" [disabled]="busy()">Cambiar contraseña</button>
-      </div>
+      <footer uiCardFooter class="border-t border-border-subtle pt-4">
+        <button uiButton type="submit" [disabled]="busy()">
+          @if (busy()) {
+            <ui-spinner />
+          }
+          Cambiar contraseña
+        </button>
+      </footer>
     </form>
-  `,
-  styles: `
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-      gap: 1rem;
-    }
-    .field {
-      display: grid;
-      gap: 0.35rem;
-    }
   `,
 })
 export class PasswordForm {

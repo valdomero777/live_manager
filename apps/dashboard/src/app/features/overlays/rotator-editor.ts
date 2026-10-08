@@ -16,6 +16,23 @@ import {
   type RotatorConfig,
   type RotatorPanel,
 } from '@tiklive/contracts';
+import {
+  LucideArrowDown,
+  LucideArrowUp,
+  LucideCircleAlert,
+  LucidePlus,
+  LucideSave,
+  LucideTrash,
+} from '@lucide/angular';
+import { EmptyState } from '../../components/shared/empty-state';
+import { UI_ALERT } from '../../components/ui/alert';
+import { UiButton } from '../../components/ui/button';
+import { UI_CARD } from '../../components/ui/card';
+import { UI_DROPDOWN_MENU } from '../../components/ui/dropdown-menu';
+import { UiFormField } from '../../components/ui/form-field';
+import { UiCheckbox, UiInput, UiNativeSelect } from '../../components/ui/input';
+import { ToastService } from '../../components/ui/toast';
+import { UiTooltip } from '../../components/ui/tooltip';
 import { ApiClient } from '../../core/api-client';
 import { METRIC_LABELS, SCOPE_LABELS, errorMessage } from '../../lib/labels';
 
@@ -40,186 +57,227 @@ const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
 /** Edits a rotator configuration (RF-17): which panels alternate and for how long. */
 @Component({
   selector: 'app-rotator-editor',
+  imports: [
+    UiButton,
+    UiCheckbox,
+    UiFormField,
+    UiInput,
+    UiNativeSelect,
+    UiTooltip,
+    EmptyState,
+    ...UI_CARD,
+    ...UI_ALERT,
+    ...UI_DROPDOWN_MENU,
+    LucideArrowUp,
+    LucideArrowDown,
+    LucideTrash,
+    LucidePlus,
+    LucideSave,
+    LucideCircleAlert,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
   template: `
-    <section class="card stack" aria-labelledby="rot-title">
-      <h2 id="rot-title">Paneles del rotator «{{ configId() }}»</h2>
-      <p class="muted">El overlay muestra cada panel durante su tiempo y pasa al siguiente.</p>
-
-      @for (p of panels(); track $index; let i = $index) {
-        <div class="panel">
-          <div class="row">
-            <strong>{{ i + 1 }}. {{ panelLabels[p.type] }}</strong>
-            <span class="spacer"></span>
-            <button type="button" (click)="move(i, -1)" [disabled]="i === 0" aria-label="Subir">
-              ↑
-            </button>
-            <button
-              type="button"
-              (click)="move(i, 1)"
-              [disabled]="i === panels().length - 1"
-              aria-label="Bajar"
-            >
-              ↓
-            </button>
-            <button type="button" class="danger" (click)="remove(i)">Quitar</button>
-          </div>
-          <div class="grid">
-            @switch (p.type) {
-              @case ('leaderboard') {
-                <div class="field">
-                  <label [for]="'rp-m-' + i">Métrica</label>
-                  <select
-                    [id]="'rp-m-' + i"
-                    (change)="patch(i, { metric: $any($event.target).value })"
-                  >
-                    @for (m of metrics; track m) {
-                      <option [value]="m" [selected]="m + '' === p.metric + ''">
-                        {{ metricLabels[m] }}
-                      </option>
-                    }
-                  </select>
-                </div>
-                <div class="field">
-                  <label [for]="'rp-s-' + i">Período</label>
-                  <select
-                    [id]="'rp-s-' + i"
-                    (change)="patch(i, { scope: $any($event.target).value })"
-                  >
-                    @for (s of scopes; track s) {
-                      <option [value]="s" [selected]="s + '' === p.scope + ''">
-                        {{ scopeLabels[s] }}
-                      </option>
-                    }
-                  </select>
-                </div>
-                <div class="field">
-                  <label [for]="'rp-l-' + i">Cuántos</label>
-                  <input
-                    [id]="'rp-l-' + i"
-                    type="number"
-                    min="1"
-                    max="20"
-                    [value]="p.limit"
-                    (input)="patch(i, { limit: +$any($event.target).value })"
-                  />
-                </div>
-                <div class="field">
-                  <label [for]="'rp-t-' + i">Título (opcional)</label>
-                  <input
-                    [id]="'rp-t-' + i"
-                    type="text"
-                    [value]="p.title ?? ''"
-                    (input)="patch(i, { title: $any($event.target).value || undefined })"
-                  />
-                </div>
+    <section uiCard aria-labelledby="rot-title">
+      <header uiCardHeader>
+        <h2 uiCardTitle id="rot-title">Paneles del rotator «{{ configId() }}»</h2>
+        <p uiCardDescription>
+          El overlay muestra cada panel durante su tiempo y pasa al siguiente.
+        </p>
+        <div uiCardAction>
+          <label for="rot-tr" class="sr-only">Transición</label>
+          <select
+            uiNativeSelect
+            size="sm"
+            id="rot-tr"
+            class="w-auto"
+            (change)="transition.set($any($event.target).value)"
+          >
+            <option value="fade" [selected]="transition() === 'fade'">Fundido</option>
+            <option value="none" [selected]="transition() === 'none'">Corte directo</option>
+          </select>
+        </div>
+      </header>
+      <div uiCardContent class="grid gap-3">
+        @for (p of panels(); track $index; let i = $index) {
+          <div class="rounded-lg border bg-surface">
+            <div class="flex items-center gap-2 border-b border-border-subtle px-3 py-2">
+              <span
+                class="grid size-6 place-items-center rounded-md bg-muted text-xs font-semibold tabular-nums"
+                >{{ i + 1 }}</span
+              >
+              <span class="text-sm font-medium">{{ panelLabels[p.type] }}</span>
+              <span class="flex-1"></span>
+              <button
+                uiButton
+                variant="ghost"
+                size="icon-sm"
+                type="button"
+                (click)="move(i, -1)"
+                [disabled]="i === 0"
+                aria-label="Subir"
+                uiTooltip="Subir"
+              >
+                <svg lucideArrowUp />
+              </button>
+              <button
+                uiButton
+                variant="ghost"
+                size="icon-sm"
+                type="button"
+                (click)="move(i, 1)"
+                [disabled]="i === panels().length - 1"
+                aria-label="Bajar"
+                uiTooltip="Bajar"
+              >
+                <svg lucideArrowDown />
+              </button>
+              <button
+                uiButton
+                variant="ghost-destructive"
+                size="icon-sm"
+                type="button"
+                (click)="remove(i)"
+                aria-label="Quitar"
+                uiTooltip="Quitar"
+              >
+                <svg lucideTrash />
+              </button>
+            </div>
+            <div class="form-grid p-3">
+              @switch (p.type) {
+                @case ('leaderboard') {
+                  <ui-form-field label="Métrica" [for]="'rp-m-' + i">
+                    <select
+                      uiNativeSelect
+                      [id]="'rp-m-' + i"
+                      (change)="patch(i, { metric: $any($event.target).value })"
+                    >
+                      @for (m of metrics; track m) {
+                        <option [value]="m" [selected]="m === p.metric">
+                          {{ metricLabels[m] }}
+                        </option>
+                      }
+                    </select>
+                  </ui-form-field>
+                  <ui-form-field label="Período" [for]="'rp-s-' + i">
+                    <select
+                      uiNativeSelect
+                      [id]="'rp-s-' + i"
+                      (change)="patch(i, { scope: $any($event.target).value })"
+                    >
+                      @for (s of scopes; track s) {
+                        <option [value]="s" [selected]="s === p.scope">{{ scopeLabels[s] }}</option>
+                      }
+                    </select>
+                  </ui-form-field>
+                  <ui-form-field label="Cuántos" [for]="'rp-l-' + i">
+                    <input
+                      uiInput
+                      [id]="'rp-l-' + i"
+                      type="number"
+                      min="1"
+                      max="20"
+                      [value]="p.limit"
+                      (input)="patch(i, { limit: +$any($event.target).value })"
+                    />
+                  </ui-form-field>
+                  <ui-form-field label="Título" [for]="'rp-t-' + i" [optional]="true">
+                    <input
+                      uiInput
+                      [id]="'rp-t-' + i"
+                      type="text"
+                      [value]="p.title ?? ''"
+                      (input)="patch(i, { title: $any($event.target).value || undefined })"
+                    />
+                  </ui-form-field>
+                }
+                @case ('goal') {
+                  <ui-form-field label="Meta" [for]="'rp-g-' + i">
+                    <select
+                      uiNativeSelect
+                      [id]="'rp-g-' + i"
+                      (change)="patch(i, { goalId: +$any($event.target).value })"
+                    >
+                      @for (g of goals(); track g.id) {
+                        <option [value]="g.id" [selected]="g.id === p.goalId">{{ g.name }}</option>
+                      }
+                    </select>
+                  </ui-form-field>
+                }
+                @case ('stats') {
+                  <fieldset class="col-span-full m-0 grid gap-2 rounded-lg border p-3">
+                    <legend class="px-1 type-label">Datos</legend>
+                    <div class="flex flex-wrap gap-x-4 gap-y-2">
+                      @for (f of statsFields; track f) {
+                        <label class="flex items-center gap-2 text-sm">
+                          <input
+                            uiCheckbox
+                            type="checkbox"
+                            [checked]="p.fields.includes(f)"
+                            (change)="toggleField(i, f, $any($event.target).checked)"
+                          />
+                          {{ f }}
+                        </label>
+                      }
+                    </div>
+                  </fieldset>
+                }
               }
-              @case ('goal') {
-                <div class="field">
-                  <label [for]="'rp-g-' + i">Meta</label>
-                  <select
-                    [id]="'rp-g-' + i"
-                    (change)="patch(i, { goalId: +$any($event.target).value })"
-                  >
-                    @for (g of goals(); track g.id) {
-                      <option [value]="g.id" [selected]="g.id + '' === p.goalId + ''">
-                        {{ g.name }}
-                      </option>
-                    }
-                  </select>
-                </div>
-              }
-              @case ('stats') {
-                <fieldset class="field">
-                  <legend>Datos</legend>
-                  @for (f of statsFields; track f) {
-                    <label class="check">
-                      <input
-                        type="checkbox"
-                        [checked]="p.fields.includes(f)"
-                        (change)="toggleField(i, f, $any($event.target).checked)"
-                      />
-                      {{ f }}
-                    </label>
-                  }
-                </fieldset>
-              }
-            }
-            <div class="field">
-              <label [for]="'rp-d-' + i">Duración (s)</label>
-              <input
-                [id]="'rp-d-' + i"
-                type="number"
-                min="2"
-                max="120"
-                [value]="p.durationMs / 1000"
-                (input)="patch(i, { durationMs: +$any($event.target).value * 1000 })"
-              />
+              <ui-form-field label="Duración (s)" [for]="'rp-d-' + i">
+                <input
+                  uiInput
+                  [id]="'rp-d-' + i"
+                  type="number"
+                  min="2"
+                  max="120"
+                  [value]="p.durationMs / 1000"
+                  (input)="patch(i, { durationMs: +$any($event.target).value * 1000 })"
+                />
+              </ui-form-field>
             </div>
           </div>
-        </div>
-      }
+        } @empty {
+          <app-empty-state
+            title="Sin paneles"
+            description="Agrega al menos un panel para que el rotator muestre algo."
+            class="py-6"
+          />
+        }
 
-      <div class="row">
-        <label for="rot-add" class="sr-only">Panel a agregar</label>
-        <select #add id="rot-add">
-          <option value="leaderboard">Ranking</option>
-          <option value="goal">Meta</option>
-          <option value="stats">Estadísticas</option>
-        </select>
-        <button type="button" (click)="addPanel($any(add.value))">Agregar panel</button>
-        <span class="spacer"></span>
-        <label for="rot-tr">Transición</label>
-        <select id="rot-tr" (change)="transition.set($any($event.target).value)">
-          <option value="fade" [selected]="'fade' === transition() + ''">Fundido</option>
-          <option value="none" [selected]="'none' === transition() + ''">Corte directo</option>
-        </select>
+        @if (message(); as m) {
+          @if (!m.ok) {
+            <div uiAlert variant="destructive" role="alert">
+              <svg lucideCircleAlert />
+              <p uiAlertDescription>{{ m.text }}</p>
+            </div>
+          }
+        }
       </div>
-      @if (message(); as m) {
-        <p class="notice" [class.ok]="m.ok" [class.danger]="!m.ok" role="status">{{ m.text }}</p>
-      }
-      <div class="row">
-        <button class="primary" type="button" (click)="save()" [disabled]="busy()">
-          Guardar rotator
+      <footer uiCardFooter class="border-t border-border-subtle pt-4">
+        <button uiButton variant="outline" size="sm" type="button" [cdkMenuTriggerFor]="addMenu">
+          <svg lucidePlus /> Agregar panel
+        </button>
+        <span class="flex-1"></span>
+        <button uiButton type="button" (click)="save()" [disabled]="busy()">
+          <svg lucideSave /> Guardar rotator
+        </button>
+      </footer>
+    </section>
+
+    <ng-template #addMenu>
+      <div cdkMenu uiDropdownMenu>
+        <button cdkMenuItem uiDropdownMenuItem (cdkMenuItemTriggered)="addPanel('leaderboard')">
+          Ranking
+        </button>
+        <button cdkMenuItem uiDropdownMenuItem (cdkMenuItemTriggered)="addPanel('goal')">
+          Meta
+        </button>
+        <button cdkMenuItem uiDropdownMenuItem (cdkMenuItemTriggered)="addPanel('stats')">
+          Estadísticas
         </button>
       </div>
-    </section>
-  `,
-  styles: `
-    .panel {
-      display: grid;
-      gap: 0.5rem;
-      padding: 0.75rem;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--surface-2);
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-      gap: 0.75rem;
-    }
-    .field {
-      display: grid;
-      gap: 0.3rem;
-      align-content: start;
-    }
-    fieldset {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-    }
-    .check {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-weight: 500;
-    }
-    .spacer {
-      flex: 1;
-    }
-    .row select {
-      width: auto;
-    }
+    </ng-template>
   `,
 })
 export class RotatorEditor {
@@ -227,6 +285,7 @@ export class RotatorEditor {
   readonly savedChange = output();
 
   private readonly api = inject(ApiClient);
+  private readonly toast = inject(ToastService);
   protected readonly metrics = METRICS;
   protected readonly scopes = SCOPES;
   protected readonly statsFields = STATS_FIELDS;
@@ -295,10 +354,8 @@ export class RotatorEditor {
     this.busy.set(true);
     try {
       await this.api.put(`/rotators/${this.configId()}`, parsed.data);
-      this.message.set({
-        ok: true,
-        text: 'Rotator guardado. Las fuentes abiertas lo aplican al recargarse.',
-      });
+      this.message.set(undefined);
+      this.toast.success('Rotator guardado', 'Las fuentes abiertas lo aplican al recargarse.');
       this.savedChange.emit();
     } catch (e) {
       this.message.set({ ok: false, text: errorMessage(e) });

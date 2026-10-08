@@ -12,7 +12,10 @@ import {
   LucideZap,
 } from '@lucide/angular';
 import type { LiveEventType, Sound, Trigger, TriggerDefinitionInput } from '@tiklive/contracts';
-import { AutomationCard, type AutomationActionView } from '../../components/automations/automation-card';
+import {
+  AutomationCard,
+  type AutomationActionView,
+} from '../../components/automations/automation-card';
 import { AutomationStep } from '../../components/automations/automation-step';
 import { TriggerSelector } from '../../components/automations/trigger-selector';
 import { EmptyState } from '../../components/shared/empty-state';
@@ -205,7 +208,11 @@ export class TriggersPage {
     return this.run(async () => {
       const { status } = await this.store.testOnAudioScreen(trigger.id);
       if (status === 'queued') this.toast.success('Enviado a la pantalla de audio');
-      else this.toast.error('No se pudo enviar el sonido', 'Revisa que la pantalla de audio esté abierta.');
+      else
+        this.toast.error(
+          'No se pudo enviar el sonido',
+          'Revisa que la pantalla de audio esté abierta.',
+        );
     });
   }
 

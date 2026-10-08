@@ -19,16 +19,17 @@ export class UiTableHeader {
 @Directive({ selector: 'tbody[uiTableBody]', host: { '[class]': 'classes()' } })
 export class UiTableBody {
   readonly userClass = input<string>('', { alias: 'class' });
-  protected readonly classes = computed(() =>
-    cn('[&_tr:last-child]:border-0', this.userClass()),
-  );
+  protected readonly classes = computed(() => cn('[&_tr:last-child]:border-0', this.userClass()));
 }
 
 @Directive({ selector: 'tr[uiTableRow]', host: { '[class]': 'classes()' } })
 export class UiTableRow {
   readonly userClass = input<string>('', { alias: 'class' });
   protected readonly classes = computed(() =>
-    cn('border-b border-border-subtle transition-colors hover:bg-surface-hover/60', this.userClass()),
+    cn(
+      'border-b border-border-subtle transition-colors hover:bg-surface-hover/60',
+      this.userClass(),
+    ),
   );
 }
 

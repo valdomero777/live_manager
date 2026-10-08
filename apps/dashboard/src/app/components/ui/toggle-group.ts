@@ -9,7 +9,10 @@ import { cn } from '../../lib/utils';
 export class UiToggleGroup {
   readonly userClass = input<string>('', { alias: 'class' });
   protected readonly classes = computed(() =>
-    cn('inline-flex w-fit max-w-full flex-wrap items-center gap-1 rounded-lg bg-muted p-1', this.userClass()),
+    cn(
+      'inline-flex w-fit max-w-full flex-wrap items-center gap-1 rounded-lg bg-muted p-1',
+      this.userClass(),
+    ),
   );
 }
 

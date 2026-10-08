@@ -117,7 +117,9 @@ export class RuleEditorPage {
   /** Errors shown next to their field (the rest are listed by the save bar). */
   protected readonly nameError = computed(() => {
     if (!this.showErrors()) return undefined;
-    return this.validation().errors.find((e) => e.startsWith('Nombre'))?.replace(/^Nombre: /, '');
+    return this.validation()
+      .errors.find((e) => e.startsWith('Nombre'))
+      ?.replace(/^Nombre: /, '');
   });
   protected readonly variables = computed(() => TEMPLATE_VARIABLES[this.draft().trigger] ?? []);
   protected readonly conditionTypes = computed(() =>

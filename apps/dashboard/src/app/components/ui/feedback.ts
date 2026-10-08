@@ -67,7 +67,10 @@ export class UiProgress {
   protected readonly clamped = computed(() => Math.max(0, Math.min(100, Math.round(this.value()))));
   protected readonly indicator = computed(() => this.indicatorClass());
   protected readonly classes = computed(() =>
-    cn('relative block h-2 w-full overflow-hidden rounded-full bg-surface-active', this.userClass()),
+    cn(
+      'relative block h-2 w-full overflow-hidden rounded-full bg-surface-active',
+      this.userClass(),
+    ),
   );
 }
 

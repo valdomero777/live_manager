@@ -84,7 +84,9 @@ export class ActivityChart {
 
   protected tooltip(b: ActivityBucket): string {
     const time = new Date(b.start).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
-    const parts = ACTIVITY_SERIES.filter((s) => b[s.key] > 0).map((s) => `${b[s.key]} ${s.label.toLowerCase()}`);
+    const parts = ACTIVITY_SERIES.filter((s) => b[s.key] > 0).map(
+      (s) => `${b[s.key]} ${s.label.toLowerCase()}`,
+    );
     return `${time} · ${parts.length ? parts.join(', ') : 'sin actividad'}`;
   }
 }

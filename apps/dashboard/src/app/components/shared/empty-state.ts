@@ -9,7 +9,9 @@ import { cn } from '../../lib/utils';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class]': 'classes()' },
   template: `
-    <span class="grid size-10 place-items-center rounded-full bg-surface-active text-muted-foreground">
+    <span
+      class="grid size-10 place-items-center rounded-full bg-surface-active text-muted-foreground"
+    >
       <svg [lucideIcon]="icon()" class="size-5" />
     </span>
     <div class="grid max-w-sm gap-1">

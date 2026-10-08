@@ -65,7 +65,9 @@ export interface AutomationActionView {
       </header>
 
       <div uiCardContent>
-        <ol class="grid gap-2 lg:grid-cols-[minmax(0,0.8fr)_auto_minmax(0,1fr)_auto_minmax(0,1.2fr)] lg:items-start lg:gap-3">
+        <ol
+          class="grid gap-2 lg:grid-cols-[minmax(0,0.8fr)_auto_minmax(0,1fr)_auto_minmax(0,1.2fr)] lg:items-start lg:gap-3"
+        >
           <li class="grid gap-1.5">
             <span class="type-overline text-muted-foreground">Cuando</span>
             <span class="inline-flex w-fit items-center gap-2 text-sm font-medium">
@@ -84,7 +86,11 @@ export interface AutomationActionView {
               <ul class="grid gap-1">
                 @for (c of conditions(); track $index) {
                   <li class="flex items-start gap-2 text-sm">
-                    <svg lucideListFilter class="mt-0.5 size-3.5 shrink-0 text-info-text" aria-hidden="true" />
+                    <svg
+                      lucideListFilter
+                      class="mt-0.5 size-3.5 shrink-0 text-info-text"
+                      aria-hidden="true"
+                    />
                     <span class="min-w-0 break-words">{{ c }}</span>
                   </li>
                 }
@@ -101,7 +107,11 @@ export interface AutomationActionView {
             <ul class="grid gap-1.5">
               @for (a of actions(); track $index) {
                 <li class="flex items-start gap-2 text-sm">
-                  <span [class]="a.tone" class="grid size-6 shrink-0 place-items-center rounded-md" aria-hidden="true">
+                  <span
+                    [class]="a.tone"
+                    class="grid size-6 shrink-0 place-items-center rounded-md"
+                    aria-hidden="true"
+                  >
                     <svg [lucideIcon]="a.icon" class="size-3.5" />
                   </span>
                   <span class="min-w-0 pt-0.5 break-words">{{ a.text }}</span>

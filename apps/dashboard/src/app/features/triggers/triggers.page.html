@@ -3,174 +3,203 @@
   description="Un sonido de MyInstants para cada tipo de evento. Suena en la pantalla de audio (fuente de navegador de OBS) directamente desde MyInstants, sin descargarse. Para condiciones y varias acciones usa «Reglas»."
 >
   @if (!draft()) {
-    <button uiButton type="button" (click)="startNew()"><svg lucidePlus /> Nuevo trigger</button>
+  <button uiButton type="button" (click)="startNew()"><svg lucidePlus /> Nuevo trigger</button>
   }
 </app-page-header>
 
 @if (error()) {
-  <div uiAlert variant="destructive" role="alert">
-    <svg lucideCircleAlert />
-    <p uiAlertTitle>No se pudo completar la acción</p>
-    <p uiAlertDescription>{{ error() }}</p>
+<div uiAlert variant="destructive" role="alert">
+  <svg lucideCircleAlert />
+  <p uiAlertTitle>No se pudo completar la acción</p>
+  <p uiAlertDescription>{{ error() }}</p>
+</div>
+} @if (audio.blocked()) {
+<div uiAlert variant="warning" role="alert">
+  <svg lucideVolumeX />
+  <p uiAlertTitle>El navegador bloqueó el audio</p>
+  <div uiAlertDescription>
+    <p>Actívalo para permitir la reproducción automática de triggers.</p>
+    <button uiButton size="sm" variant="outline" type="button" (click)="audio.unlock()">
+      Activar audio
+    </button>
   </div>
-}
-@if (audio.blocked()) {
-  <div uiAlert variant="warning" role="alert">
-    <svg lucideVolumeX />
-    <p uiAlertTitle>El navegador bloqueó el audio</p>
-    <div uiAlertDescription>
-      <p>Actívalo para permitir la reproducción automática de triggers.</p>
-      <button uiButton size="sm" variant="outline" type="button" (click)="audio.unlock()">Activar audio</button>
-    </div>
-  </div>
-}
-
-@if (draft(); as d) {
-  <form uiCard (submit)="$event.preventDefault(); save()" aria-labelledby="trigger-form-title" novalidate>
-    <header uiCardHeader>
-      <h2 uiCardTitle id="trigger-form-title">{{ d.id === undefined ? 'Nuevo trigger' : 'Editar trigger' }}</h2>
-      <div uiCardAction>
-        <label for="t-enabled" class="type-caption">{{ d.enabled ? 'Activado' : 'Desactivado' }}</label>
-        <ui-switch inputId="t-enabled" [checked]="d.enabled" (checkedChange)="patch({ enabled: $event })" />
-      </div>
-    </header>
-    <div uiCardContent class="grid gap-6">
-      <ui-form-field label="Nombre" for="t-name" [error]="nameError()" class="max-w-md">
-        <input
-          uiInput
-          id="t-name"
-          type="text"
-          maxlength="100"
-          placeholder="p. ej. Nuevo seguidor"
-          [value]="d.name"
-          [attr.aria-invalid]="!!nameError()"
-          [attr.aria-describedby]="nameError() ? 't-name-error' : null"
-          (input)="patch({ name: $any($event.target).value })"
-        />
-      </ui-form-field>
-
-      <div>
-        <app-automation-step kind="when" title="Ocurre este evento" [icon]="icons.when">
-          <app-trigger-selector name="t-event" [value]="d.event" (valueChange)="patch({ event: $event })" />
-        </app-automation-step>
-        <app-automation-step kind="then" title="Reproducir este sonido" [icon]="icons.then" [last]="true">
-          @if (d.sound; as s) {
-            <app-sound-player
-              [url]="s.audioUrl"
-              [title]="s.title"
-              [volume]="d.volume"
-              volumeId="t-volume"
-              (volumeChange)="patch({ volume: $event })"
-            >
-              <app-sound-selector
-                buttonLabel="Cambiar"
-                variant="ghost"
-                size="sm"
-                [selectedId]="s.id"
-                (picked)="pick($event)"
-              />
-            </app-sound-player>
-          } @else {
-            <div
-              class="flex flex-col items-start gap-3 rounded-lg border border-dashed p-4 sm:flex-row sm:items-center"
-              [class.border-danger]="!!soundError()"
-            >
-              <p class="flex-1 type-secondary">Aún no eliges un sonido. Busca en MyInstants y escúchalo antes de elegirlo.</p>
-              <app-sound-selector variant="default" (picked)="pick($event)" />
-            </div>
-            @if (soundError()) {
-              <p class="mt-2 flex items-center gap-1.5 text-xs font-medium text-danger-text" role="alert">
-                <svg lucideCircleAlert class="size-3.5" /> {{ soundError() }}
-              </p>
-            }
-          }
-        </app-automation-step>
-      </div>
-    </div>
-    <footer uiCardFooter class="justify-end border-t border-border-subtle pt-4">
-      <button uiButton variant="ghost" type="button" (click)="cancel()">Cancelar</button>
-      <button uiButton type="submit" [disabled]="busy()">
-        @if (busy()) {
-          <ui-spinner />
-        }
-        Guardar trigger
-      </button>
-    </footer>
-  </form>
-}
-
-@if (loading()) {
-  <div class="grid gap-4" aria-busy="true" aria-label="Cargando triggers">
-    @for (i of [0, 1]; track i) {
-      <div uiSkeleton class="h-40 rounded-xl"></div>
-    }
-  </div>
-} @else {
-  <div class="grid gap-4">
-    @for (c of cards(); track c.trigger.id) {
-      @let t = c.trigger;
-      <app-automation-card
-        [id]="'trigger-' + t.id"
-        [name]="t.name"
-        [enabled]="t.enabled"
-        [event]="t.event"
-        [actions]="c.actions"
-        [badges]="['MyInstants']"
-        [busy]="busy()"
-        (toggle)="toggle(t, $event)"
+</div>
+} @if (draft(); as d) {
+<form
+  uiCard
+  (submit)="$event.preventDefault(); save()"
+  aria-labelledby="trigger-form-title"
+  novalidate
+>
+  <header uiCardHeader>
+    <h2 uiCardTitle id="trigger-form-title">
+      {{ d.id === undefined ? 'Nuevo trigger' : 'Editar trigger' }}
+    </h2>
+    <div uiCardAction>
+      <label for="t-enabled" class="type-caption"
+        >{{ d.enabled ? 'Activado' : 'Desactivado' }}</label
       >
-        <app-sound-preview
-          automationCardActions
-          [url]="t.soundUrl"
-          [title]="t.name"
-          [volume]="t.volume"
-          [showLabel]="true"
+      <ui-switch
+        inputId="t-enabled"
+        [checked]="d.enabled"
+        (checkedChange)="patch({ enabled: $event })"
+      />
+    </div>
+  </header>
+  <div uiCardContent class="grid gap-6">
+    <ui-form-field label="Nombre" for="t-name" [error]="nameError()" class="max-w-md">
+      <input
+        uiInput
+        id="t-name"
+        type="text"
+        maxlength="100"
+        placeholder="p. ej. Nuevo seguidor"
+        [value]="d.name"
+        [attr.aria-invalid]="!!nameError()"
+        [attr.aria-describedby]="nameError() ? 't-name-error' : null"
+        (input)="patch({ name: $any($event.target).value })"
+      />
+    </ui-form-field>
+
+    <div>
+      <app-automation-step kind="when" title="Ocurre este evento" [icon]="icons.when">
+        <app-trigger-selector
+          name="t-event"
+          [value]="d.event"
+          (valueChange)="patch({ event: $event })"
         />
-        <button
-          automationCardActions
-          uiButton
-          variant="ghost"
-          size="sm"
-          type="button"
-          (click)="testOnScreen(t)"
-          [disabled]="busy()"
+      </app-automation-step>
+      <app-automation-step
+        kind="then"
+        title="Reproducir este sonido"
+        [icon]="icons.then"
+        [last]="true"
+      >
+        @if (d.sound; as s) {
+        <app-sound-player
+          [url]="s.audioUrl"
+          [title]="s.title"
+          [volume]="d.volume"
+          volumeId="t-volume"
+          (volumeChange)="patch({ volume: $event })"
         >
-          <svg lucideMonitorPlay /> Probar en la pantalla de audio
-        </button>
-        <span automationCardActions class="flex-1"></span>
-        <button automationCardActions uiButton variant="ghost" size="sm" type="button" (click)="edit(t)" [disabled]="busy()">
-          <svg lucidePencil /> Editar
-        </button>
-        <button
-          automationCardActions
-          uiButton
-          variant="ghost"
-          size="icon-sm"
-          type="button"
-          [attr.aria-label]="'Más acciones para ' + t.name"
-          [cdkMenuTriggerFor]="more"
-          [cdkMenuTriggerData]="{ $implicit: t }"
+          <app-sound-selector
+            buttonLabel="Cambiar"
+            variant="ghost"
+            size="sm"
+            [selectedId]="s.id"
+            (picked)="pick($event)"
+          />
+        </app-sound-player>
+        } @else {
+        <div
+          class="flex flex-col items-start gap-3 rounded-lg border border-dashed p-4 sm:flex-row sm:items-center"
+          [class.border-danger]="!!soundError()"
         >
-          <svg lucideEllipsis />
-        </button>
-      </app-automation-card>
-    } @empty {
-      @if (!draft()) {
-        <app-empty-state
-          [icon]="icons.empty"
-          title="Aún no hay triggers"
-          description="Por ejemplo: un «vine boom» cada vez que alguien te sigue."
-        >
-          <button uiButton type="button" (click)="startNew()"><svg lucidePlus /> Nuevo trigger</button>
-        </app-empty-state>
-      }
-    }
+          <p class="flex-1 type-secondary">
+            Aún no eliges un sonido. Busca en MyInstants y escúchalo antes de elegirlo.
+          </p>
+          <app-sound-selector variant="default" (picked)="pick($event)" />
+        </div>
+        @if (soundError()) {
+        <p class="mt-2 flex items-center gap-1.5 text-xs font-medium text-danger-text" role="alert">
+          <svg lucideCircleAlert class="size-3.5" /> {{ soundError() }}
+        </p>
+        } }
+      </app-automation-step>
+    </div>
   </div>
+  <footer uiCardFooter class="justify-end border-t border-border-subtle pt-4">
+    <button uiButton variant="ghost" type="button" (click)="cancel()">Cancelar</button>
+    <button uiButton type="submit" [disabled]="busy()">
+      @if (busy()) {
+      <ui-spinner />
+      } Guardar trigger
+    </button>
+  </footer>
+</form>
+} @if (loading()) {
+<div class="grid gap-4" aria-busy="true" aria-label="Cargando triggers">
+  @for (i of [0, 1]; track i) {
+  <div uiSkeleton class="h-40 rounded-xl"></div>
+  }
+</div>
+} @else {
+<div class="grid gap-4">
+  @for (c of cards(); track c.trigger.id) { @let t = c.trigger;
+  <app-automation-card
+    [id]="'trigger-' + t.id"
+    [name]="t.name"
+    [enabled]="t.enabled"
+    [event]="t.event"
+    [actions]="c.actions"
+    [badges]="['MyInstants']"
+    [busy]="busy()"
+    (toggle)="toggle(t, $event)"
+  >
+    <app-sound-preview
+      automationCardActions
+      [url]="t.soundUrl"
+      [title]="t.name"
+      [volume]="t.volume"
+      [showLabel]="true"
+    />
+    <button
+      automationCardActions
+      uiButton
+      variant="ghost"
+      size="sm"
+      type="button"
+      (click)="testOnScreen(t)"
+      [disabled]="busy()"
+    >
+      <svg lucideMonitorPlay /> Probar en la pantalla de audio
+    </button>
+    <span automationCardActions class="flex-1"></span>
+    <button
+      automationCardActions
+      uiButton
+      variant="ghost"
+      size="sm"
+      type="button"
+      (click)="edit(t)"
+      [disabled]="busy()"
+    >
+      <svg lucidePencil /> Editar
+    </button>
+    <button
+      automationCardActions
+      uiButton
+      variant="ghost"
+      size="icon-sm"
+      type="button"
+      [attr.aria-label]="'Más acciones para ' + t.name"
+      [cdkMenuTriggerFor]="more"
+      [cdkMenuTriggerData]="{ $implicit: t }"
+    >
+      <svg lucideEllipsis />
+    </button>
+  </app-automation-card>
+  } @empty { @if (!draft()) {
+  <app-empty-state
+    [icon]="icons.empty"
+    title="Aún no hay triggers"
+    description="Por ejemplo: un «vine boom» cada vez que alguien te sigue."
+  >
+    <button uiButton type="button" (click)="startNew()"><svg lucidePlus /> Nuevo trigger</button>
+  </app-empty-state>
+  } }
+</div>
 }
 
 <ng-template #more let-trigger>
   <div cdkMenu uiDropdownMenu>
-    <button cdkMenuItem uiDropdownMenuItem variant="destructive" (cdkMenuItemTriggered)="remove(trigger)">
+    <button
+      cdkMenuItem
+      uiDropdownMenuItem
+      variant="destructive"
+      (cdkMenuItemTriggered)="remove(trigger)"
+    >
       <svg lucideTrash /> Eliminar
     </button>
   </div>

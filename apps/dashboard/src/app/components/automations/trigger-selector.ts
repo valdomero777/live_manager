@@ -19,7 +19,7 @@ import { EVENT_META } from '../live/event-meta';
         @for (type of types(); track type) {
           @let meta = eventMeta[type];
           <label
-            class="relative flex cursor-pointer items-center gap-2.5 rounded-lg border bg-surface p-2.5 transition-[border-color,background-color,box-shadow] hover:bg-surface-hover has-checked:border-primary has-checked:bg-primary/5 has-checked:ring-1 has-checked:ring-primary has-focus-visible:ring-[3px] has-focus-visible:ring-ring/40 has-disabled:cursor-not-allowed has-disabled:opacity-50"
+            class="relative flex cursor-pointer items-center gap-2 rounded-lg border bg-surface p-2 sm:gap-2.5 sm:p-2.5 transition-[border-color,background-color,box-shadow] hover:bg-surface-hover has-checked:border-primary has-checked:bg-primary/5 has-checked:ring-1 has-checked:ring-primary has-focus-visible:ring-[3px] has-focus-visible:ring-ring/40 has-disabled:cursor-not-allowed has-disabled:opacity-50"
           >
             <input
               type="radio"
@@ -30,10 +30,17 @@ import { EVENT_META } from '../live/event-meta';
               [disabled]="disabled()"
               (change)="value.set(type)"
             />
-            <span [class]="meta.tone" class="grid size-8 shrink-0 place-items-center rounded-md">
+            <span
+              [class]="meta.tone"
+              class="grid size-7 shrink-0 place-items-center rounded-md sm:size-8"
+            >
               <svg [lucideIcon]="meta.icon" class="size-4" />
             </span>
-            <span class="min-w-0 truncate text-sm font-medium" [title]="meta.label">{{ meta.label }}</span>
+            <span
+              class="min-w-0 text-sm leading-tight font-medium break-words"
+              [title]="meta.label"
+              >{{ meta.label }}</span
+            >
           </label>
         }
       </div>

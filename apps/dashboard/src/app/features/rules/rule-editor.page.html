@@ -2,22 +2,26 @@
   [title]="isNew() ? 'Nueva regla' : draft().name || 'Editar regla'"
   description="Cuando ocurre un evento y se cumplen las condiciones, se ejecutan las acciones en orden."
 >
-  <a pageHeaderLead routerLink="/reglas" class="inline-flex w-fit items-center gap-1.5 type-caption hover:text-foreground">
+  <a
+    pageHeaderLead
+    routerLink="/reglas"
+    class="inline-flex w-fit items-center gap-1.5 type-caption hover:text-foreground"
+  >
     <svg lucideArrowLeft class="size-3.5" /> Reglas
   </a>
   @if (!isNew()) {
-    <span uiBadge [variant]="dirty() ? 'warning' : 'success'" aria-live="polite">
-      {{ dirty() ? 'Cambios sin guardar' : 'Guardada' }}
-    </span>
+  <span uiBadge [variant]="dirty() ? 'warning' : 'success'" aria-live="polite">
+    {{ dirty() ? 'Cambios sin guardar' : 'Guardada' }}
+  </span>
   }
 </app-page-header>
 
 @if (error()) {
-  <div uiAlert variant="destructive" role="alert">
-    <svg lucideCircleAlert />
-    <p uiAlertTitle>No se pudo completar la acción</p>
-    <p uiAlertDescription>{{ error() }}</p>
-  </div>
+<div uiAlert variant="destructive" role="alert">
+  <svg lucideCircleAlert />
+  <p uiAlertTitle>No se pudo completar la acción</p>
+  <p uiAlertDescription>{{ error() }}</p>
+</div>
 }
 
 <div class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
@@ -69,135 +73,140 @@
       <header uiCardHeader>
         <h2 uiCardTitle id="test-title"><svg lucideFlaskConical /> Probar</h2>
         <p uiCardDescription>
-          Ejecuta la regla guardada con un evento de ejemplo. Ignora la espera y la probabilidad; sus
-          acciones se ven y oyen en los overlays.
+          Ejecuta la regla guardada con un evento de ejemplo. Ignora la espera y la probabilidad;
+          sus acciones se ven y oyen en los overlays.
         </p>
       </header>
       <div uiCardContent class="grid gap-4">
         @if (isNew()) {
-          <p class="type-secondary">Guarda la regla para poder probarla.</p>
-        } @else {
-          @if (dirty()) {
-            <div uiAlert variant="warning">
-              <svg lucideTriangleAlert />
-              <p uiAlertDescription>Hay cambios sin guardar: se probará la versión guardada.</p>
-            </div>
+        <p class="type-secondary">Guarda la regla para poder probarla.</p>
+        } @else { @if (dirty()) {
+        <div uiAlert variant="warning">
+          <svg lucideTriangleAlert />
+          <p uiAlertDescription>Hay cambios sin guardar: se probará la versión guardada.</p>
+        </div>
+        }
+        <div class="form-grid">
+          <ui-form-field label="Usuario" for="t-user">
+            <input
+              uiInput
+              id="t-user"
+              type="text"
+              placeholder="prueba"
+              (input)="setTest('user', $any($event.target).value)"
+            />
+          </ui-form-field>
+          @switch (draft().trigger) { @case ('gift') {
+          <ui-form-field label="Regalo" for="t-gift">
+            <input
+              uiInput
+              id="t-gift"
+              type="text"
+              placeholder="Rose"
+              [value]="testInput().giftName ?? ''"
+              (input)="setTest('giftName', $any($event.target).value)"
+            />
+          </ui-form-field>
+          <ui-form-field label="Cantidad" for="t-qty">
+            <input
+              uiInput
+              id="t-qty"
+              type="number"
+              min="1"
+              [value]="testInput().quantity ?? ''"
+              (input)="setTest('quantity', $any($event.target).value)"
+            />
+          </ui-form-field>
+          <ui-form-field label="Diamantes c/u" for="t-diamonds">
+            <input
+              uiInput
+              id="t-diamonds"
+              type="number"
+              min="0"
+              placeholder="1"
+              [value]="testInput().diamonds ?? ''"
+              (input)="setTest('diamonds', $any($event.target).value)"
+            />
+          </ui-form-field>
+          } @case ('comment') {
+          <ui-form-field label="Comentario" for="t-text" class="col-span-full">
+            <input
+              uiInput
+              id="t-text"
+              type="text"
+              placeholder="hola!"
+              (input)="setTest('text', $any($event.target).value)"
+            />
+          </ui-form-field>
+          } @case ('like') {
+          <ui-form-field label="Likes" for="t-likes">
+            <input
+              uiInput
+              id="t-likes"
+              type="number"
+              min="1"
+              placeholder="100"
+              (input)="setTest('likes', $any($event.target).value)"
+            />
+          </ui-form-field>
+          } }
+        </div>
+        @if (draft().trigger === 'gift') {
+        <details class="group rounded-lg border bg-muted/40">
+          <summary
+            class="flex cursor-pointer list-none items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium outline-none select-none hover:bg-surface-hover focus-visible:ring-[3px] focus-visible:ring-ring/40 [&::-webkit-details-marker]:hidden"
+          >
+            <svg lucideChevronRight class="size-4 transition-transform group-open:rotate-90" />
+            Elegir el regalo de prueba de la lista
+          </summary>
+          <div class="p-3 pt-1">
+            <app-gift-grid
+              label="Regalo de prueba"
+              [selected]="testInput().giftName"
+              (pick)="pickTestGift($event)"
+            />
+          </div>
+        </details>
+        }
+        <div>
+          <button uiButton variant="outline" type="button" (click)="test()" [disabled]="busy()">
+            @if (busy()) {
+            <ui-spinner />
+            } @else {
+            <svg lucideFlaskConical />
+            } Probar ahora
+          </button>
+        </div>
+        @if (testResult(); as r) {
+        <div uiAlert [variant]="r.matched ? 'success' : 'warning'" role="status">
+          @if (r.matched) {
+          <svg lucideCircleCheck />
+          } @else {
+          <svg lucideCircleX />
           }
-          <div class="form-grid">
-            <ui-form-field label="Usuario" for="t-user">
-              <input uiInput id="t-user" type="text" placeholder="prueba" (input)="setTest('user', $any($event.target).value)" />
-            </ui-form-field>
-            @switch (draft().trigger) {
-              @case ('gift') {
-                <ui-form-field label="Regalo" for="t-gift">
-                  <input
-                    uiInput
-                    id="t-gift"
-                    type="text"
-                    placeholder="Rose"
-                    [value]="testInput().giftName ?? ''"
-                    (input)="setTest('giftName', $any($event.target).value)"
-                  />
-                </ui-form-field>
-                <ui-form-field label="Cantidad" for="t-qty">
-                  <input
-                    uiInput
-                    id="t-qty"
-                    type="number"
-                    min="1"
-                    [value]="testInput().quantity ?? ''"
-                    (input)="setTest('quantity', $any($event.target).value)"
-                  />
-                </ui-form-field>
-                <ui-form-field label="Diamantes c/u" for="t-diamonds">
-                  <input
-                    uiInput
-                    id="t-diamonds"
-                    type="number"
-                    min="0"
-                    placeholder="1"
-                    [value]="testInput().diamonds ?? ''"
-                    (input)="setTest('diamonds', $any($event.target).value)"
-                  />
-                </ui-form-field>
+          <p uiAlertTitle>{{ r.matched ? 'La regla se activó' : 'La regla no se activó' }}</p>
+          <div uiAlertDescription>
+            @if (r.conditions.length) {
+            <ul class="grid gap-0.5">
+              @for (c of r.conditions; track $index) {
+              <li class="flex items-center gap-1.5">
+                @if (c.ok) {
+                <svg lucideCircleCheck class="size-3.5 text-success-text" />
+                } @else {
+                <svg lucideCircleX class="size-3.5 text-danger-text" />
+                } {{ conditionLabel(c.type) }}
+              </li>
               }
-              @case ('comment') {
-                <ui-form-field label="Comentario" for="t-text" class="col-span-full">
-                  <input uiInput id="t-text" type="text" placeholder="hola!" (input)="setTest('text', $any($event.target).value)" />
-                </ui-form-field>
-              }
-              @case ('like') {
-                <ui-form-field label="Likes" for="t-likes">
-                  <input
-                    uiInput
-                    id="t-likes"
-                    type="number"
-                    min="1"
-                    placeholder="100"
-                    (input)="setTest('likes', $any($event.target).value)"
-                  />
-                </ui-form-field>
-              }
+            </ul>
+            } @if (r.matched) {
+            <p>
+              Acciones enviadas: {{ r.actionsQueued }} @if (r.actionsSkipped) { · no enviadas: {{
+              r.actionsSkipped }} (revisa sonidos o textos vacíos) }
+            </p>
             }
           </div>
-          @if (draft().trigger === 'gift') {
-            <details class="group rounded-lg border bg-muted/40">
-              <summary
-                class="flex cursor-pointer list-none items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium outline-none select-none hover:bg-surface-hover focus-visible:ring-[3px] focus-visible:ring-ring/40 [&::-webkit-details-marker]:hidden"
-              >
-                <svg lucideChevronRight class="size-4 transition-transform group-open:rotate-90" />
-                Elegir el regalo de prueba de la lista
-              </summary>
-              <div class="p-3 pt-1">
-                <app-gift-grid label="Regalo de prueba" [selected]="testInput().giftName" (pick)="pickTestGift($event)" />
-              </div>
-            </details>
-          }
-          <div>
-            <button uiButton variant="outline" type="button" (click)="test()" [disabled]="busy()">
-              @if (busy()) {
-                <ui-spinner />
-              } @else {
-                <svg lucideFlaskConical />
-              }
-              Probar ahora
-            </button>
-          </div>
-          @if (testResult(); as r) {
-            <div uiAlert [variant]="r.matched ? 'success' : 'warning'" role="status">
-              @if (r.matched) {
-                <svg lucideCircleCheck />
-              } @else {
-                <svg lucideCircleX />
-              }
-              <p uiAlertTitle>{{ r.matched ? 'La regla se activó' : 'La regla no se activó' }}</p>
-              <div uiAlertDescription>
-                @if (r.conditions.length) {
-                  <ul class="grid gap-0.5">
-                    @for (c of r.conditions; track $index) {
-                      <li class="flex items-center gap-1.5">
-                        @if (c.ok) {
-                          <svg lucideCircleCheck class="size-3.5 text-success-text" />
-                        } @else {
-                          <svg lucideCircleX class="size-3.5 text-danger-text" />
-                        }
-                        {{ conditionLabel(c.type) }}
-                      </li>
-                    }
-                  </ul>
-                }
-                @if (r.matched) {
-                  <p>
-                    Acciones enviadas: {{ r.actionsQueued }}
-                    @if (r.actionsSkipped) {
-                      · no enviadas: {{ r.actionsSkipped }} (revisa sonidos o textos vacíos)
-                    }
-                  </p>
-                }
-              </div>
-            </div>
-          }
-        }
+        </div>
+        } }
       </div>
     </section>
   </div>
@@ -209,7 +218,11 @@
         <p uiCardDescription>Evitan que una regla se dispare de más.</p>
       </header>
       <div uiCardContent class="grid gap-4">
-        <ui-form-field label="Prioridad (0–100)" for="r-priority" description="Mayor prioridad se ejecuta antes en la cola.">
+        <ui-form-field
+          label="Prioridad (0–100)"
+          for="r-priority"
+          description="Mayor prioridad se ejecuta antes en la cola."
+        >
           <input
             uiInput
             id="r-priority"
@@ -257,7 +270,9 @@
         <ui-form-field label="Si hay varias acciones" for="r-mode">
           <select uiNativeSelect id="r-mode" (change)="update('mode', $any($event.target).value)">
             <option value="all" [selected]="draft().mode === 'all'">Ejecutar todas</option>
-            <option value="random" [selected]="draft().mode === 'random'">Elegir una al azar</option>
+            <option value="random" [selected]="draft().mode === 'random'">
+              Elegir una al azar
+            </option>
           </select>
         </ui-form-field>
       </div>
@@ -270,7 +285,8 @@
         <svg lucideChevronRight class="size-4 transition-transform group-open:rotate-90" />
         Ver la regla en JSON
       </summary>
-      <pre class="max-h-96 overflow-auto border-t px-5 py-4 font-mono text-xs scrollbar-thin">{{
+      <pre class="max-h-96 overflow-auto border-t px-5 py-4 font-mono text-xs scrollbar-thin">
+{{
         (validation().definition ?? draft()) | json
       }}</pre>
     </details>
@@ -283,33 +299,34 @@
 >
   <div class="min-w-0 flex-1" aria-live="polite">
     @if (showErrors() && validation().errors.length) {
-      <p class="flex items-center gap-2 text-sm font-medium text-danger-text">
-        <svg lucideCircleAlert class="size-4 shrink-0" />
-        Revisa {{ validation().errors.length === 1 ? 'un campo' : validation().errors.length + ' campos' }}
-      </p>
-      <ul class="mt-1 grid gap-0.5 pl-6 type-caption">
-        @for (e of validation().errors; track e) {
-          <li>{{ e }}</li>
-        }
-      </ul>
+    <p class="flex items-center gap-2 text-sm font-medium text-danger-text">
+      <svg lucideCircleAlert class="size-4 shrink-0" />
+      Revisa {{ validation().errors.length === 1 ? 'un campo' : validation().errors.length + '
+      campos' }}
+    </p>
+    <ul class="mt-1 grid gap-0.5 pl-6 type-caption">
+      @for (e of validation().errors; track e) {
+      <li>{{ e }}</li>
+      }
+    </ul>
     } @else if (collisionNames().length) {
-      <p class="flex items-center gap-2 text-sm text-warning-text">
-        <svg lucideTriangleAlert class="size-4 shrink-0" />
-        Puede dispararse junto con {{ collisionNames().join(', ') }} (mismo evento, pantalla y prioridad).
-      </p>
+    <p class="flex items-center gap-2 text-sm text-warning-text">
+      <svg lucideTriangleAlert class="size-4 shrink-0" />
+      Puede dispararse junto con {{ collisionNames().join(', ') }} (mismo evento, pantalla y
+      prioridad).
+    </p>
     } @else {
-      <p class="type-secondary">{{ dirty() ? 'Tienes cambios sin guardar.' : 'Todo guardado.' }}</p>
+    <p class="type-secondary">{{ dirty() ? 'Tienes cambios sin guardar.' : 'Todo guardado.' }}</p>
     }
   </div>
   <div class="flex gap-2">
     <a uiButton variant="ghost" routerLink="/reglas">Cancelar</a>
     <button uiButton type="button" (click)="save()" [disabled]="busy()">
       @if (busy()) {
-        <ui-spinner />
+      <ui-spinner />
       } @else {
-        <svg lucideSave />
-      }
-      Guardar regla
+      <svg lucideSave />
+      } Guardar regla
     </button>
   </div>
 </div>

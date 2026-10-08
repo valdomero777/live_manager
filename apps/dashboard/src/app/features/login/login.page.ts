@@ -1,9 +1,16 @@
 import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { LucideKeyRound, LucideRadio } from '@lucide/angular';
 import { MIN_PASSWORD_LENGTH } from '@tiklive/contracts';
 import { ApiError } from '../../core/api-client';
 import { AuthStore } from '../../core/auth.store';
+import { UI_ALERT } from '../../components/ui/alert';
+import { UiButton } from '../../components/ui/button';
+import { UI_CARD } from '../../components/ui/card';
+import { UiSpinner } from '../../components/ui/feedback';
+import { UiFormField } from '../../components/ui/form-field';
+import { UiInput } from '../../components/ui/input';
 
 /**
  * Sign-in, or first-time password creation with the one-time code printed in the server
@@ -11,64 +18,97 @@ import { AuthStore } from '../../core/auth.store';
  */
 @Component({
   selector: 'app-login-page',
-  imports: [ReactiveFormsModule],
+  imports: [
+    ReactiveFormsModule,
+    UiButton,
+    UiInput,
+    UiFormField,
+    UiSpinner,
+    ...UI_CARD,
+    ...UI_ALERT,
+    LucideRadio,
+    LucideKeyRound,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'grid min-h-dvh place-items-center bg-background p-4' },
   template: `
-    <main class="wrap">
-      <form class="card stack" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-        <h1>TikLive</h1>
-        @if (setupRequired()) {
-          <p class="notice info">
-            Primer inicio: crea la contraseña del panel. Copia el
-            <strong>código de configuración</strong> que aparece en la consola donde corre el
-            servidor.
-          </p>
-          <div class="stack field">
-            <label for="code">Código de configuración</label>
-            <input
-              id="code"
-              type="text"
-              formControlName="code"
-              autocomplete="one-time-code"
-              autocapitalize="characters"
-            />
-          </div>
-        }
-        <div class="stack field">
-          <label for="password">{{ setupRequired() ? 'Nueva contraseña' : 'Contraseña' }}</label>
-          <input
-            id="password"
-            type="password"
-            formControlName="password"
-            [attr.autocomplete]="setupRequired() ? 'new-password' : 'current-password'"
-            aria-describedby="password-help"
-          />
-          @if (setupRequired()) {
-            <small id="password-help" class="muted">Mínimo {{ minLength }} caracteres.</small>
-          }
+    <main class="grid w-full max-w-sm gap-6">
+      <div class="grid justify-items-center gap-3 text-center">
+        <span
+          class="grid size-12 place-items-center rounded-xl bg-primary text-primary-foreground shadow-card"
+          aria-hidden="true"
+        >
+          <svg lucideRadio class="size-6" />
+        </span>
+        <div class="grid gap-1">
+          <h1 class="type-page-title">TikLive</h1>
+          <p class="type-secondary">Automatización para tu TikTok LIVE</p>
         </div>
-        @if (error()) {
-          <p class="notice danger" role="alert">{{ error() }}</p>
-        }
-        <button class="primary" type="submit" [disabled]="busy()">
-          {{ setupRequired() ? 'Crear contraseña y entrar' : 'Entrar' }}
-        </button>
+      </div>
+
+      <form
+        uiCard
+        [formGroup]="form"
+        (ngSubmit)="submit()"
+        novalidate
+        aria-labelledby="login-title"
+      >
+        <header uiCardHeader>
+          <h2 uiCardTitle id="login-title">
+            {{ setupRequired() ? 'Crea la contraseña del panel' : 'Inicia sesión' }}
+          </h2>
+          <p uiCardDescription>
+            {{ setupRequired() ? 'Solo la primera vez.' : 'Con la contraseña del panel.' }}
+          </p>
+        </header>
+        <div uiCardContent class="grid gap-4">
+          @if (setupRequired()) {
+            <div uiAlert variant="info">
+              <svg lucideKeyRound />
+              <p uiAlertDescription>
+                Copia el <strong>código de configuración</strong> que aparece en la consola donde
+                corre el servidor.
+              </p>
+            </div>
+            <ui-form-field label="Código de configuración" for="code">
+              <input
+                uiInput
+                id="code"
+                type="text"
+                formControlName="code"
+                autocomplete="one-time-code"
+                autocapitalize="characters"
+                class="font-mono tracking-widest uppercase"
+              />
+            </ui-form-field>
+          }
+          <ui-form-field
+            [label]="setupRequired() ? 'Nueva contraseña' : 'Contraseña'"
+            for="password"
+            [description]="setupRequired() ? 'Mínimo ' + minLength + ' caracteres.' : undefined"
+            [error]="error()"
+          >
+            <input
+              uiInput
+              id="password"
+              type="password"
+              formControlName="password"
+              [attr.autocomplete]="setupRequired() ? 'new-password' : 'current-password'"
+              [attr.aria-invalid]="!!error()"
+              [attr.aria-describedby]="
+                (setupRequired() ? 'password-description ' : '') + (error() ? 'password-error' : '')
+              "
+            />
+          </ui-form-field>
+          <button uiButton type="submit" class="w-full" [disabled]="busy()">
+            @if (busy()) {
+              <ui-spinner />
+            }
+            {{ setupRequired() ? 'Crear contraseña y entrar' : 'Entrar' }}
+          </button>
+        </div>
       </form>
     </main>
-  `,
-  styles: `
-    .wrap {
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 1rem;
-    }
-    form {
-      width: min(26rem, 100%);
-    }
-    .field {
-      gap: 0.35rem;
-    }
   `,
 })
 export class LoginPage {

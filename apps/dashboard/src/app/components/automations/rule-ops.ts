@@ -11,8 +11,18 @@ export type RuleOp =
   | { readonly kind: 'trigger'; readonly trigger: LiveEventType }
   | { readonly kind: 'add'; readonly list: RuleList; readonly type: string }
   | { readonly kind: 'remove'; readonly list: RuleList; readonly index: number }
-  | { readonly kind: 'move'; readonly list: RuleList; readonly index: number; readonly delta: number }
-  | { readonly kind: 'type'; readonly list: RuleList; readonly index: number; readonly type: string }
+  | {
+      readonly kind: 'move';
+      readonly list: RuleList;
+      readonly index: number;
+      readonly delta: number;
+    }
+  | {
+      readonly kind: 'type';
+      readonly list: RuleList;
+      readonly index: number;
+      readonly type: string;
+    }
   | {
       readonly kind: 'param';
       readonly list: RuleList;

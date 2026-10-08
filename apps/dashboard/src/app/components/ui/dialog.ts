@@ -1,9 +1,4 @@
-import {
-  CdkDialogContainer,
-  Dialog,
-  DialogRef,
-  type DialogConfig,
-} from '@angular/cdk/dialog';
+import { CdkDialogContainer, Dialog, DialogRef, type DialogConfig } from '@angular/cdk/dialog';
 import { Overlay } from '@angular/cdk/overlay';
 import type { ComponentType } from '@angular/cdk/portal';
 import {
@@ -20,6 +15,11 @@ import {
 import { LucideX } from '@lucide/angular';
 import { cn } from '../../lib/utils';
 import { UiButton } from './button';
+
+/** Lets dialog parts (UiDialogTitle) reach their container, which CDK does not expose by default. */
+const exposeContainer = (_ref: unknown, _config: unknown, container: unknown) => [
+  { provide: CdkDialogContainer, useValue: container },
+];
 
 const WIDTHS = { sm: '26rem', md: '32rem', lg: '42rem', xl: '56rem' } as const;
 export type DialogSize = keyof typeof WIDTHS;
@@ -45,12 +45,16 @@ export class UiDialogService {
       panelClass: 'ui-dialog-pane',
       autoFocus: 'first-tabbable',
       restoreFocus: true,
+      providers: exposeContainer,
       ...rest,
     });
   }
 
   /** Side panel (mobile navigation). */
-  openSheet<C>(content: ComponentType<C> | TemplateRef<C>, ariaLabel: string): DialogRef<unknown, C> {
+  openSheet<C>(
+    content: ComponentType<C> | TemplateRef<C>,
+    ariaLabel: string,
+  ): DialogRef<unknown, C> {
     return this.dialog.open(content, {
       ariaLabel,
       width: 'min(18rem, 85vw)',

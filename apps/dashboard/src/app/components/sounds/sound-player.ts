@@ -52,9 +52,20 @@ import { UiSlider } from '../ui/input';
     </div>
 
     <div class="flex flex-wrap items-center gap-3">
-      <div class="flex items-center gap-1" role="group" [attr.aria-label]="'Reproducción de ' + title()">
+      <div
+        class="flex items-center gap-1"
+        role="group"
+        [attr.aria-label]="'Reproducción de ' + title()"
+      >
         @if (playing()) {
-          <button uiButton variant="outline" size="icon-sm" type="button" aria-label="Pausar" (click)="audio.pause()">
+          <button
+            uiButton
+            variant="outline"
+            size="icon-sm"
+            type="button"
+            aria-label="Pausar"
+            (click)="audio.pause()"
+          >
             <svg lucidePause class="fill-current" />
           </button>
         } @else {

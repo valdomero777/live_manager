@@ -16,7 +16,9 @@ import { toRuleOp, type RuleOp } from './rule-ops';
   template: `
     @for (item of items(); track $index; let i = $index) {
       @if (i > 0) {
-        <span class="-my-1 justify-self-start rounded-full bg-muted px-2 py-0.5 type-overline text-muted-foreground">
+        <span
+          class="-my-1 justify-self-start rounded-full bg-muted px-2 py-0.5 type-overline text-muted-foreground"
+        >
           y además
         </span>
       }

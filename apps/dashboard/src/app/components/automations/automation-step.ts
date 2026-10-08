@@ -18,7 +18,10 @@ const STEPS: Readonly<Record<StepKind, { overline: string; tone: string }>> = {
   selector: 'app-automation-step',
   imports: [LucideDynamicIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'group/step relative grid grid-cols-[2.25rem_1fr] gap-x-3 sm:gap-x-4' },
+  host: {
+    class:
+      'group/step relative grid grid-cols-[1.75rem_1fr] gap-x-2.5 sm:grid-cols-[2.25rem_1fr] sm:gap-x-4',
+  },
   template: `
     <div class="flex flex-col items-center">
       <span [class]="badgeClass()" aria-hidden="true">
@@ -54,6 +57,9 @@ export class AutomationStep {
   protected readonly step = computed(() => STEPS[this.kind()]);
   protected readonly headingId = computed(() => `step-${this.kind()}-title`);
   protected readonly badgeClass = computed(() =>
-    cn('grid size-9 shrink-0 place-items-center rounded-full ring-4 ring-background', this.step().tone),
+    cn(
+      'grid size-7 shrink-0 place-items-center rounded-full ring-4 ring-background sm:size-9 [&_svg]:size-3.5 sm:[&_svg]:size-4',
+      this.step().tone,
+    ),
   );
 }

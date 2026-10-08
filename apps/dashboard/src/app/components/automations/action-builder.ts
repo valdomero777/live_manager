@@ -53,7 +53,9 @@ import { toRuleOp, type RuleOp } from './rule-ops';
         <p class="type-caption">
           Variables para textos:
           @for (v of variables(); track v) {
-            <code class="mx-0.5 rounded bg-muted px-1 py-0.5 text-[0.6875rem] text-foreground">{{ v }}</code>
+            <code class="mx-0.5 rounded bg-muted px-1 py-0.5 text-[0.6875rem] text-foreground">{{
+              v
+            }}</code>
           }
         </p>
       }
@@ -65,7 +67,9 @@ import { toRuleOp, type RuleOp } from './rule-ops';
             cdkMenuItem
             uiDropdownMenuItem
             [disabled]="!k.available"
-            (cdkMenuItemTriggered)="k.type && op.emit({ kind: 'add', list: 'actions', type: k.type })"
+            (cdkMenuItemTriggered)="
+              k.type && op.emit({ kind: 'add', list: 'actions', type: k.type })
+            "
           >
             <span [class]="k.tone" class="grid size-7 shrink-0 place-items-center rounded-md">
               <svg [lucideIcon]="k.icon" class="size-3.5 !text-current" />

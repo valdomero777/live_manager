@@ -20,11 +20,7 @@ import { TriggerSelector } from './trigger-selector';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
-    <app-automation-step
-      kind="when"
-      title="Ocurre este evento en tu LIVE"
-      [icon]="icons.when"
-    >
+    <app-automation-step kind="when" title="Ocurre este evento en tu LIVE" [icon]="icons.when">
       <app-trigger-selector
         name="rule-trigger"
         [value]="trigger()"
@@ -32,13 +28,11 @@ import { TriggerSelector } from './trigger-selector';
       />
     </app-automation-step>
 
-    <app-automation-step
-      kind="if"
-      title="Se cumplen estas condiciones"
-      [icon]="icons.if"
-    >
+    <app-automation-step kind="if" title="Se cumplen estas condiciones" [icon]="icons.if">
       @if (conditions().length) {
-        <span stepAction uiBadge variant="info">{{ conditions().length }} · todas deben cumplirse</span>
+        <span stepAction uiBadge variant="info"
+          >{{ conditions().length }} · todas deben cumplirse</span
+        >
       }
       <app-condition-builder
         [items]="conditions()"

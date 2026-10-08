@@ -16,7 +16,15 @@ function formatDuration(ms: number): string {
 /** Top of the dashboard: is the LIVE connected, since when, and the next action to take. */
 @Component({
   selector: 'app-live-session-card',
-  imports: [RouterLink, LiveStatus, UiButton, LucideRadio, LucideFlaskConical, LucideTimer, ...UI_CARD],
+  imports: [
+    RouterLink,
+    LiveStatus,
+    UiButton,
+    LucideRadio,
+    LucideFlaskConical,
+    LucideTimer,
+    ...UI_CARD,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `

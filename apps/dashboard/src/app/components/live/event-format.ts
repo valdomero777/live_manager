@@ -77,6 +77,15 @@ export interface ActivityBucket {
   readonly social: number;
 }
 
+const SERIES_OF: Partial<Record<LiveEventType, keyof Omit<ActivityBucket, 'start'>>> = {
+  gift: 'gifts',
+  like: 'likes',
+  comment: 'comments',
+  follow: 'social',
+  share: 'social',
+  join: 'social',
+};
+
 /**
  * Interactions per minute over the last `minutes`, from the events the panel already holds.
  * Every event counts one, so a burst of 500 likes does not hide a single big gift.
@@ -97,12 +106,10 @@ export function activityPerMinute(
     social: 0,
   }));
   for (const e of events) {
-    const bucket = buckets[Math.floor((e.occurredAt - first) / MINUTE)];
-    if (!bucket || e.occurredAt < first) continue;
-    if (e.type === 'gift') bucket.gifts += 1;
-    else if (e.type === 'like') bucket.likes += 1;
-    else if (e.type === 'comment') bucket.comments += 1;
-    else if (e.type === 'follow' || e.type === 'share' || e.type === 'join') bucket.social += 1;
+    const bucket =
+      e.occurredAt < first ? undefined : buckets[Math.floor((e.occurredAt - first) / MINUTE)];
+    const series = SERIES_OF[e.type];
+    if (bucket && series) bucket[series] += 1;
   }
   return buckets;
 }

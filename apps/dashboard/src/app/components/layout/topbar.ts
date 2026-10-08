@@ -137,7 +137,12 @@ import { UiTooltip } from '../ui/tooltip';
         <p uiDropdownMenuLabel>Panel de TikLive</p>
         <a cdkMenuItem uiDropdownMenuItem routerLink="/ajustes"><svg lucideSettings /> Ajustes</a>
         <div uiDropdownMenuSeparator></div>
-        <button cdkMenuItem uiDropdownMenuItem variant="destructive" (cdkMenuItemTriggered)="logout.emit()">
+        <button
+          cdkMenuItem
+          uiDropdownMenuItem
+          variant="destructive"
+          (cdkMenuItemTriggered)="logout.emit()"
+        >
           <svg lucideLogOut /> Cerrar sesión
         </button>
       </div>

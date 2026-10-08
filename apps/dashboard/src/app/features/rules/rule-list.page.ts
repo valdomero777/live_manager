@@ -11,7 +11,10 @@ import {
   LucideWorkflow,
 } from '@lucide/angular';
 import type { ActionConfig, Rule } from '@tiklive/contracts';
-import { AutomationCard, type AutomationActionView } from '../../components/automations/automation-card';
+import {
+  AutomationCard,
+  type AutomationActionView,
+} from '../../components/automations/automation-card';
 import { actionKind } from '../../components/automations/automation-meta';
 import {
   collisions,
@@ -30,7 +33,10 @@ import { AssetsStore } from '../../core/assets.store';
 import { RulesStore } from '../../core/rules.store';
 import { errorMessage } from '../../lib/labels';
 
-function actionView(action: ActionConfig, assetName: (id: number | undefined) => string): AutomationActionView {
+function actionView(
+  action: ActionConfig,
+  assetName: (id: number | undefined) => string,
+): AutomationActionView {
   const kind = actionKind(action.type);
   return {
     icon: kind?.icon ?? LucideWorkflow,
@@ -105,7 +111,13 @@ function badgesOf(rule: Rule): string[] {
             [busy]="busy()"
             (toggle)="toggle(item.rule, $event)"
           >
-            <a automationCardActions uiButton variant="outline" size="sm" [routerLink]="['/reglas', item.rule.id]">
+            <a
+              automationCardActions
+              uiButton
+              variant="outline"
+              size="sm"
+              [routerLink]="['/reglas', item.rule.id]"
+            >
               <svg lucidePencil /> Editar
             </a>
             <a
@@ -207,7 +219,10 @@ export class RuleListPage {
   protected duplicate(rule: Rule): Promise<void> {
     return this.run(async () => {
       await this.store.duplicate(rule);
-      this.toast.success('Regla duplicada', 'La copia se creó desactivada para no dispararse dos veces.');
+      this.toast.success(
+        'Regla duplicada',
+        'La copia se creó desactivada para no dispararse dos veces.',
+      );
     });
   }
 

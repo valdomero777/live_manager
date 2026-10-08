@@ -17,9 +17,7 @@ import { cn } from '../../lib/utils';
 @Component({
   selector: 'ui-switch',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [
-    { provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => UiSwitch), multi: true },
-  ],
+  providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => UiSwitch), multi: true }],
   host: { class: 'inline-flex', 'data-slot': 'switch' },
   template: `
     <button

@@ -10,6 +10,30 @@ import {
   type Metric,
   type Scope,
 } from '@tiklive/contracts';
+import {
+  LucideCircleAlert,
+  LucideCrown,
+  LucideEyeOff,
+  LucidePencil,
+  LucidePlus,
+  LucideRotateCcw,
+  LucideTarget,
+  LucideTrash,
+  LucideTrophy,
+} from '@lucide/angular';
+import { EmptyState } from '../../components/shared/empty-state';
+import { PageHeader } from '../../components/shared/page-header';
+import { UI_ALERT } from '../../components/ui/alert';
+import { UiBadge } from '../../components/ui/badge';
+import { UiButton } from '../../components/ui/button';
+import { UI_CARD } from '../../components/ui/card';
+import { ConfirmService } from '../../components/ui/confirm-dialog';
+import { UI_DROPDOWN_MENU } from '../../components/ui/dropdown-menu';
+import { UiProgress, UiSkeleton } from '../../components/ui/feedback';
+import { UiTextarea } from '../../components/ui/input';
+import { UI_TABLE } from '../../components/ui/table';
+import { ToastService } from '../../components/ui/toast';
+import { UI_TOGGLE_GROUP } from '../../components/ui/toggle-group';
 import { ApiClient } from '../../core/api-client';
 import { GOAL_METRIC_LABELS, METRIC_LABELS, SCOPE_LABELS, errorMessage } from '../../lib/labels';
 import { GoalForm } from './goal-form';
@@ -21,13 +45,39 @@ type GoalWithProgress = Goal & { progress?: Omit<GoalProgress, 'seq'> };
 /** Leaderboards (RF-12..14), goals (RF-15) and ranking privacy, in one place. */
 @Component({
   selector: 'app-rankings-page',
-  imports: [GoalForm],
+  imports: [
+    GoalForm,
+    PageHeader,
+    EmptyState,
+    UiBadge,
+    UiButton,
+    UiProgress,
+    UiSkeleton,
+    UiTextarea,
+    ...UI_CARD,
+    ...UI_ALERT,
+    ...UI_TABLE,
+    ...UI_TOGGLE_GROUP,
+    ...UI_DROPDOWN_MENU,
+    LucidePlus,
+    LucidePencil,
+    LucideTrash,
+    LucideRotateCcw,
+    LucideCrown,
+    LucideCircleAlert,
+    LucideTrophy,
+    LucideTarget,
+    LucideEyeOff,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'page' },
   templateUrl: './rankings.page.html',
-  styleUrl: './rankings.page.css',
 })
 export class RankingsPage {
   private readonly api = inject(ApiClient);
+  private readonly confirm = inject(ConfirmService);
+  private readonly toast = inject(ToastService);
+  protected readonly icons = { goals: LucideTarget, board: LucideTrophy };
   protected readonly metrics = METRICS;
   protected readonly scopes = SCOPES;
   protected readonly metricLabels = METRIC_LABELS;
@@ -41,7 +91,8 @@ export class RankingsPage {
   protected readonly editing = signal<Goal | 'new' | undefined>(undefined);
   protected readonly excluded = signal('');
   protected readonly busy = signal(false);
-  protected readonly message = signal<{ ok: boolean; text: string } | undefined>(undefined);
+  protected readonly loading = signal(true);
+  protected readonly error = signal<string | undefined>(undefined);
 
   constructor() {
     void this.refresh();
@@ -59,18 +110,24 @@ export class RankingsPage {
   protected async reset(scope: Scope): Promise<void> {
     const warning =
       scope === 'total'
-        ? 'Se borrará el ranking HISTÓRICO completo. Esta acción no se puede deshacer. ¿Continuar?'
-        : `Se reiniciará el ranking «${SCOPE_LABELS[scope]}». Los demás períodos no cambian. ¿Continuar?`;
-    if (!confirm(warning)) return;
+        ? 'Se borrará el ranking histórico completo. Esta acción no se puede deshacer.'
+        : 'Los demás períodos no cambian.';
+    const ok = await this.confirm.confirm({
+      title: `¿Reiniciar el ranking «${SCOPE_LABELS[scope]}»?`,
+      description: warning,
+      confirmLabel: 'Reiniciar',
+      destructive: true,
+    });
+    if (!ok) return;
     await this.run(async () => {
       const r = await this.api.post<{ removed: number }>('/leaderboards/reset', {
         scope,
         confirm: true,
       });
-      this.message.set({
-        ok: true,
-        text: `Ranking «${SCOPE_LABELS[scope]}» reiniciado (${r.removed} filas).`,
-      });
+      this.toast.success(
+        `Ranking «${SCOPE_LABELS[scope]}» reiniciado`,
+        `${r.removed} filas borradas.`,
+      );
     });
   }
 
@@ -80,13 +137,22 @@ export class RankingsPage {
       if (editing && editing !== 'new') await this.api.put(`/goals/${editing.id}`, definition);
       else await this.api.post('/goals', definition);
       this.editing.set(undefined);
-      this.message.set({ ok: true, text: `Meta «${definition.name}» guardada.` });
+      this.toast.success(`Meta «${definition.name}» guardada`);
     });
   }
 
   protected async deleteGoal(goal: Goal): Promise<void> {
-    if (!confirm(`¿Eliminar la meta «${goal.name}»?`)) return;
-    await this.run(() => this.api.delete(`/goals/${goal.id}`));
+    const ok = await this.confirm.confirm({
+      title: `¿Eliminar la meta «${goal.name}»?`,
+      description: 'Los overlays que la muestran dejarán de encontrarla.',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
+    await this.run(async () => {
+      await this.api.delete(`/goals/${goal.id}`);
+      this.toast.success('Meta eliminada');
+    });
   }
 
   protected async saveExclusions(): Promise<void> {
@@ -96,7 +162,7 @@ export class RankingsPage {
       .filter(Boolean);
     await this.run(async () => {
       await this.api.put<LeaderboardSettings>('/settings/leaderboard', { excludedUniqueIds });
-      this.message.set({ ok: true, text: 'Lista de usuarios ocultos guardada.' });
+      this.toast.success('Lista de usuarios ocultos guardada');
     });
   }
 
@@ -111,12 +177,12 @@ export class RankingsPage {
 
   private async run(action: () => Promise<unknown>): Promise<void> {
     this.busy.set(true);
-    this.message.set(undefined);
+    this.error.set(undefined);
     try {
       await action();
       await this.refresh();
     } catch (e) {
-      this.message.set({ ok: false, text: errorMessage(e) });
+      this.error.set(errorMessage(e));
     } finally {
       this.busy.set(false);
     }
@@ -134,6 +200,8 @@ export class RankingsPage {
       );
     } catch {
       // keep the last data; the shell shows the connection state
+    } finally {
+      this.loading.set(false);
     }
   }
 

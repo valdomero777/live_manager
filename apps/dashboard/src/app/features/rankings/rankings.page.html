@@ -1,132 +1,228 @@
-<h1>Rankings y metas</h1>
+<app-page-header
+  title="Rankings y metas"
+  description="Quién más aporta a tu LIVE y las metas que muestran los overlays. Se actualiza cada 5 segundos."
+/>
 
-@if (message(); as m) {
-<p class="notice" [class.ok]="m.ok" [class.danger]="!m.ok" role="status">{{ m.text }}</p>
+@if (error()) {
+<div uiAlert variant="destructive" role="alert">
+  <svg lucideCircleAlert />
+  <p uiAlertTitle>No se pudo completar la acción</p>
+  <p uiAlertDescription>{{ error() }}</p>
+</div>
 }
 
-<section class="card stack" aria-labelledby="lb-title">
-  <h2 id="lb-title">Rankings</h2>
-  <div class="row">
-    <div role="group" aria-label="Métrica" class="segmented">
-      @for (m of metrics; track m) {
-      <button type="button" [attr.aria-pressed]="metric() === m" (click)="select(m, scope())">
-        {{ metricLabels[m] }}
-      </button>
+<div class="grid items-start gap-4 xl:grid-cols-5">
+  <section uiCard class="xl:col-span-3" aria-labelledby="lb-title">
+    <header uiCardHeader>
+      <h2 uiCardTitle id="lb-title"><svg lucideTrophy /> Rankings</h2>
+      <p uiCardDescription>{{ metricLabels[metric()] }} · {{ scopeLabels[scope()] }}</p>
+      <div uiCardAction>
+        <button
+          uiButton
+          variant="ghost"
+          size="sm"
+          type="button"
+          [cdkMenuTriggerFor]="resetMenu"
+          [disabled]="busy()"
+        >
+          <svg lucideRotateCcw /> Reiniciar
+        </button>
+      </div>
+    </header>
+    <div uiCardContent class="flex flex-wrap gap-2">
+      <div uiToggleGroup aria-label="Métrica">
+        @for (m of metrics; track m) {
+        <button uiToggleGroupItem [pressed]="metric() === m" (click)="select(m, scope())">
+          {{ metricLabels[m] }}
+        </button>
+        }
+      </div>
+      <div uiToggleGroup aria-label="Período">
+        @for (s of scopes; track s) {
+        <button uiToggleGroupItem [pressed]="scope() === s" (click)="select(metric(), s)">
+          {{ scopeLabels[s] }}
+        </button>
+        }
+      </div>
+    </div>
+    <div uiCardContent>
+      @if (loading()) {
+      <div class="grid gap-2" aria-busy="true" aria-label="Cargando ranking">
+        @for (i of [0, 1, 2, 3, 4]; track i) {
+        <div uiSkeleton class="h-9"></div>
+        }
+      </div>
+      } @else {
+      <div class="overflow-x-auto rounded-lg border">
+        <table uiTable>
+          <caption class="sr-only">
+            {{ metricLabels[metric()] }} · {{ scopeLabels[scope()] }}
+          </caption>
+          <thead uiTableHeader class="bg-muted/50">
+            <tr uiTableRow class="hover:bg-transparent">
+              <th uiTableHead scope="col" class="w-12">#</th>
+              <th uiTableHead scope="col">Usuario</th>
+              <th uiTableHead scope="col" class="text-right">{{ metricLabels[metric()] }}</th>
+            </tr>
+          </thead>
+          <tbody uiTableBody>
+            @for (r of rows(); track r.viewerId) {
+            <tr uiTableRow>
+              <td uiTableCell class="font-medium tabular-nums">
+                @if (r.rank === 1) {
+                <span class="inline-flex items-center gap-1 text-gift-text"
+                  ><svg lucideCrown class="size-4" /><span class="sr-only">Primero</span></span
+                >
+                } @else { {{ r.rank }} }
+              </td>
+              <td uiTableCell>
+                <span class="font-medium">{{ r.nickname }}</span>
+                <span class="ml-1.5 type-caption">&#64;{{ r.uniqueId }}</span>
+              </td>
+              <td uiTableCell class="text-right font-semibold tabular-nums">
+                {{ r.value.toLocaleString('es-MX') }}
+              </td>
+            </tr>
+            } @empty {
+            <tr>
+              <td colspan="3" class="px-3 py-10 text-center type-secondary">
+                Sin datos en este período.
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
       }
     </div>
-    <div role="group" aria-label="Período" class="segmented">
-      @for (s of scopes; track s) {
-      <button type="button" [attr.aria-pressed]="scope() === s" (click)="select(metric(), s)">
-        {{ scopeLabels[s] }}
-      </button>
+  </section>
+
+  <section uiCard class="xl:col-span-2" aria-labelledby="goals-title">
+    <header uiCardHeader>
+      <h2 uiCardTitle id="goals-title"><svg lucideTarget /> Metas</h2>
+      <p uiCardDescription>Barras de progreso para los overlays.</p>
+      @if (!editing()) {
+      <div uiCardAction>
+        <button uiButton size="sm" type="button" (click)="editing.set('new')">
+          <svg lucidePlus /> Nueva meta
+        </button>
+      </div>
       }
+    </header>
+    <div uiCardContent class="grid gap-3">
+      @if (editing() === 'new') {
+      <div class="rounded-lg border bg-muted/40 p-4">
+        <app-goal-form (saved)="saveGoal($event)" (cancelled)="editing.set(undefined)" />
+      </div>
+      } @for (g of goals(); track g.id) {
+      <article class="rounded-lg border p-4" [attr.aria-label]="g.name">
+        @if (isEditing(g)) {
+        <app-goal-form [goal]="g" (saved)="saveGoal($event)" (cancelled)="editing.set(undefined)" />
+        } @else {
+        <div class="flex items-start gap-2">
+          <div class="grid min-w-0 flex-1 gap-1.5">
+            <p class="truncate text-sm font-semibold">{{ g.name }}</p>
+            <div class="flex flex-wrap gap-1.5">
+              <span uiBadge variant="gift">{{ goalMetricLabels[g.metric] }}</span>
+              <span uiBadge variant="secondary"
+                >{{ g.scope === 'session' ? 'Cada live' : 'Histórico' }}</span
+              >
+              @if (g.repeatFactor) {
+              <span uiBadge variant="secondary">Niveles ×{{ g.repeatFactor }}</span>
+              } @if (!g.active) {
+              <span uiBadge variant="warning">Inactiva</span>
+              }
+              <span uiBadge variant="outline">ID {{ g.id }}</span>
+            </div>
+          </div>
+          <button
+            uiButton
+            variant="ghost"
+            size="icon-sm"
+            type="button"
+            [attr.aria-label]="'Editar ' + g.name"
+            (click)="editing.set(g)"
+          >
+            <svg lucidePencil />
+          </button>
+          <button
+            uiButton
+            variant="ghost-destructive"
+            size="icon-sm"
+            type="button"
+            [attr.aria-label]="'Eliminar ' + g.name"
+            (click)="deleteGoal(g)"
+            [disabled]="busy()"
+          >
+            <svg lucideTrash />
+          </button>
+        </div>
+        @if (g.progress; as p) {
+        <div class="mt-3 grid gap-1.5">
+          <ui-progress
+            [value]="percent(g)"
+            [attr.aria-label]="g.name"
+            [indicatorClass]="p.reached ? 'bg-success' : 'bg-linear-to-r from-primary to-gift'"
+          />
+          <p class="flex justify-between type-caption tabular-nums">
+            <span>
+              {{ p.current.toLocaleString('es-MX') }} / {{ p.target.toLocaleString('es-MX') }} @if
+              (p.cycle > 1) { · nivel {{ p.cycle }} } @if (p.reached) { ·
+              <span class="font-medium text-success-text">cumplida</span>
+              }
+            </span>
+            <span class="font-medium text-foreground">{{ percent(g) }}%</span>
+          </p>
+        </div>
+        } }
+      </article>
+      } @empty { @if (editing() !== 'new') {
+      <app-empty-state
+        [icon]="icons.goals"
+        title="Aún no hay metas"
+        description="Por ejemplo: 1.000 diamantes en este live."
+      />
+      } }
     </div>
+  </section>
+</div>
+
+<section uiCard aria-labelledby="priv-title">
+  <header uiCardHeader>
+    <h2 uiCardTitle id="priv-title"><svg lucideEyeOff /> Usuarios ocultos en los rankings</h2>
+    <p uiCardDescription>
+      Un usuario (sin &#64;) por línea; por ejemplo, tus moderadores o cuentas de prueba.
+    </p>
+  </header>
+  <div uiCardContent>
+    <label class="sr-only" for="excluded">Usuarios ocultos</label>
+    <textarea
+      uiTextarea
+      id="excluded"
+      class="max-w-xl font-mono"
+      [value]="excluded()"
+      (input)="excluded.set($any($event.target).value)"
+    ></textarea>
   </div>
-  <table>
-    <caption class="sr-only">
-      {{ metricLabels[metric()] }} · {{ scopeLabels[scope()] }}
-    </caption>
-    <thead>
-      <tr>
-        <th scope="col">#</th>
-        <th scope="col">Usuario</th>
-        <th scope="col" class="num">{{ metricLabels[metric()] }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (r of rows(); track r.viewerId) {
-      <tr>
-        <td>{{ r.rank }}</td>
-        <td><strong>{{ r.nickname }}</strong> <span class="muted">&#64;{{ r.uniqueId }}</span></td>
-        <td class="num">{{ r.value.toLocaleString('es-MX') }}</td>
-      </tr>
-      } @empty {
-      <tr>
-        <td colspan="3" class="muted">Sin datos en este período.</td>
-      </tr>
-      }
-    </tbody>
-  </table>
-  <div class="row">
-    <span class="muted">Reiniciar:</span>
+  <footer uiCardFooter>
+    <button uiButton variant="outline" type="button" (click)="saveExclusions()" [disabled]="busy()">
+      Guardar lista
+    </button>
+  </footer>
+</section>
+
+<ng-template #resetMenu>
+  <div cdkMenu uiDropdownMenu>
+    <p uiDropdownMenuLabel>Reiniciar ranking</p>
     @for (s of scopes; track s) {
-    <button type="button" [class.danger]="s === 'total'" (click)="reset(s)" [disabled]="busy()">
-      {{ scopeLabels[s] }}
+    <button
+      cdkMenuItem
+      uiDropdownMenuItem
+      [variant]="s === 'total' ? 'destructive' : 'default'"
+      (cdkMenuItemTriggered)="reset(s)"
+    >
+      <svg lucideRotateCcw /> {{ scopeLabels[s] }}
     </button>
     }
   </div>
-</section>
-
-<section class="card stack" aria-labelledby="goals-title">
-  <div class="row">
-    <h2 id="goals-title">Metas</h2>
-    <span style="flex: 1"></span>
-    @if (!editing()) {
-    <button class="primary" type="button" (click)="editing.set('new')">Nueva meta</button>
-    }
-  </div>
-
-  @if (editing() === 'new') {
-  <div class="editor">
-    <app-goal-form (saved)="saveGoal($event)" (cancelled)="editing.set(undefined)" />
-  </div>
-  } @for (g of goals(); track g.id) {
-  <article class="goal">
-    @if (isEditing(g)) {
-    <app-goal-form [goal]="g" (saved)="saveGoal($event)" (cancelled)="editing.set(undefined)" />
-    } @else {
-    <div class="row">
-      <strong>{{ g.name }}</strong>
-      <span class="badge">{{ goalMetricLabels[g.metric] }}</span>
-      <span class="badge">{{ g.scope === 'session' ? 'Cada live' : 'Histórico' }}</span>
-      @if (g.repeatFactor) {
-      <span class="badge">Niveles ×{{ g.repeatFactor }}</span>
-      } @if (!g.active) {
-      <span class="badge warn">Inactiva</span>
-      }
-      <span class="muted">ID {{ g.id }}</span>
-    </div>
-    @if (g.progress; as p) {
-    <div
-      class="bar"
-      role="progressbar"
-      [attr.aria-valuenow]="percent(g)"
-      aria-valuemin="0"
-      aria-valuemax="100"
-      [attr.aria-label]="g.name"
-    >
-      <div class="fill" [style.transform]="'scaleX(' + p.ratio + ')'"></div>
-    </div>
-    <div class="muted">
-      {{ p.current.toLocaleString('es-MX') }} / {{ p.target.toLocaleString('es-MX') }} · {{
-      percent(g) }}% @if (p.cycle > 1) { · nivel {{ p.cycle }} } @if (p.reached) { · cumplida }
-    </div>
-    }
-    <div class="row">
-      <button type="button" (click)="editing.set(g)">Editar</button>
-      <button type="button" class="danger" (click)="deleteGoal(g)" [disabled]="busy()">
-        Eliminar
-      </button>
-    </div>
-    }
-  </article>
-  } @empty { @if (editing() !== 'new') {
-  <p class="muted">Aún no hay metas.</p>
-  } }
-</section>
-
-<section class="card stack" aria-labelledby="priv-title">
-  <h2 id="priv-title">Usuarios ocultos en los rankings</h2>
-  <p class="muted">
-    Un usuario (sin @) por línea; por ejemplo, tus moderadores o cuentas de prueba.
-  </p>
-  <label class="sr-only" for="excluded">Usuarios ocultos</label>
-  <textarea
-    id="excluded"
-    [value]="excluded()"
-    (input)="excluded.set($any($event.target).value)"
-  ></textarea>
-  <div class="row">
-    <button type="button" (click)="saveExclusions()" [disabled]="busy()">Guardar lista</button>
-  </div>
-</section>
+</ng-template>

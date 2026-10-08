@@ -66,7 +66,15 @@ describe('event formatting', () => {
     const events = [
       { id: 'a', sessionId: 1, occurredAt: at(10), type: 'comment', viewer, text: 'hola' },
       { id: 'b', sessionId: 1, occurredAt: at(10), type: 'follow', viewer },
-      { id: 'c', sessionId: 1, occurredAt: at(9), type: 'like', viewer, likeDelta: 50, totalLikes: 50 },
+      {
+        id: 'c',
+        sessionId: 1,
+        occurredAt: at(9),
+        type: 'like',
+        viewer,
+        likeDelta: 50,
+        totalLikes: 50,
+      },
       { id: 'd', sessionId: 1, occurredAt: at(1), type: 'follow', viewer },
     ] satisfies LiveEvent[];
     const buckets = activityPerMinute(events, now, 3);

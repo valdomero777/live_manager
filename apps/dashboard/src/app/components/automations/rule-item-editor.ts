@@ -67,7 +67,9 @@ export class RuleItemEditor {
   protected readonly def = computed(() => this.types().find((t) => t.type === this.item().type));
   protected readonly idPrefix = computed(() => `${this.kind()}-${this.index()}`);
   protected readonly icon = computed(() =>
-    this.kind() === 'action' ? (actionKind(this.item().type)?.icon ?? CONDITION_ICON) : CONDITION_ICON,
+    this.kind() === 'action'
+      ? (actionKind(this.item().type)?.icon ?? CONDITION_ICON)
+      : CONDITION_ICON,
   );
   protected readonly iconTone = computed(() =>
     this.kind() === 'action'

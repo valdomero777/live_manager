@@ -10,11 +10,11 @@
 />
 
 @if (statsError()) {
-  <div uiAlert variant="warning" role="status">
-    <svg lucideCircleAlert />
-    <p uiAlertTitle>No se pudieron actualizar las métricas</p>
-    <p uiAlertDescription>Se muestran los últimos valores recibidos. Se reintenta cada 5 s.</p>
-  </div>
+<div uiAlert variant="warning" role="status">
+  <svg lucideCircleAlert />
+  <p uiAlertTitle>No se pudieron actualizar las métricas</p>
+  <p uiAlertDescription>Se muestran los últimos valores recibidos. Se reintenta cada 5 s.</p>
+</div>
 }
 
 <section aria-label="Métricas del live" class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
@@ -122,32 +122,35 @@
   >
     <dl class="grid gap-3">
       <div class="flex items-center gap-3 rounded-lg bg-muted p-3">
-        <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-gift-soft text-gift-text">
+        <span
+          class="grid size-9 shrink-0 place-items-center rounded-lg bg-gift-soft text-gift-text"
+        >
           <svg [lucideIcon]="icons.crown" class="size-4" />
         </span>
         <div class="grid min-w-0">
           <dt class="type-caption">Mayor regalo</dt>
           <dd class="truncate text-sm font-medium">
-            @if (stats()?.topGift; as g) {
-              &#64;{{ g.uniqueId }} · {{ g.quantity }} × {{ g.giftName }}
-              <span class="text-gift-text">· {{ formatMetric(g.diamonds) }} diamantes</span>
+            @if (stats()?.topGift; as g) { &#64;{{ g.uniqueId }} · {{ g.quantity }} × {{ g.giftName
+            }}
+            <span class="text-gift-text">· {{ formatMetric(g.diamonds) }} diamantes</span>
             } @else {
-              <span class="text-muted-foreground">Todavía sin regalos</span>
+            <span class="text-muted-foreground">Todavía sin regalos</span>
             }
           </dd>
         </div>
       </div>
       <div class="flex items-center gap-3 rounded-lg bg-muted p-3">
-        <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-gift-soft text-gift-text">
+        <span
+          class="grid size-9 shrink-0 place-items-center rounded-lg bg-gift-soft text-gift-text"
+        >
           <svg [lucideIcon]="icons.gift" class="size-4" />
         </span>
         <div class="grid min-w-0">
           <dt class="type-caption">Último regalo</dt>
           <dd class="truncate text-sm font-medium">
-            @if (stats()?.lastGift; as g) {
-              &#64;{{ g.uniqueId }} · {{ g.quantity }} × {{ g.giftName }}
-            } @else {
-              <span class="text-muted-foreground">Todavía sin regalos</span>
+            @if (stats()?.lastGift; as g) { &#64;{{ g.uniqueId }} · {{ g.quantity }} × {{ g.giftName
+            }} } @else {
+            <span class="text-muted-foreground">Todavía sin regalos</span>
             }
           </dd>
         </div>
@@ -161,10 +164,10 @@
         <div class="grid min-w-0">
           <dt class="type-caption">Último seguidor</dt>
           <dd class="truncate text-sm font-medium">
-            @if (stats()?.lastFollower; as f) {
-              {{ f.nickname }} <span class="text-muted-foreground">&#64;{{ f.uniqueId }}</span>
+            @if (stats()?.lastFollower; as f) { {{ f.nickname }}
+            <span class="text-muted-foreground">&#64;{{ f.uniqueId }}</span>
             } @else {
-              <span class="text-muted-foreground">Todavía sin seguidores nuevos</span>
+            <span class="text-muted-foreground">Todavía sin seguidores nuevos</span>
             }
           </dd>
         </div>

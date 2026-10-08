@@ -2,13 +2,7 @@ import type { ConnectorStatus } from '@tiklive/contracts';
 
 /** What the streamer needs to know about the TikTok connection, in product terms. */
 export type LiveState =
-  | 'unknown'
-  | 'disconnected'
-  | 'connecting'
-  | 'connected'
-  | 'live'
-  | 'reconnecting'
-  | 'error';
+  'unknown' | 'disconnected' | 'connecting' | 'connected' | 'live' | 'reconnecting' | 'error';
 
 export type LiveTone = 'neutral' | 'info' | 'success' | 'live' | 'warning' | 'danger';
 
@@ -48,24 +42,20 @@ function stateOf(status: ConnectorStatus | undefined): LiveState {
   }
 }
 
+type HintFn = (target: string, status: ConnectorStatus | undefined) => string;
+
+const HINTS: Readonly<Record<LiveState, HintFn>> = {
+  unknown: () => 'Leyendo el estado del conector',
+  disconnected: (t) => (t ? `Último usuario: ${t}` : 'Sin cuenta conectada'),
+  connecting: (t) => (t ? `Conectando con ${t}…` : 'Abriendo la conexión…'),
+  connected: () => 'Esperando a que inicies el live',
+  live: (t) => (t ? `Recibiendo eventos de ${t}` : 'Recibiendo eventos'),
+  reconnecting: (_, s) => (s?.lastError ? `Reintentando · ${s.lastError}` : 'Reintentando…'),
+  error: (_, s) => s?.lastError ?? 'La conexión se detuvo',
+};
+
 function hintOf(state: LiveState, status: ConnectorStatus | undefined): string {
-  const target = status?.target ? `@${status.target}` : '';
-  switch (state) {
-    case 'unknown':
-      return 'Leyendo el estado del conector';
-    case 'connecting':
-      return target ? `Conectando con ${target}…` : 'Abriendo la conexión…';
-    case 'connected':
-      return 'Esperando a que inicies el live';
-    case 'live':
-      return target ? `Recibiendo eventos de ${target}` : 'Recibiendo eventos';
-    case 'reconnecting':
-      return status?.lastError ? `Reintentando · ${status.lastError}` : 'Reintentando…';
-    case 'error':
-      return status?.lastError ?? 'La conexión se detuvo';
-    default:
-      return target ? `Último usuario: ${target}` : 'Sin cuenta conectada';
-  }
+  return HINTS[state](status?.target ? `@${status.target}` : '', status);
 }
 
 /** Maps the connector's technical state to the six states the UI shows. */

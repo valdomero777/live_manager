@@ -2,7 +2,20 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { DomSanitizer } from '@angular/platform-browser';
 import type { Goal, SettingsResponse } from '@tiklive/contracts';
 import { ApiClient } from '../../core/api-client';
+import {
+  LucideExternalLink,
+  LucideRefreshCw,
+  LucideSlidersHorizontal,
+  LucideTv,
+} from '@lucide/angular';
 import { CopyButton } from '../../components/shared/copy-button';
+import { PageHeader } from '../../components/shared/page-header';
+import { UiButton } from '../../components/ui/button';
+import { UI_CARD } from '../../components/ui/card';
+import { UiFormField } from '../../components/ui/form-field';
+import { UiCheckbox, UiInput, UiNativeSelect } from '../../components/ui/input';
+import { UiSwitch } from '../../components/ui/switch';
+import { UI_TOGGLE_GROUP } from '../../components/ui/toggle-group';
 import {
   OVERLAY_TYPES,
   buildOverlayUrl,
@@ -17,10 +30,26 @@ import { RotatorEditor } from './rotator-editor';
  */
 @Component({
   selector: 'app-overlays-page',
-  imports: [CopyButton, RotatorEditor],
+  imports: [
+    CopyButton,
+    RotatorEditor,
+    PageHeader,
+    UiButton,
+    UiCheckbox,
+    UiFormField,
+    UiInput,
+    UiNativeSelect,
+    UiSwitch,
+    ...UI_CARD,
+    ...UI_TOGGLE_GROUP,
+    LucideExternalLink,
+    LucideRefreshCw,
+    LucideSlidersHorizontal,
+    LucideTv,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'page' },
   templateUrl: './overlays.page.html',
-  styleUrl: './overlays.page.css',
 })
 export class OverlaysPage {
   private readonly api = inject(ApiClient);
@@ -34,6 +63,11 @@ export class OverlaysPage {
   protected readonly host = signal(location.host);
   protected readonly goals = signal<readonly Goal[]>([]);
   protected readonly previewBg = signal<'checker' | 'dark' | 'light'>('checker');
+  protected readonly backgrounds = [
+    { value: 'checker', label: 'Transparente' },
+    { value: 'dark', label: 'Oscuro' },
+    { value: 'light', label: 'Claro' },
+  ] as const;
   protected readonly reloadToken = signal(0);
 
   protected readonly type = computed<OverlayType>(

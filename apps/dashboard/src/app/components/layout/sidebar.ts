@@ -29,7 +29,11 @@ import { NAVIGATION } from './navigation';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'flex h-full min-h-0 flex-col bg-sidebar' },
   template: `
-    <div class="flex h-14 shrink-0 items-center gap-2.5 border-b px-4" [class.justify-center]="collapsed()" [class.px-0]="collapsed()">
+    <div
+      class="flex h-14 shrink-0 items-center gap-2.5 border-b px-4"
+      [class.justify-center]="collapsed()"
+      [class.px-0]="collapsed()"
+    >
       <span
         class="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-xs"
         aria-hidden="true"
@@ -44,9 +48,17 @@ import { NAVIGATION } from './navigation';
       }
     </div>
 
-    <nav aria-label="Principal" class="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin" [class.px-2]="collapsed()">
+    <nav
+      aria-label="Principal"
+      class="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin"
+      [class.px-2]="collapsed()"
+    >
       @for (group of navigation; track group.label; let first = $first) {
-        <div class="grid gap-0.5" [class.mt-5]="!first && !collapsed()" [class.mt-3]="!first && collapsed()">
+        <div
+          class="grid gap-0.5"
+          [class.mt-5]="!first && !collapsed()"
+          [class.mt-3]="!first && collapsed()"
+        >
           @if (collapsed()) {
             @if (!first) {
               <span class="mx-auto mb-2 block h-px w-6 bg-border" aria-hidden="true"></span>
