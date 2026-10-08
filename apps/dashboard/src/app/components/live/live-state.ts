@@ -1,0 +1,75 @@
+import type { ConnectorStatus } from '@tiklive/contracts';
+
+/** What the streamer needs to know about the TikTok connection, in product terms. */
+export type LiveState =
+  | 'unknown'
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'live'
+  | 'reconnecting'
+  | 'error';
+
+export type LiveTone = 'neutral' | 'info' | 'success' | 'live' | 'warning' | 'danger';
+
+export interface LiveStateView {
+  readonly state: LiveState;
+  readonly label: string;
+  readonly hint: string;
+  readonly tone: LiveTone;
+  /** Animated dot: something is happening right now. */
+  readonly pulse: boolean;
+}
+
+const VIEWS: Readonly<Record<LiveState, Omit<LiveStateView, 'state' | 'hint'>>> = {
+  unknown: { label: 'Comprobando…', tone: 'neutral', pulse: false },
+  disconnected: { label: 'Desconectado', tone: 'neutral', pulse: false },
+  connecting: { label: 'Conectando', tone: 'info', pulse: true },
+  connected: { label: 'Conectado', tone: 'success', pulse: false },
+  live: { label: 'LIVE', tone: 'live', pulse: true },
+  reconnecting: { label: 'Reconectando', tone: 'warning', pulse: true },
+  error: { label: 'Error', tone: 'danger', pulse: false },
+};
+
+function stateOf(status: ConnectorStatus | undefined): LiveState {
+  switch (status?.state) {
+    case undefined:
+      return 'unknown';
+    case 'connecting':
+      return 'connecting';
+    case 'waiting_host':
+      return 'connected';
+    case 'connected':
+      return 'live';
+    case 'reconnecting':
+      return 'reconnecting';
+    default:
+      return status?.lastError ? 'error' : 'disconnected';
+  }
+}
+
+function hintOf(state: LiveState, status: ConnectorStatus | undefined): string {
+  const target = status?.target ? `@${status.target}` : '';
+  switch (state) {
+    case 'unknown':
+      return 'Leyendo el estado del conector';
+    case 'connecting':
+      return target ? `Conectando con ${target}…` : 'Abriendo la conexión…';
+    case 'connected':
+      return 'Esperando a que inicies el live';
+    case 'live':
+      return target ? `Recibiendo eventos de ${target}` : 'Recibiendo eventos';
+    case 'reconnecting':
+      return status?.lastError ? `Reintentando · ${status.lastError}` : 'Reintentando…';
+    case 'error':
+      return status?.lastError ?? 'La conexión se detuvo';
+    default:
+      return target ? `Último usuario: ${target}` : 'Sin cuenta conectada';
+  }
+}
+
+/** Maps the connector's technical state to the six states the UI shows. */
+export function liveStateOf(status: ConnectorStatus | undefined): LiveStateView {
+  const state = stateOf(status);
+  return { state, hint: hintOf(state, status), ...VIEWS[state] };
+}

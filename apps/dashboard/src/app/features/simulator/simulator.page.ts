@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import type { SimulatorTemplateInput } from '@tiklive/contracts';
 import { ApiClient } from '../../core/api-client';
-import { errorMessage } from '../../shared/labels';
+import { errorMessage } from '../../lib/labels';
 
 const FULL_TEST: readonly SimulatorTemplateInput[] = [
   { kind: 'gift', user: 'prueba', giftName: 'Rose', diamonds: 1, quantity: 5, streak: true },

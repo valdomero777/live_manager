@@ -2,9 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink } from '@angular/router';
 import type { Rule } from '@tiklive/contracts';
 import { AssetsStore } from '../../core/assets.store';
-import { EVENT_LABELS, errorMessage } from '../../shared/labels';
+import { EVENT_LABELS, errorMessage } from '../../lib/labels';
 import { collisions, describeAction, describeCondition } from './rule-catalog';
-import { RulesStore } from './rules.store';
+import { RulesStore } from '../../core/rules.store';
 
 /** Rules overview: enable/disable, duplicate, delete, and collision warnings (spec 13). */
 @Component({

@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { LIVE_EVENT_TYPES, type LiveEvent, type LiveEventType } from '@tiklive/contracts';
 import { AdminSocketService } from '../../core/admin-socket.service';
-import { EVENT_LABELS } from '../../shared/labels';
+import { EVENT_LABELS } from '../../lib/labels';
 
 function detail(e: LiveEvent): string {
   switch (e.type) {

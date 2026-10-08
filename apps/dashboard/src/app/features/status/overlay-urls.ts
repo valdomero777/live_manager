@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
-import { CopyButton } from '../../shared/copy-button';
+import { CopyButton } from '../../components/shared/copy-button';
 
 interface OverlayLink {
   readonly name: string;

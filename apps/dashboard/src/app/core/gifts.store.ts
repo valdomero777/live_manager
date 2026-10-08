@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import type { GiftCatalog } from '@tiklive/contracts';
-import { errorMessage } from '../shared/labels';
+import { errorMessage } from '../lib/labels';
 import { ApiClient } from './api-client';
 
 /** TikTok gift catalog (name, coins, image) for the rule editor's gift picker. */

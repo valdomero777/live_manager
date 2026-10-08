@@ -6,7 +6,7 @@ import type {
   RuleTestRequest,
   RuleTestResult,
 } from '@tiklive/contracts';
-import { ApiClient } from '../../core/api-client';
+import { ApiClient } from './api-client';
 
 /** Rule definition without id/version: what PUT /rules/:id expects. */
 export function definitionOf(rule: Rule): RuleDefinition {

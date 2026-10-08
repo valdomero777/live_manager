@@ -8,7 +8,13 @@ import {
   signal,
 } from '@angular/core';
 import type { GiftInfo } from '@tiklive/contracts';
-import { GiftsStore } from '../../core/gifts.store';
+import { LucideCircleAlert, LucideRefreshCw, LucideSearch } from '@lucide/angular';
+import { GiftsStore } from '../../../core/gifts.store';
+import { UI_ALERT } from '../../ui/alert';
+import { UiButton } from '../../ui/button';
+import { UiSkeleton, UiSpinner } from '../../ui/feedback';
+import { UiInput } from '../../ui/input';
+import { UiTooltip } from '../../ui/tooltip';
 
 /** Gifts shown before the list is filtered: the grid stays light with 600+ gifts. */
 const PAGE = 60;
@@ -20,8 +26,19 @@ const PAGE = 60;
 @Component({
   selector: 'app-gift-grid',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    UiButton,
+    UiInput,
+    UiSkeleton,
+    UiSpinner,
+    UiTooltip,
+    ...UI_ALERT,
+    LucideSearch,
+    LucideRefreshCw,
+    LucideCircleAlert,
+  ],
+  host: { class: 'block' },
   templateUrl: './gift-grid.html',
-  styleUrl: './gift-grid.css',
 })
 export class GiftGrid {
   readonly selected = input<string | number | null | undefined>();
@@ -29,6 +46,7 @@ export class GiftGrid {
   readonly pick = output<GiftInfo>();
 
   protected readonly store = inject(GiftsStore);
+  protected readonly skeletons = [0, 1, 2, 3, 4, 5];
   protected readonly query = signal('');
   protected readonly limit = signal(PAGE);
 

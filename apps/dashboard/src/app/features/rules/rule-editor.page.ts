@@ -10,8 +10,8 @@ import {
   type RuleTestResult,
 } from '@tiklive/contracts';
 import { AssetsStore } from '../../core/assets.store';
-import { GiftGrid } from '../../shared/gift-grid/gift-grid';
-import { EVENT_LABELS, errorMessage } from '../../shared/labels';
+import { GiftGrid } from '../../components/shared/gift-grid/gift-grid';
+import { EVENT_LABELS, errorMessage } from '../../lib/labels';
 import {
   ACTION_TYPES,
   CONDITION_TYPES,
@@ -30,7 +30,7 @@ import {
   type ParamValue,
   type RuleDraft,
 } from './rule-draft';
-import { RulesStore } from './rules.store';
+import { RulesStore } from '../../core/rules.store';
 
 type ListKey = 'conditions' | 'actions';
 

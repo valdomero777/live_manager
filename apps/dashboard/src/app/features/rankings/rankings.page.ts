@@ -11,7 +11,7 @@ import {
   type Scope,
 } from '@tiklive/contracts';
 import { ApiClient } from '../../core/api-client';
-import { GOAL_METRIC_LABELS, METRIC_LABELS, SCOPE_LABELS, errorMessage } from '../../shared/labels';
+import { GOAL_METRIC_LABELS, METRIC_LABELS, SCOPE_LABELS, errorMessage } from '../../lib/labels';
 import { GoalForm } from './goal-form';
 
 const REFRESH_MS = 5_000;

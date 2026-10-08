@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { DomSanitizer } from '@angular/platform-browser';
 import type { Goal, SettingsResponse } from '@tiklive/contracts';
 import { ApiClient } from '../../core/api-client';
-import { CopyButton } from '../../shared/copy-button';
+import { CopyButton } from '../../components/shared/copy-button';
 import {
   OVERLAY_TYPES,
   buildOverlayUrl,

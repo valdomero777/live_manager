@@ -17,7 +17,7 @@ import {
   type GoalDefinition,
 } from '@tiklive/contracts';
 import { AssetsStore } from '../../core/assets.store';
-import { GOAL_METRIC_LABELS } from '../../shared/labels';
+import { GOAL_METRIC_LABELS } from '../../lib/labels';
 
 /** Celebration presets: sound + alert + speech. Other onReach actions are kept as they are. */
 function splitActions(actions: readonly ActionConfig[]) {

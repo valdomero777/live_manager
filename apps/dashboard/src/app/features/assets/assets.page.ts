@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ASSET_MAX_BYTES, type Asset } from '@tiklive/contracts';
 import { AssetsStore } from '../../core/assets.store';
-import { errorMessage, formatBytes } from '../../shared/labels';
+import { errorMessage, formatBytes } from '../../lib/labels';
 
 const ACCEPT = '.wav,.mp3,.ogg,.m4a,.png,.jpg,.jpeg,.gif,.webp,.webm';
 const KIND_LABELS: Readonly<Record<Asset['kind'], string>> = {

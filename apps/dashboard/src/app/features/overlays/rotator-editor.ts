@@ -17,7 +17,7 @@ import {
   type RotatorPanel,
 } from '@tiklive/contracts';
 import { ApiClient } from '../../core/api-client';
-import { METRIC_LABELS, SCOPE_LABELS, errorMessage } from '../../shared/labels';
+import { METRIC_LABELS, SCOPE_LABELS, errorMessage } from '../../lib/labels';
 
 const NEW_PANELS: Readonly<Record<RotatorPanel['type'], RotatorPanel>> = {
   leaderboard: {

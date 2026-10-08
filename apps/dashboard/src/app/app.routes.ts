@@ -10,12 +10,18 @@ export const routes: Routes = [
   {
     path: '',
     canActivate: [authGuard],
-    loadComponent: () => import('./layout/shell').then((m) => m.Shell),
+    loadComponent: () => import('./components/layout/app-shell').then((m) => m.AppShell),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'estado' },
+      { path: '', pathMatch: 'full', redirectTo: 'inicio' },
+      {
+        path: 'inicio',
+        title: 'Dashboard · TikLive',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.page').then((m) => m.DashboardPage),
+      },
       {
         path: 'estado',
-        title: 'Estado · TikLive',
+        title: 'Conexión y estado · TikLive',
         loadComponent: () => import('./features/status/status.page').then((m) => m.StatusPage),
       },
       {

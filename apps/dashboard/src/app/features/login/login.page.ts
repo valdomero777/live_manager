@@ -118,7 +118,7 @@ export class LoginPage {
 
   private goBack(): Promise<boolean> {
     const target = this.volver();
-    const safe = target?.startsWith('/') && !target.startsWith('//') ? target : '/estado';
+    const safe = target?.startsWith('/') && !target.startsWith('//') ? target : '/inicio';
     return this.router.navigateByUrl(safe);
   }
 }

@@ -50,7 +50,10 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.css"],
+            "styles": [
+              "@angular/cdk/overlay-prebuilt.css",
+              "src/styles.css"
+            ],
             "baseHref": "/admin/",
             "outputPath": "dist/dashboard"
           },

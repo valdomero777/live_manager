@@ -8,7 +8,7 @@ import {
 } from '@tiklive/contracts';
 import { AudioService } from '../../core/audio.service';
 import { TriggersStore } from '../../core/triggers.store';
-import { EVENT_LABELS, errorMessage } from '../../shared/labels';
+import { EVENT_LABELS, errorMessage } from '../../lib/labels';
 import { SoundPicker } from './sound-picker';
 
 /** What the form edits; becomes a TriggerDefinition on save. */
