@@ -21,7 +21,7 @@ Los IDs (RF/RNF) refieren a la sección 2 de la especificación.
 
 | Fase | Contenido | Estado |
 | --- | --- | --- |
-| 0 | Laptop, SO, firewall, verificación de supuestos (sección 18) | Manual — pendiente del usuario |
+| 0 | Laptop, SO, firewall, verificación de supuestos (sección 18) | Manual — checklist en [fase-0.md](fase-0.md) y `npm run phase0`; pendiente de ejecutar |
 | 1 | Monorepo + CI, `contracts`, dominio, `LiveEventSource` (conector + simulador), normalizador, SQLite + migraciones, pestaña de audio | **Hecha** (falta validar con un live real) |
 | 2 | Motor de reglas, condiciones/acciones, cola con prioridad, limitadores, TTS + filtros, assets, overlay de alertas | **Mayormente hecha**: falta subida de assets, webhook, updateGoal |
 | 3 | Proyecciones, leaderboards, metas, stats, rotator | **Hecha** (ver abajo) |
