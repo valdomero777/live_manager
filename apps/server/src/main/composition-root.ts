@@ -1,3 +1,4 @@
+import { dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import type { FastifyInstance } from 'fastify';
@@ -24,6 +25,13 @@ import {
   type GoalAdjuster,
 } from '../application/actions/server-action-runner.js';
 import type { WebhookClient } from '../application/ports/webhook-client.js';
+import { meterNotifier } from '../application/metrics/metered-notifier.js';
+import { MetricsRegistry } from '../application/metrics/metrics-registry.js';
+import type { AdminNotifier } from '../application/ports/admin-notifier.js';
+import { diskFreePercent, EventLoopLag } from '../infrastructure/system/process-stats.js';
+import { MaintenanceService } from '../application/maintenance/maintenance-service.js';
+import { FileBackupStore } from '../infrastructure/backup/file-backup-store.js';
+import { SqliteEventRetention } from '../infrastructure/sqlite/sqlite-event-retention.js';
 import { JsonlRecorder } from '../infrastructure/recording/jsonl-recorder.js';
 import { HttpWebhookClient } from '../infrastructure/http/http-webhook-client.js';
 import { GoalService } from '../application/projections/goal-service.js';
@@ -145,20 +153,31 @@ function buildServerActions(cfg: AppConfig, hooks: AppHooks, rt: Runtime) {
   return { serverActions, goalLink };
 }
 
+function buildActionScheduler(rt: Runtime, screens: ScreenSocketHub, metrics: MetricsRegistry) {
+  const latency = metrics.histogram('action_latency_ms', 'Time from queueing to action.done');
+  const outcomes = metrics.counter('actions_total', 'Screen actions by outcome');
+  return new ActionScheduler({
+    onOutcome: (action, outcome, latencyMs) => {
+      outcomes.inc({ outcome });
+      if (outcome === 'done') latency.observe(latencyMs, { type: action.command.type });
+    },
+    gateway: screens,
+    scheduler: rt.scheduler,
+    clock: rt.clock,
+    logger: rt.logger.child({ module: 'actions' }),
+  });
+}
+
 function buildReactions(
   cfg: AppConfig,
   hooks: AppHooks,
   rt: Runtime,
   db: Persistence,
   screens: ScreenSocketHub,
-  admin: AdminSocketHub,
+  admin: AdminNotifier,
+  metrics: MetricsRegistry,
 ) {
-  const actions = new ActionScheduler({
-    gateway: screens,
-    scheduler: rt.scheduler,
-    clock: rt.clock,
-    logger: rt.logger.child({ module: 'actions' }),
-  });
+  const actions = buildActionScheduler(rt, screens, metrics);
   const moderation = new ModerationService(db.settings, rt.clock);
   const handlers = createDefaultActionRegistry();
   const { serverActions, goalLink } = buildServerActions(cfg, hooks, rt);
@@ -231,12 +250,17 @@ function buildIntake(
   rt: Runtime,
   db: Persistence,
   consumers: readonly LiveEventConsumer[],
-  admin: AdminSocketHub,
+  admin: AdminNotifier,
+  metrics: MetricsRegistry,
 ) {
+  const dropped = metrics.counter('events_dropped_total', 'Events rejected before storage');
   const normalizer = new EventNormalizer({
     clock: rt.clock,
     ids: rt.ids,
-    onDrop: (reason, raw) => rt.logger.debug({ reason, kind: raw.kind }, 'event dropped'),
+    onDrop: (reason, raw) => {
+      dropped.inc({ reason });
+      rt.logger.debug({ reason, kind: raw.kind }, 'event dropped');
+    },
   });
   const ingest = new IngestLiveEvent({
     events: db.events,
@@ -252,7 +276,7 @@ function buildConnector(
   cfg: AppConfig,
   rt: Runtime,
   pipeline: LiveEventPipeline,
-  admin: AdminSocketHub,
+  admin: AdminNotifier,
 ) {
   const source: LiveEventSource = cfg.simulate
     ? new SimulatedSource()
@@ -308,6 +332,9 @@ interface ServiceParts {
   pipeline: LiveEventPipeline;
   supervisor: ConnectorSupervisor;
   projections: Projections;
+  maintenance: MaintenanceService;
+  metrics: MetricsRegistry;
+  lag: EventLoopLag;
   auth: AuthService;
   overlayAccess: { key: string };
   requestRestart: () => void;
@@ -377,16 +404,23 @@ function buildTriggerServices(p: ServiceParts) {
   };
 }
 
-function buildServices(p: ServiceParts): HttpServices {
-  const health = new HealthService({
+function buildHealth(p: ServiceParts): HealthService {
+  return new HealthService({
     supervisor: p.supervisor,
     actions: p.reactions.actions,
     screens: p.screens,
     isDbHealthy: () => isDatabaseHealthy(p.db.database),
+    diskFreePercent: () => diskFreePercent(dirname(p.cfg.dbPath)),
+    lastBackupAt: () => p.maintenance.lastDbBackupAt(),
+    processStats: () => ({ rssBytes: process.memoryUsage.rss(), eventLoopLagMs: p.lag.peek() }),
     clock: p.rt.clock,
     startedAt: p.rt.clock.now(),
     version: p.cfg.version,
   });
+}
+
+function buildServices(p: ServiceParts): HttpServices {
+  const health = buildHealth(p);
   return {
     health,
     supervisor: p.supervisor,
@@ -410,8 +444,55 @@ function buildServices(p: ServiceParts): HttpServices {
     settings: buildSettings(p),
     moderation: p.reactions.moderation,
     gifts: buildGiftService(p),
+    maintenance: p.maintenance,
+    metrics: p.metrics,
     ...buildTriggerServices(p),
   };
+}
+
+interface GaugeSources {
+  supervisor: ConnectorSupervisor;
+  screens: ScreenSocketHub;
+  actions: ActionScheduler;
+  lag: EventLoopLag;
+  connectorState: { current: string };
+}
+
+/** Values read at scrape time (spec 15). */
+function registerGauges(metrics: MetricsRegistry, g: GaugeSources): void {
+  const perKey = (key: string, values: Record<string, number>) =>
+    Object.entries(values).map(([name, value]) => ({ labels: { [key]: name }, value }));
+  metrics.gauge('connector_state', 'Connector state machine (1 = current)', () => [
+    { labels: { state: g.supervisor.status().state }, value: 1 },
+  ]);
+  metrics.gauge('action_queue_depth', 'Actions waiting or in flight', () =>
+    perKey('screen', g.actions.depths()),
+  );
+  metrics.gauge('ws_clients', 'Connected overlay screens', () =>
+    perKey('screen', g.screens.connectedScreens()),
+  );
+  metrics.gauge('process_rss_bytes', 'Resident memory', () => [
+    { value: process.memoryUsage.rss() },
+  ]);
+  metrics.gauge('event_loop_lag_ms', 'Mean event-loop delay since the last scrape', () => [
+    { value: g.lag.read() },
+  ]);
+}
+
+function buildObservability(admin: AdminNotifier) {
+  const metrics = new MetricsRegistry();
+  const connectorState = { current: 'idle' };
+  return { metrics, connectorState, notifier: meterNotifier(admin, metrics, connectorState) };
+}
+
+function buildMaintenance(cfg: AppConfig, rt: Runtime, db: Persistence) {
+  return new MaintenanceService({
+    store: new FileBackupStore(db.database.sqlite, cfg.backupDir, cfg.assetsDir),
+    retention: new SqliteEventRetention(db.database.sqlite),
+    scheduler: rt.scheduler,
+    clock: rt.clock,
+    logger: rt.logger.child({ module: 'maintenance' }),
+  });
 }
 
 function httpOptions(cfg: AppConfig, overlayAccess: { key: string }) {
@@ -424,43 +505,44 @@ function httpOptions(cfg: AppConfig, overlayAccess: { key: string }) {
 }
 
 /** The only place that instantiates concrete dependencies (manual DI, no container). */
-export async function buildApp(cfg: AppConfig, hooks: AppHooks = {}): Promise<App> {
+function buildCore(cfg: AppConfig, hooks: AppHooks) {
   const rt = buildRuntime(cfg);
   const db = buildPersistence(cfg, rt);
   const screens = new ScreenSocketHub();
   const admin = new AdminSocketHub(rt.clock);
-  const reactions = buildReactions(cfg, hooks, rt, db, screens, admin);
+  const { metrics, notifier, connectorState } = buildObservability(admin);
+  const reactions = buildReactions(cfg, hooks, rt, db, screens, notifier, metrics);
   const projections = buildProjections(rt, db, screens, reactions);
-  const pipeline = buildIntake(
+  const consumers = [projections.publisher, reactions.engine, reactions.triggers];
+  const pipeline = buildIntake(rt, db, consumers, notifier, metrics);
+  const { supervisor, recorder } = buildConnector(cfg, rt, pipeline, notifier);
+  const lag = new EventLoopLag();
+  registerGauges(metrics, { supervisor, screens, actions: reactions.actions, lag, connectorState });
+  const maintenance = buildMaintenance(cfg, rt, db);
+  return {
     rt,
     db,
-    [projections.publisher, reactions.engine, reactions.triggers],
+    screens,
     admin,
-  );
-  const { supervisor, recorder } = buildConnector(cfg, rt, pipeline, admin);
-  const auth = hooks.auth ?? createAuthService(cfg, rt.logger);
-  const overlayAccess = { key: cfg.overlayKey };
-  const requestRestart =
-    hooks.requestRestart ?? (() => rt.logger.warn({}, 'restart is not available in this mode'));
-  const services = buildServices({
-    ...{ cfg, rt, db, screens, admin, reactions, pipeline, supervisor, projections },
-    ...{ auth, overlayAccess, requestRestart, hooks },
-  });
-  const http = await buildHttpServer(services, httpOptions(cfg, overlayAccess), rt.pino);
-
-  const lifecycle = {
-    cfg,
-    rt,
-    db,
+    metrics,
     reactions,
     projections,
     pipeline,
     supervisor,
-    http,
-    auth,
-    recorder,
+    ...{ recorder, maintenance, lag },
   };
-  return { http, logger: rt.logger, auth, ...appLifecycle({ ...lifecycle, screens, admin }) };
+}
+
+export async function buildApp(cfg: AppConfig, hooks: AppHooks = {}): Promise<App> {
+  const core = buildCore(cfg, hooks);
+  const { rt } = core;
+  const auth = hooks.auth ?? createAuthService(cfg, rt.logger);
+  const overlayAccess = { key: cfg.overlayKey };
+  const requestRestart =
+    hooks.requestRestart ?? (() => rt.logger.warn({}, 'restart is not available in this mode'));
+  const services = buildServices({ cfg, hooks, ...core, auth, overlayAccess, requestRestart });
+  const http = await buildHttpServer(services, httpOptions(cfg, overlayAccess), rt.pino);
+  return { http, logger: rt.logger, auth, ...appLifecycle({ cfg, ...core, http, auth }) };
 }
 
 interface LifecycleParts {
@@ -474,6 +556,8 @@ interface LifecycleParts {
   http: FastifyInstance;
   auth: AuthService;
   recorder: JsonlRecorder | undefined;
+  maintenance: MaintenanceService;
+  lag: EventLoopLag;
   screens: ScreenSocketHub;
   admin: AdminSocketHub;
 }
@@ -490,6 +574,7 @@ function appLifecycle(p: LifecycleParts): Pick<App, 'start' | 'stop'> {
       await p.projections.leaderboards.loadSettings();
       await p.projections.goals.reload();
       p.pipeline.start();
+      p.maintenance.start();
       await p.http.listen({ port: p.cfg.port, host: p.cfg.host });
       announceSetup(p.auth, p.rt.logger, p.cfg);
       const autoTarget = p.cfg.simulate ? SIMULATOR_TARGET : p.cfg.tiktokUsername;
@@ -497,6 +582,8 @@ function appLifecycle(p: LifecycleParts): Pick<App, 'start' | 'stop'> {
     },
     stop: () => {
       p.projections.publisher.dispose();
+      p.maintenance.dispose();
+      p.lag.dispose();
       const { supervisor, pipeline, http, screens, admin, recorder } = p;
       const parts = { supervisor, pipeline, http, screens, admin, recorder, logger: p.rt.logger };
       return shutdown({ ...parts, ...p.db });

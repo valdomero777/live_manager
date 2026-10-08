@@ -25,7 +25,7 @@ Los IDs (RF/RNF) refieren a la sección 2 de la especificación.
 | 1 | Monorepo + CI, `contracts`, dominio, `LiveEventSource` (conector + simulador), normalizador, SQLite + migraciones, pestaña de audio | **Hecha** (falta validar con un live real) |
 | 2 | Motor de reglas, condiciones/acciones, cola con prioridad, limitadores, TTS + filtros, assets, overlay de alertas | **Hecha** (acciones `webhook` y `updateGoal` el 2026-10-08) |
 | 3 | Proyecciones, leaderboards, metas, stats, rotator | **Hecha** (ver abajo) |
-| 4 | Dashboard Angular, auth, respaldos, `/health` completo, métricas, runbook, despliegue | Pendiente |
+| 4 | Dashboard Angular, auth, respaldos, `/health` completo, métricas, runbook, despliegue | **En curso**: hechos respaldos, restauración, retención, `/health`, `/metrics` y alertas (ver `docs/operacion.md`); falta despliegue (systemd/Windows), rollback y ensayo de 4 h |
 | 5 | v2/v3 | Pendiente |
 
 ## Fase 1 — tareas
@@ -102,7 +102,7 @@ Pendiente o diferido:
 - Acción `updateGoal` (sumar progreso manual) y `webhook`: necesitan un ejecutor de acciones del
   lado del servidor; quedan junto con el resto de la fase 2.
 - Métrica `top_gift` como ranking: hoy solo existe como "mejor regalo" en stats.
-- Retención de 90 días de `live_event` (tarea de limpieza): pendiente para la fase 4.
+- ~~Retención de 90 días de `live_event`~~: hecha en la fase 4 (limpieza diaria en bloques).
 
 ## Configuración desde el panel (adelanto de fase 4) — 2026-10-07
 
@@ -150,3 +150,14 @@ Pendiente o diferido:
 - Las metas (`onReach`) solo aceptan acciones de pantalla: evita bucles meta → meta.
 - Variables de entorno de despliegue (no están en el panel): `WEBHOOK_ALLOWED_HOSTS`,
   `WEBHOOK_PRIVATE_HOSTS` (separadas por comas).
+
+## Fase 4 — avance 2026-10-08
+
+- Mantenimiento en proceso (sin cron): respaldo diario de SQLite (14 días), copia semanal de
+  assets, limpieza diaria de eventos > 90 días; `npm run restore` verifica el archivo y guarda la
+  base anterior. Probado: respaldo con la base en uso → restauración → mismas filas.
+- `/health` ampliado (memoria, retraso del bucle, disco, último respaldo, alertas de la spec §15) y
+  `/metrics` en formato Prometheus (detrás de la sesión). Alertas visibles en Estado.
+- Pendiente: unidad systemd o servicio de Windows según el SO elegido en la fase 0, empaquetado
+  versionado con rollback, runbook de incidentes completo, textos i18n, e2e con Playwright y el
+  ensayo de 4 horas continuas.

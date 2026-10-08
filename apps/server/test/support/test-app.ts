@@ -33,6 +33,7 @@ export async function startTestApp(
       DB_PATH: ':memory:',
       CONFIG_PATH: join(dir, 'config.json'),
       ASSETS_DIR: join(dir, 'assets'),
+      BACKUP_DIR: join(dir, 'backups'),
       OVERLAYS_DIR: join(dir, 'none'),
       DASHBOARD_DIR: join(dir, 'none'),
       OVERLAY_KEY: TEST_OVERLAY_KEY,
