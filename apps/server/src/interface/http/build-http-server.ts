@@ -41,9 +41,9 @@ const HASHED_BUNDLE = /-[A-Z0-9]{8}\.(js|css)$/;
 const DASHBOARD_PREFIX = '/admin/';
 
 function cacheHeaders(hashed: RegExp) {
-  return (res: { setHeader(name: string, value: string): unknown }, path: string) => {
+  return (reply: { header(name: string, value: string): unknown }, path: string) => {
     const immutable = hashed.test(path);
-    res.setHeader('Cache-Control', immutable ? 'public, max-age=31536000, immutable' : 'no-cache');
+    reply.header('Cache-Control', immutable ? 'public, max-age=31536000, immutable' : 'no-cache');
   };
 }
 
