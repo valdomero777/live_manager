@@ -31,7 +31,8 @@ TIKLIVE_PASSWORD=... npm run watch-events
 - [ ] Funciona sin servicio de firma externo (anota si pide clave o aparece un límite de uso;
       revisa el README de `tiktok-live-connector`).
 - [ ] Una racha de regalos llega como un solo evento.
-- [ ] Guarda unos minutos de eventos para regresión (pendiente: modo `record`, ver `plan.md`).
+- [ ] Graba unos minutos para regresión: arranca con `RECORD_PATH=data/live.jsonl` y luego
+      `npm run simulate -- replay data/live.jsonl`. El archivo contiene usuarios y comentarios reales.
 
 ## 2. LIVE Studio y audio (R-05)
 

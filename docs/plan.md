@@ -65,7 +65,9 @@ Pendiente, en orden propuesto:
 
 1. **Fase 0 (manual):** verificar los supuestos de la sección 18 con un live real
    (`SIMULATE=false`, `TIKTOK_USERNAME=…`), LIVE Studio con fuente Link y transparencia.
-2. Modo `record` (JSONL de un live real) para pruebas de regresión del mapeo; el `replay` ya existe.
+2. ~~Modo `record`~~ hecho: `RECORD_PATH=data/live.jsonl` graba cada evento crudo del conector real
+   (no del simulador) y `npm run simulate -- replay data/live.jsonl` lo reproduce. Pendiente: grabar
+   un live real y convertir un fragmento en prueba de regresión del mapeo.
 3. ~~Resto de fase 2~~ hecho (ver abajo).
 4. Fase 3: proyecciones, leaderboards, metas, stats y rotator.
 5. Fase 4: dashboard Angular, autenticación (argon2id + cookie), respaldos, `/metrics`, systemd.

@@ -24,6 +24,7 @@ import {
   type GoalAdjuster,
 } from '../application/actions/server-action-runner.js';
 import type { WebhookClient } from '../application/ports/webhook-client.js';
+import { JsonlRecorder } from '../infrastructure/recording/jsonl-recorder.js';
 import { HttpWebhookClient } from '../infrastructure/http/http-webhook-client.js';
 import { GoalService } from '../application/projections/goal-service.js';
 import { LeaderboardService } from '../application/projections/leaderboard-service.js';
@@ -261,9 +262,17 @@ function buildConnector(
   const { scheduler, clock, random } = rt;
   const logger = rt.logger.child({ module: 'connector' });
   const supervisor = new ConnectorSupervisor({ source, scheduler, clock, random, logger });
-  source.onEvent((raw) => pipeline.accept(raw, supervisor.status().target ?? SIMULATOR_TARGET));
+  // Only the real connector is recorded: simulated events already come from a replayable source.
+  const recorder =
+    cfg.recordPath && !cfg.simulate
+      ? new JsonlRecorder(cfg.recordPath, rt.logger.child({ module: 'recorder' }))
+      : undefined;
+  source.onEvent((raw) => {
+    recorder?.write(raw);
+    pipeline.accept(raw, supervisor.status().target ?? SIMULATOR_TARGET);
+  });
   supervisor.onStatus((status) => admin.publish('connector.status', status));
-  return supervisor;
+  return { supervisor, recorder };
 }
 
 /** Things that outlive one app instance: sessions survive an in-process restart. */
@@ -405,6 +414,15 @@ function buildServices(p: ServiceParts): HttpServices {
   };
 }
 
+function httpOptions(cfg: AppConfig, overlayAccess: { key: string }) {
+  return {
+    overlayKey: () => overlayAccess.key,
+    overlaysDir: cfg.overlaysDir,
+    dashboardDir: cfg.dashboardDir,
+    mediaDir: cfg.assetsDir,
+  };
+}
+
 /** The only place that instantiates concrete dependencies (manual DI, no container). */
 export async function buildApp(cfg: AppConfig, hooks: AppHooks = {}): Promise<App> {
   const rt = buildRuntime(cfg);
@@ -419,7 +437,7 @@ export async function buildApp(cfg: AppConfig, hooks: AppHooks = {}): Promise<Ap
     [projections.publisher, reactions.engine, reactions.triggers],
     admin,
   );
-  const supervisor = buildConnector(cfg, rt, pipeline, admin);
+  const { supervisor, recorder } = buildConnector(cfg, rt, pipeline, admin);
   const auth = hooks.auth ?? createAuthService(cfg, rt.logger);
   const overlayAccess = { key: cfg.overlayKey };
   const requestRestart =
@@ -428,18 +446,20 @@ export async function buildApp(cfg: AppConfig, hooks: AppHooks = {}): Promise<Ap
     ...{ cfg, rt, db, screens, admin, reactions, pipeline, supervisor, projections },
     ...{ auth, overlayAccess, requestRestart, hooks },
   });
-  const http = await buildHttpServer(
-    services,
-    {
-      overlayKey: () => overlayAccess.key,
-      overlaysDir: cfg.overlaysDir,
-      dashboardDir: cfg.dashboardDir,
-      mediaDir: cfg.assetsDir,
-    },
-    rt.pino,
-  );
+  const http = await buildHttpServer(services, httpOptions(cfg, overlayAccess), rt.pino);
 
-  const lifecycle = { cfg, rt, db, reactions, projections, pipeline, supervisor, http, auth };
+  const lifecycle = {
+    cfg,
+    rt,
+    db,
+    reactions,
+    projections,
+    pipeline,
+    supervisor,
+    http,
+    auth,
+    recorder,
+  };
   return { http, logger: rt.logger, auth, ...appLifecycle({ ...lifecycle, screens, admin }) };
 }
 
@@ -453,6 +473,7 @@ interface LifecycleParts {
   supervisor: ConnectorSupervisor;
   http: FastifyInstance;
   auth: AuthService;
+  recorder: JsonlRecorder | undefined;
   screens: ScreenSocketHub;
   admin: AdminSocketHub;
 }
@@ -476,8 +497,9 @@ function appLifecycle(p: LifecycleParts): Pick<App, 'start' | 'stop'> {
     },
     stop: () => {
       p.projections.publisher.dispose();
-      const { supervisor, pipeline, http, screens, admin } = p;
-      return shutdown({ supervisor, pipeline, http, screens, admin, logger: p.rt.logger, ...p.db });
+      const { supervisor, pipeline, http, screens, admin, recorder } = p;
+      const parts = { supervisor, pipeline, http, screens, admin, recorder, logger: p.rt.logger };
+      return shutdown({ ...parts, ...p.db });
     },
   };
 }
@@ -500,6 +522,7 @@ interface ShutdownParts {
   screens: ScreenSocketHub;
   admin: AdminSocketHub;
   database: DatabaseHandle;
+  recorder: JsonlRecorder | undefined;
   logger: Logger;
 }
 
@@ -511,6 +534,7 @@ async function shutdown(p: ShutdownParts): Promise<void> {
   const deadline = new Promise<void>((resolve) => setTimeout(resolve, SHUTDOWN_DRAIN_MS).unref());
   await Promise.race([p.pipeline.drain(), deadline]);
   await p.sessions.end();
+  await p.recorder?.close();
   p.screens.closeAll();
   p.admin.closeAll();
   await p.http.close();
