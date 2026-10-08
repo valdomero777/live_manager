@@ -19,6 +19,12 @@ import type { GiftCatalogSource } from '../application/ports/gift-catalog-source
 import type { SoundProvider } from '../application/ports/sound-provider.js';
 import type { LiveEventSource } from '../application/ports/live-event-source.js';
 import type { Logger } from '../application/ports/logger.js';
+import {
+  ServerActionRunner,
+  type GoalAdjuster,
+} from '../application/actions/server-action-runner.js';
+import type { WebhookClient } from '../application/ports/webhook-client.js';
+import { HttpWebhookClient } from '../infrastructure/http/http-webhook-client.js';
 import { GoalService } from '../application/projections/goal-service.js';
 import { LeaderboardService } from '../application/projections/leaderboard-service.js';
 import { RotatorService } from '../application/projections/rotator-service.js';
@@ -123,7 +129,24 @@ function buildPersistence(cfg: AppConfig, rt: Runtime) {
 }
 type Persistence = ReturnType<typeof buildPersistence>;
 
+/** updateGoal and webhook. Goals are built after the engine, so they are linked in later. */
+function buildServerActions(cfg: AppConfig, hooks: AppHooks, rt: Runtime) {
+  const goalLink: { current: GoalAdjuster | undefined } = { current: undefined };
+  const serverActions = new ServerActionRunner({
+    goals: {
+      adjust: (id, amount, eventId) =>
+        goalLink.current?.adjust(id, amount, eventId) ?? Promise.resolve(false),
+    },
+    webhook: hooks.webhookClient ?? new HttpWebhookClient(cfg.webhookPolicy),
+    clock: rt.clock,
+    logger: rt.logger.child({ module: 'server-actions' }),
+  });
+  return { serverActions, goalLink };
+}
+
 function buildReactions(
+  cfg: AppConfig,
+  hooks: AppHooks,
   rt: Runtime,
   db: Persistence,
   screens: ScreenSocketHub,
@@ -137,7 +160,9 @@ function buildReactions(
   });
   const moderation = new ModerationService(db.settings, rt.clock);
   const handlers = createDefaultActionRegistry();
+  const { serverActions, goalLink } = buildServerActions(cfg, hooks, rt);
   const engine = new RuleEngine({
+    serverActions,
     rules: db.rules,
     conditions: createDefaultConditionRegistry(),
     actions: handlers,
@@ -157,7 +182,7 @@ function buildReactions(
     ids: rt.ids,
     logger: rt.logger.child({ module: 'triggers' }),
   });
-  return { actions, engine, handlers, moderation, triggers };
+  return { actions, engine, handlers, moderation, triggers, goalLink };
 }
 type Reactions = ReturnType<typeof buildReactions>;
 
@@ -181,6 +206,7 @@ function buildProjections(rt: Runtime, db: Persistence, screens: ScreenSocketHub
     clock: rt.clock,
     logger: rt.logger.child({ module: 'goals' }),
   });
+  r.goalLink.current = goals;
   const stats = new StatsProjection();
   const publisher = new SnapshotPublisher({
     gateway: screens,
@@ -248,6 +274,8 @@ export interface AppHooks {
   readonly giftSource?: GiftCatalogSource;
   /** Tests replace the MyInstants lookup with a fake. */
   readonly soundProvider?: SoundProvider;
+  /** Tests replace outbound HTTP for the webhook action. */
+  readonly webhookClient?: WebhookClient;
 }
 
 export function createAuthService(cfg: AppConfig, logger: Logger): AuthService {
@@ -383,7 +411,7 @@ export async function buildApp(cfg: AppConfig, hooks: AppHooks = {}): Promise<Ap
   const db = buildPersistence(cfg, rt);
   const screens = new ScreenSocketHub();
   const admin = new AdminSocketHub(rt.clock);
-  const reactions = buildReactions(rt, db, screens, admin);
+  const reactions = buildReactions(cfg, hooks, rt, db, screens, admin);
   const projections = buildProjections(rt, db, screens, reactions);
   const pipeline = buildIntake(
     rt,

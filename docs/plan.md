@@ -23,7 +23,7 @@ Los IDs (RF/RNF) refieren a la sección 2 de la especificación.
 | --- | --- | --- |
 | 0 | Laptop, SO, firewall, verificación de supuestos (sección 18) | Manual — checklist en [fase-0.md](fase-0.md) y `npm run phase0`; pendiente de ejecutar |
 | 1 | Monorepo + CI, `contracts`, dominio, `LiveEventSource` (conector + simulador), normalizador, SQLite + migraciones, pestaña de audio | **Hecha** (falta validar con un live real) |
-| 2 | Motor de reglas, condiciones/acciones, cola con prioridad, limitadores, TTS + filtros, assets, overlay de alertas | **Mayormente hecha**: falta subida de assets, webhook, updateGoal |
+| 2 | Motor de reglas, condiciones/acciones, cola con prioridad, limitadores, TTS + filtros, assets, overlay de alertas | **Hecha** (acciones `webhook` y `updateGoal` el 2026-10-08) |
 | 3 | Proyecciones, leaderboards, metas, stats, rotator | **Hecha** (ver abajo) |
 | 4 | Dashboard Angular, auth, respaldos, `/health` completo, métricas, runbook, despliegue | Pendiente |
 | 5 | v2/v3 | Pendiente |
@@ -66,8 +66,7 @@ Pendiente, en orden propuesto:
 1. **Fase 0 (manual):** verificar los supuestos de la sección 18 con un live real
    (`SIMULATE=false`, `TIKTOK_USERNAME=…`), LIVE Studio con fuente Link y transparencia.
 2. Modo `record` (JSONL de un live real) para pruebas de regresión del mapeo; el `replay` ya existe.
-3. Resto de fase 2: subida de assets con validación por *magic bytes* (RF-19), acciones `webhook`
-   (con protección SSRF) y `updateGoal`, `POST /rules/:id/test`, ajustes TTS persistidos.
+3. ~~Resto de fase 2~~ hecho (ver abajo).
 4. Fase 3: proyecciones, leaderboards, metas, stats y rotator.
 5. Fase 4: dashboard Angular, autenticación (argon2id + cookie), respaldos, `/metrics`, systemd.
 
@@ -133,3 +132,19 @@ Pendiente o diferido:
 - Reconexión con backoff probada con reloj falso.
 - `npm run simulate -- gift` produce sonido en la pestaña de audio.
 - Pendiente manual: reconexión tras cortar la red 60 s con un live real.
+
+## Acciones de servidor — 2026-10-08
+
+- `updateGoal` (`goalId`, `amount` entero, negativo resta): el progreso manual se guarda en
+  `goal_adjustment` (migración 0005) y se suma al total de la sala. Cuenta como progreso ganado:
+  al cruzar la meta se celebra una sola vez por ciclo. También `POST /goals/:id/progress`.
+- `webhook` (`url`, `POST|PUT`, `body` JSON con `{variables}` escapadas): fire-and-forget, nunca
+  frena el ingest. Protección SSRF: solo hosts de `WEBHOOK_ALLOWED_HOSTS`; las direcciones
+  privadas/loopback/metadata se bloquean al conectar salvo hosts en `WEBHOOK_PRIVATE_HOSTS`; sin
+  redirecciones, 3 s de timeout, respuesta máx. 64 KB, *circuit breaker* de 5 fallos por host
+  (1 min). Sin lista, los webhooks quedan desactivados. `{comment}`/`{commandArgs}` pasan por la
+  moderación también en el cuerpo.
+- «Probar» una regla no ejecuta acciones de servidor (las cuenta como omitidas).
+- Las metas (`onReach`) solo aceptan acciones de pantalla: evita bucles meta → meta.
+- Variables de entorno de despliegue (no están en el panel): `WEBHOOK_ALLOWED_HOSTS`,
+  `WEBHOOK_PRIVATE_HOSTS` (separadas por comas).

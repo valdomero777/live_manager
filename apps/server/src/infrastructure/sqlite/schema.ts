@@ -94,6 +94,11 @@ export interface Database {
     cycle: number;
     reached_at: number;
   };
+  goal_adjustment: {
+    goal_id: number;
+    scope_key: string;
+    amount: number;
+  };
   app_setting: {
     key: string;
     value: string;
