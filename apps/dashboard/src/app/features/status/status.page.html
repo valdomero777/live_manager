@@ -1,0 +1,96 @@
+<h1>Estado</h1>
+
+<div class="grid">
+  <section class="card stack" aria-labelledby="connector-title">
+    <h2 id="connector-title">Conexión con TikTok</h2>
+    <p class="state">
+      <span
+        class="dot"
+        [class.ok]="connector()?.state === 'connected'"
+        [class.warn]="connector()?.state === 'reconnecting' || connector()?.state === 'waiting_host' || connector()?.state === 'connecting'"
+        aria-hidden="true"
+      ></span>
+      <strong>{{ stateLabel() }}</strong>
+      @if (connector()?.target; as target) {
+      <span class="muted">· &#64;{{ target }}</span>
+      }
+    </p>
+    @if (connector()?.lastError; as lastError) {
+    <p class="notice warn">Último error: {{ lastError }}</p>
+    } @if (connector()?.nextRetryAt; as nextRetryAt) {
+    <p class="muted">Próximo intento: {{ nextRetryAt | date: 'HH:mm:ss' }}</p>
+    }
+    <form class="row" (ngSubmit)="connect()">
+      <label class="sr-only" for="username">Usuario de TikTok</label>
+      <input
+        id="username"
+        type="text"
+        name="username"
+        placeholder="tu_usuario"
+        [ngModel]="username()"
+        (ngModelChange)="username.set($event)"
+        autocomplete="off"
+      />
+      <button class="primary" type="submit" [disabled]="busy()">Conectar</button>
+      <button type="button" (click)="disconnect()" [disabled]="busy()">Desconectar</button>
+    </form>
+    <p class="muted small">Para conectar siempre al arrancar, guarda tu usuario en Ajustes.</p>
+    @if (error()) {
+    <p class="notice danger" role="alert">{{ error() }}</p>
+    }
+  </section>
+
+  <section class="card stack" aria-labelledby="system-title">
+    <h2 id="system-title">Sistema</h2>
+    @if (health(); as h) {
+    <dl>
+      <dt>Estado</dt>
+      <dd>
+        <span class="badge" [class.ok]="h.status === 'ok'" [class.danger]="h.status !== 'ok'">
+          {{ h.status === 'ok' ? 'Correcto' : 'Degradado' }}
+        </span>
+      </dd>
+      <dt>Base de datos</dt>
+      <dd>{{ h.db === 'ok' ? 'Disponible' : 'Sin acceso' }}</dd>
+      <dt>Encendido hace</dt>
+      <dd>{{ uptime(h.uptimeS) }}</dd>
+      <dt>Versión</dt>
+      <dd>{{ h.version }}</dd>
+      <dt>Pantallas conectadas</dt>
+      <dd>
+        @for (s of screens(); track s[0]) {
+        <span class="badge ok">{{ s[0] }} × {{ s[1] }}</span>
+        } @empty {
+        <span class="muted">Ninguna. Abre la pestaña de audio en la PC de stream.</span>
+        }
+      </dd>
+    </dl>
+    } @else {
+    <p class="notice danger">No se pudo leer el estado del servidor.</p>
+    }
+  </section>
+</div>
+
+<section class="card stack" aria-labelledby="overlays-title">
+  <h2 id="overlays-title">URLs de los overlays</h2>
+  @if (overlayKey(); as key) {
+  <app-overlay-urls [overlayKey]="key" [lanAddresses]="addresses()" />
+  } @else {
+  <p class="muted">Cargando…</p>
+  }
+</section>
+
+<section class="card stack" aria-labelledby="events-title">
+  <h2 id="events-title">Eventos en vivo</h2>
+  <ol class="events" aria-live="polite">
+    @for (e of recentEvents(); track e.id) {
+    <li>
+      <time class="muted">{{ e.at | date: 'HH:mm:ss' }}</time>
+      <span class="badge">{{ e.type }}</span>
+      <span>{{ e.text }}</span>
+    </li>
+    } @empty {
+    <li class="muted">Aún no llegan eventos. Inicia tu live o usa el simulador.</li>
+    }
+  </ol>
+</section>

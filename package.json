@@ -1,0 +1,45 @@
+{
+  "name": "tiklive",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/contracts",
+    "packages/overlays",
+    "apps/server",
+    "apps/dashboard"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch --conditions=development --env-file-if-exists=.env apps/server/src/main/index.ts",
+    "build": "npm run build -w @tiklive/contracts && npm run build -w @tiklive/overlays && npm run build -w @tiklive/dashboard && npm run build -w @tiklive/server",
+    "start": "node --env-file-if-exists=.env apps/server/dist/main/index.js",
+    "simulate": "tsx --conditions=development tools/simulate.ts",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "typecheck": "tsc -p packages/contracts --noEmit && tsc -p apps/server --noEmit && tsc -p packages/overlays --noEmit && tsc -p tools --noEmit && tsc -p apps/dashboard/tsconfig.app.json --noEmit && tsc -p apps/dashboard/tsconfig.spec.json --noEmit",
+    "depcheck": "depcruise apps/server/src --config .dependency-cruiser.cjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "seed": "tsx --conditions=development --env-file-if-exists=.env apps/server/src/main/seed.ts",
+    "dev:overlays": "npm run dev -w @tiklive/overlays",
+    "load-test": "tsx --conditions=development tools/load-test.ts",
+    "watch-events": "tsx --conditions=development tools/watch-events.ts",
+    "dev:dashboard": "npm run start -w @tiklive/dashboard"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^5.0.3",
+    "dependency-cruiser": "^17.0.0",
+    "eslint": "^10.0.0",
+    "globals": "^16.0.0",
+    "prettier": "^3.6.0",
+    "tsx": "^4.20.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
+  }
+}

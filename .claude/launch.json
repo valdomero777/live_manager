@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "tiklive",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--import",
+        "tsx",
+        "--conditions=development",
+        "--env-file=.env",
+        "apps/server/src/main/index.ts"
+      ],
+      "port": 3000
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+<h1>Rankings y metas</h1>
+
+@if (message(); as m) {
+<p class="notice" [class.ok]="m.ok" [class.danger]="!m.ok" role="status">{{ m.text }}</p>
+}
+
+<section class="card stack" aria-labelledby="lb-title">
+  <h2 id="lb-title">Rankings</h2>
+  <div class="row">
+    <div role="group" aria-label="Métrica" class="segmented">
+      @for (m of metrics; track m) {
+      <button type="button" [attr.aria-pressed]="metric() === m" (click)="select(m, scope())">
+        {{ metricLabels[m] }}
+      </button>
+      }
+    </div>
+    <div role="group" aria-label="Período" class="segmented">
+      @for (s of scopes; track s) {
+      <button type="button" [attr.aria-pressed]="scope() === s" (click)="select(metric(), s)">
+        {{ scopeLabels[s] }}
+      </button>
+      }
+    </div>
+  </div>
+  <table>
+    <caption class="sr-only">
+      {{ metricLabels[metric()] }} · {{ scopeLabels[scope()] }}
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Usuario</th>
+        <th scope="col" class="num">{{ metricLabels[metric()] }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (r of rows(); track r.viewerId) {
+      <tr>
+        <td>{{ r.rank }}</td>
+        <td><strong>{{ r.nickname }}</strong> <span class="muted">&#64;{{ r.uniqueId }}</span></td>
+        <td class="num">{{ r.value.toLocaleString('es-MX') }}</td>
+      </tr>
+      } @empty {
+      <tr>
+        <td colspan="3" class="muted">Sin datos en este período.</td>
+      </tr>
+      }
+    </tbody>
+  </table>
+  <div class="row">
+    <span class="muted">Reiniciar:</span>
+    @for (s of scopes; track s) {
+    <button type="button" [class.danger]="s === 'total'" (click)="reset(s)" [disabled]="busy()">
+      {{ scopeLabels[s] }}
+    </button>
+    }
+  </div>
+</section>
+
+<section class="card stack" aria-labelledby="goals-title">
+  <div class="row">
+    <h2 id="goals-title">Metas</h2>
+    <span style="flex: 1"></span>
+    @if (!editing()) {
+    <button class="primary" type="button" (click)="editing.set('new')">Nueva meta</button>
+    }
+  </div>
+
+  @if (editing() === 'new') {
+  <div class="editor">
+    <app-goal-form (saved)="saveGoal($event)" (cancelled)="editing.set(undefined)" />
+  </div>
+  } @for (g of goals(); track g.id) {
+  <article class="goal">
+    @if (isEditing(g)) {
+    <app-goal-form [goal]="g" (saved)="saveGoal($event)" (cancelled)="editing.set(undefined)" />
+    } @else {
+    <div class="row">
+      <strong>{{ g.name }}</strong>
+      <span class="badge">{{ goalMetricLabels[g.metric] }}</span>
+      <span class="badge">{{ g.scope === 'session' ? 'Cada live' : 'Histórico' }}</span>
+      @if (g.repeatFactor) {
+      <span class="badge">Niveles ×{{ g.repeatFactor }}</span>
+      } @if (!g.active) {
+      <span class="badge warn">Inactiva</span>
+      }
+      <span class="muted">ID {{ g.id }}</span>
+    </div>
+    @if (g.progress; as p) {
+    <div
+      class="bar"
+      role="progressbar"
+      [attr.aria-valuenow]="percent(g)"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      [attr.aria-label]="g.name"
+    >
+      <div class="fill" [style.transform]="'scaleX(' + p.ratio + ')'"></div>
+    </div>
+    <div class="muted">
+      {{ p.current.toLocaleString('es-MX') }} / {{ p.target.toLocaleString('es-MX') }} · {{
+      percent(g) }}% @if (p.cycle > 1) { · nivel {{ p.cycle }} } @if (p.reached) { · cumplida }
+    </div>
+    }
+    <div class="row">
+      <button type="button" (click)="editing.set(g)">Editar</button>
+      <button type="button" class="danger" (click)="deleteGoal(g)" [disabled]="busy()">
+        Eliminar
+      </button>
+    </div>
+    }
+  </article>
+  } @empty { @if (editing() !== 'new') {
+  <p class="muted">Aún no hay metas.</p>
+  } }
+</section>
+
+<section class="card stack" aria-labelledby="priv-title">
+  <h2 id="priv-title">Usuarios ocultos en los rankings</h2>
+  <p class="muted">
+    Un usuario (sin @) por línea; por ejemplo, tus moderadores o cuentas de prueba.
+  </p>
+  <label class="sr-only" for="excluded">Usuarios ocultos</label>
+  <textarea
+    id="excluded"
+    [value]="excluded()"
+    (input)="excluded.set($any($event.target).value)"
+  ></textarea>
+  <div class="row">
+    <button type="button" (click)="saveExclusions()" [disabled]="busy()">Guardar lista</button>
+  </div>
+</section>

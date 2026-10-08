@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TikLive · Audio</title>
+    <link rel="stylesheet" href="../../src/styles/audio.css" />
+  </head>
+  <body>
+    <main class="audio">
+      <h1>Pestaña de audio</h1>
+      <p class="hint">
+        Mantén esta pestaña abierta durante el live. El navegador exige un clic para habilitar el
+        sonido.
+      </p>
+      <button id="start" type="button">Iniciar audio</button>
+      <label class="volume"
+        >Volumen maestro
+        <input id="master" type="range" min="0" max="1" step="0.05" value="1" />
+      </label>
+      <p id="status" role="status" aria-live="polite">Audio detenido</p>
+      <ol id="log" class="log" aria-label="Últimas acciones"></ol>
+    </main>
+    <script type="module" src="../../src/screens/audio.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,130 @@
+<h1>Overlays</h1>
+
+<div class="layout">
+  <section class="card stack" aria-labelledby="cfg-title">
+    <h2 id="cfg-title">Configurar</h2>
+    <div class="field">
+      <label for="o-type">Overlay</label>
+      <select id="o-type" (change)="selectType($any($event.target).value)">
+        @for (t of types; track t.id) {
+        <option [value]="t.id" [selected]="t.id + '' === (typeId()) + ''">{{ t.label }}</option>
+        }
+      </select>
+      <small class="muted">{{ type().help }}</small>
+    </div>
+
+    @for (p of type().params; track p.key) { @let id = 'o-' + type().id + '-' + p.key;
+    <div class="field">
+      @switch (p.kind) { @case ('boolean') {
+      <label class="check">
+        <input
+          type="checkbox"
+          [checked]="value(p) === '1'"
+          (change)="set(p, $any($event.target).checked ? '1' : '')"
+        />
+        {{ p.label }}
+      </label>
+      } @case ('multi') {
+      <fieldset>
+        <legend>{{ p.label }}</legend>
+        @for (o of p.options ?? []; track o.value) {
+        <label class="check">
+          <input
+            type="checkbox"
+            [checked]="isChecked(p, o.value)"
+            (change)="toggleMulti(p, o.value, $any($event.target).checked)"
+          />
+          {{ o.label }}
+        </label>
+        }
+      </fieldset>
+      } @case ('select') {
+      <label [for]="id">{{ p.label }}</label>
+      <select [id]="id" (change)="set(p, $any($event.target).value)">
+        @for (o of p.options ?? []; track o.value) {
+        <option [value]="o.value" [selected]="o.value + '' === (value(p)) + ''">
+          {{ o.label }}
+        </option>
+        }
+      </select>
+      } @case ('goal') {
+      <label [for]="id">{{ p.label }}</label>
+      <select [id]="id" (change)="set(p, $any($event.target).value)">
+        @for (g of goals(); track g.id) {
+        <option [value]="g.id" [selected]="g.id + '' === (value(p)) + ''">{{ g.name }}</option>
+        } @empty {
+        <option value="1" [selected]="'1' === (value(p)) + ''">
+          No hay metas: créalas en Rankings y metas
+        </option>
+        }
+      </select>
+      } @case ('number') {
+      <label [for]="id">{{ p.label }}</label>
+      <input
+        [id]="id"
+        type="number"
+        [attr.min]="p.min"
+        [attr.max]="p.max"
+        [attr.step]="p.step"
+        [value]="value(p)"
+        (input)="set(p, $any($event.target).value)"
+      />
+      } @default {
+      <label [for]="id">{{ p.label }}</label>
+      <input [id]="id" type="text" [value]="value(p)" (input)="set(p, $any($event.target).value)" />
+      } }
+    </div>
+    }
+
+    <div class="field">
+      <label for="o-host">Dirección para la PC de stream</label>
+      <select id="o-host" (change)="host.set($any($event.target).value)">
+        @for (h of hosts(); track h) {
+        <option [value]="h" [selected]="h + '' === (host()) + ''">{{ h }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="url">
+      <code>{{ url() }}</code>
+      <div class="row">
+        <app-copy-button [value]="url()" label="URL del overlay" />
+        <a class="button" [href]="url()" target="_blank" rel="noopener">Abrir</a>
+      </div>
+    </div>
+    <p class="muted small">
+      Pégala en LIVE Studio como fuente <strong>Link</strong> o en OBS como
+      <strong>Browser Source</strong>.
+    </p>
+  </section>
+
+  <section class="card stack preview-card" aria-labelledby="prev-title">
+    <div class="row">
+      <h2 id="prev-title">Vista previa</h2>
+      <span class="spacer"></span>
+      <label for="o-bg" class="sr-only">Fondo de la vista previa</label>
+      <select id="o-bg" (change)="previewBg.set($any($event.target).value)">
+        <option value="checker" [selected]="'checker' === (previewBg()) + ''">
+          Fondo transparente
+        </option>
+        <option value="dark" [selected]="'dark' === (previewBg()) + ''">Fondo oscuro</option>
+        <option value="light" [selected]="'light' === (previewBg()) + ''">Fondo claro</option>
+      </select>
+      <button type="button" (click)="reloadToken.set(reloadToken() + 1)">Recargar</button>
+    </div>
+    <div class="preview" [attr.data-bg]="previewBg()">
+      <iframe [src]="previewUrl()" title="Vista previa del overlay"></iframe>
+    </div>
+    <p class="muted small">
+      Usa el Simulador para ver datos en movimiento. La pestaña de audio necesita un clic en
+      «Iniciar audio» incluso aquí.
+    </p>
+  </section>
+</div>
+
+@if (typeId() === 'rotator') {
+<app-rotator-editor
+  [configId]="value(type().params[0]!)"
+  (savedChange)="reloadToken.set(reloadToken() + 1)"
+/>
+}

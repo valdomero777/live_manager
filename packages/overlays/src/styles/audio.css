@@ -1,0 +1,73 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f6f6f8;
+  --fg: #16161a;
+  --muted: #5c5c66;
+  --accent: #c8102e;
+  --accent-fg: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15151a;
+    --fg: #ececf1;
+    --muted: #a0a0ad;
+    --accent: #ff4d6d;
+    --accent-fg: #15151a;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font:
+    16px/1.5 system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+.audio {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+}
+.hint {
+  color: var(--muted);
+  margin: 0 0 1.5rem;
+}
+button {
+  font: inherit;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: var(--accent);
+  color: var(--accent-fg);
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--fg);
+  outline-offset: 2px;
+}
+.volume {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 1.5rem 0 1rem;
+  max-width: 20rem;
+}
+.log {
+  padding-left: 1.25rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}

@@ -1,0 +1,22 @@
+{
+  "/api": {
+    "target": "http://localhost:3000",
+    "secure": false
+  },
+  "/ws": {
+    "target": "ws://localhost:3000",
+    "ws": true
+  },
+  "/media": {
+    "target": "http://localhost:3000"
+  },
+  "/screen": {
+    "target": "http://localhost:3000"
+  },
+  "/overlay": {
+    "target": "http://localhost:3000"
+  },
+  "/overlay-data": {
+    "target": "http://localhost:3000"
+  }
+}

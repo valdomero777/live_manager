@@ -1,0 +1,118 @@
+<h1>Simulador</h1>
+<p class="muted">
+  Los eventos simulados recorren el mismo camino que un live real: activan reglas, sonidos, voz,
+  rankings y metas. Si estás en vivo, se suman a la sesión actual.
+</p>
+
+<div class="card row">
+  <div>
+    <h2>Prueba completa</h2>
+    <p class="muted">Un regalo en racha, 100 likes, un comentario con !di y un nuevo seguidor.</p>
+  </div>
+  <span style="flex: 1"></span>
+  <button class="primary" type="button" (click)="fullTest()" [disabled]="busy()">
+    Lanzar prueba completa
+  </button>
+</div>
+
+@if (status(); as s) {
+<p class="notice" [class.ok]="s.ok" [class.danger]="!s.ok" role="status">{{ s.text }}</p>
+}
+
+<div class="grid">
+  <form class="card stack" [formGroup]="gift" (ngSubmit)="sendGift()" aria-labelledby="sim-gift">
+    <h2 id="sim-gift">Regalo</h2>
+    <div class="field">
+      <label for="g-user">Usuario</label>
+      <input id="g-user" type="text" formControlName="user" />
+    </div>
+    <div class="field">
+      <label for="g-name">Nombre del regalo</label>
+      <input id="g-name" type="text" formControlName="giftName" />
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="g-diamonds">Diamantes c/u</label>
+        <input id="g-diamonds" type="number" min="0" formControlName="diamonds" />
+      </div>
+      <div class="field">
+        <label for="g-qty">Cantidad</label>
+        <input id="g-qty" type="number" min="1" formControlName="quantity" />
+      </div>
+    </div>
+    <label class="check"
+      ><input type="checkbox" formControlName="streak" /> Enviar como racha (un mensaje por
+      unidad)</label
+    >
+    <button type="submit" [disabled]="busy()">Enviar regalo</button>
+  </form>
+
+  <form
+    class="card stack"
+    [formGroup]="comment"
+    (ngSubmit)="sendComment()"
+    aria-labelledby="sim-comment"
+  >
+    <h2 id="sim-comment">Comentario</h2>
+    <div class="field">
+      <label for="c-user">Usuario</label>
+      <input id="c-user" type="text" formControlName="user" />
+    </div>
+    <div class="field">
+      <label for="c-text">Texto</label>
+      <input id="c-text" type="text" formControlName="text" />
+    </div>
+    <button type="submit" [disabled]="busy()">Enviar comentario</button>
+  </form>
+
+  <form class="card stack" [formGroup]="likes" (ngSubmit)="sendLikes()" aria-labelledby="sim-likes">
+    <h2 id="sim-likes">Likes</h2>
+    <div class="field">
+      <label for="l-user">Usuario</label>
+      <input id="l-user" type="text" formControlName="user" />
+    </div>
+    <div class="field">
+      <label for="l-count">Cantidad</label>
+      <input id="l-count" type="number" min="1" formControlName="count" />
+    </div>
+    <button type="submit" [disabled]="busy()">Enviar likes</button>
+  </form>
+
+  <form
+    class="card stack"
+    [formGroup]="social"
+    (ngSubmit)="sendSocial()"
+    aria-labelledby="sim-social"
+  >
+    <h2 id="sim-social">Seguidor, entrada o compartido</h2>
+    <div class="field">
+      <label for="s-user">Usuario</label>
+      <input id="s-user" type="text" formControlName="user" />
+    </div>
+    <div class="field">
+      <label for="s-kind">Tipo</label>
+      <select id="s-kind" formControlName="kind">
+        <option value="follow">Nuevo seguidor</option>
+        <option value="join">Entró al live</option>
+        <option value="share">Compartió el live</option>
+      </select>
+    </div>
+    <button type="submit" [disabled]="busy()">Enviar</button>
+  </form>
+
+  <div class="card stack" aria-labelledby="sim-room">
+    <h2 id="sim-room">Sala</h2>
+    <div class="field">
+      <label for="v-count">Espectadores</label>
+      <input id="v-count" type="number" min="0" [formControl]="viewers" />
+    </div>
+    <div class="row">
+      <button type="button" (click)="sendViewers()" [disabled]="busy()">
+        Actualizar espectadores
+      </button>
+      <button type="button" class="danger" (click)="endStream()" [disabled]="busy()">
+        Terminar live
+      </button>
+    </div>
+  </div>
+</div>

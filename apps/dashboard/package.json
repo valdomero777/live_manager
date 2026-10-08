@@ -1,0 +1,29 @@
+{
+  "name": "@tiklive/dashboard",
+  "version": "0.1.0",
+  "scripts": {
+    "start": "ng serve --proxy-config proxy.conf.json",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/forms": "^21.2.0",
+    "@angular/platform-browser": "^21.2.0",
+    "@angular/router": "^21.2.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "@tiklive/contracts": "*",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.2.26",
+    "@angular/cli": "^21.2.26",
+    "@angular/compiler-cli": "^21.2.0",
+    "typescript": "~5.9.2"
+  },
+  "type": "module"
+}
