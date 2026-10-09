@@ -88,7 +88,7 @@
     <app-event-feed
       [items]="feed()"
       [loading]="socket.historyLoading()"
-      [realtime]="socket.connected()"
+      [realtime]="!socket.lostConnection()"
       height="17.5rem"
       label="Últimos eventos"
     />

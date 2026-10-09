@@ -64,7 +64,7 @@ import { UiTooltip } from '../ui/tooltip';
       <app-live-status [status]="socket.connectorStatus()" />
     </a>
 
-    @if (!socket.connected()) {
+    @if (socket.lostConnection()) {
       <span uiBadge variant="warning" class="hidden sm:inline-flex" role="status">
         <svg lucideUnplug /> Panel reconectando…
       </span>

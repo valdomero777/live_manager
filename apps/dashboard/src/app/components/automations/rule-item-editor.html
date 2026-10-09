@@ -78,7 +78,12 @@
     </div>
     } @case ('select') {
     <ui-form-field [label]="p.label" [for]="fieldId" [description]="p.help">
-      <select uiNativeSelect [id]="fieldId" (change)="set(p, $any($event.target).value)">
+      <select
+        uiNativeSelect
+        [id]="fieldId"
+        [attr.aria-describedby]="describedBy(fieldId, { description: !!p.help })"
+        (change)="set(p, $any($event.target).value)"
+      >
         @for (o of p.options ?? []; track o.value) {
         <option [value]="o.value" [selected]="o.value === display(item(), p)">{{ o.label }}</option>
         }
@@ -133,6 +138,7 @@
           step="5"
           [id]="fieldId"
           [value]="display(item(), p)"
+          [attr.aria-describedby]="describedBy(fieldId, { description: !!p.help })"
           [attr.aria-valuetext]="display(item(), p) + '%'"
           (input)="set(p, $any($event.target).value)"
         />
@@ -153,7 +159,7 @@
         [id]="fieldId"
         [type]="p.kind === 'text' ? 'text' : 'number'"
         [attr.step]="p.kind === 'seconds' ? '0.5' : null"
-        [attr.aria-describedby]="p.help ? fieldId + '-description' : null"
+        [attr.aria-describedby]="describedBy(fieldId, { description: !!p.help })"
         [value]="display(item(), p)"
         (input)="set(p, $any($event.target).value)"
       />

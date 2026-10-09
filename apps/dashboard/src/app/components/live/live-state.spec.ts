@@ -32,6 +32,11 @@ describe('liveStateOf', () => {
     expect(view.tone).toBe('danger');
   });
 
+  it('shows a manual disconnect as disconnected even if an earlier error is remembered', () => {
+    const view = liveStateOf(status('idle', { lastError: 'socket closed' }));
+    expect(view.state).toBe('disconnected');
+  });
+
   it('names the account while live', () => {
     const view = liveStateOf(status('connected'));
     expect(view.label).toBe('LIVE');

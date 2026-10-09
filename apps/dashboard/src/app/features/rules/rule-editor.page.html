@@ -39,7 +39,7 @@
             placeholder="p. ej. Sonido para regalos grandes"
             [value]="draft().name"
             [attr.aria-invalid]="!!nameError()"
-            [attr.aria-describedby]="nameError() ? 'r-name-error' : null"
+            [attr.aria-describedby]="describedBy('r-name', { error: nameError() })"
             (input)="update('name', $any($event.target).value)"
           />
         </ui-form-field>

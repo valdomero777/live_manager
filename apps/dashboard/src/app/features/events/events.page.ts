@@ -94,7 +94,7 @@ import { EVENT_LABELS } from '../../lib/labels';
         <app-event-feed
           [items]="rows()"
           [loading]="socket.historyLoading()"
-          [realtime]="socket.connected()"
+          [realtime]="!socket.lostConnection()"
           height="min(70dvh, 44rem)"
           [emptyTitle]="filtered() ? 'Sin eventos que coincidan' : 'Aún no llegan eventos'"
           [emptyDescription]="

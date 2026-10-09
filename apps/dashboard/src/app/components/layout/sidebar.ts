@@ -30,9 +30,9 @@ import { NAVIGATION } from './navigation';
   host: { class: 'flex h-full min-h-0 flex-col bg-sidebar' },
   template: `
     <div
-      class="flex h-14 shrink-0 items-center gap-2.5 border-b px-4"
+      class="flex h-14 shrink-0 items-center gap-2.5 border-b"
       [class.justify-center]="collapsed()"
-      [class.px-0]="collapsed()"
+      [class.px-4]="!collapsed()"
     >
       <span
         class="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-xs"
@@ -50,7 +50,8 @@ import { NAVIGATION } from './navigation';
 
     <nav
       aria-label="Principal"
-      class="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin"
+      class="flex-1 overflow-y-auto py-4 scrollbar-thin"
+      [class.px-3]="!collapsed()"
       [class.px-2]="collapsed()"
     >
       @for (group of navigation; track group.label; let first = $first) {
@@ -95,14 +96,17 @@ import { NAVIGATION } from './navigation';
     </nav>
 
     @if (collapsible()) {
-      <div class="shrink-0 border-t p-3" [class.px-2]="collapsed()">
+      <div class="shrink-0 border-t py-3" [class.px-3]="!collapsed()" [class.px-2]="collapsed()">
         <button
           uiButton
           variant="ghost"
           size="sm"
           type="button"
-          class="w-full text-muted-foreground"
-          [class.justify-start]="!collapsed()"
+          [class]="
+            collapsed()
+              ? 'w-full text-muted-foreground'
+              : 'w-full justify-start text-muted-foreground'
+          "
           [attr.aria-expanded]="!collapsed()"
           [attr.aria-label]="collapsed() ? 'Expandir menú' : 'Contraer menú'"
           [uiTooltip]="collapsed() ? 'Expandir menú' : ''"

@@ -106,7 +106,10 @@ export function draftFromRule(rule: Rule): RuleDraft {
 
 export interface DraftValidation {
   readonly definition?: RuleDefinition;
+  /** Every problem, labeled for the summary next to the save button. */
   readonly errors: readonly string[];
+  /** First message per top-level field (`name`, `priority`…), for errors shown at the field. */
+  readonly fieldErrors: Readonly<Partial<Record<string, string>>>;
 }
 
 const PATH_LABELS: Readonly<Record<string, string>> = {
@@ -132,8 +135,14 @@ export function validateDraft(d: RuleDraft): DraftValidation {
     actions: d.actions.map((a) => itemToConfig(ACTION_TYPES, a)),
   };
   const result = RuleDefinitionSchema.safeParse(candidate);
-  if (result.success) return { definition: result.data, errors: [] };
+  if (result.success) return { definition: result.data, errors: [], fieldErrors: {} };
+  const fieldErrors: Partial<Record<string, string>> = {};
+  for (const issue of result.error.issues) {
+    const key = String(issue.path[0]);
+    fieldErrors[key] ??= issue.message;
+  }
   return {
+    fieldErrors,
     errors: result.error.issues.map((issue) => {
       const [head, index, field] = issue.path;
       const where = PATH_LABELS[String(head)] ?? String(head);

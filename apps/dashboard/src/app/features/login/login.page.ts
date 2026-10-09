@@ -9,7 +9,7 @@ import { UI_ALERT } from '../../components/ui/alert';
 import { UiButton } from '../../components/ui/button';
 import { UI_CARD } from '../../components/ui/card';
 import { UiSpinner } from '../../components/ui/feedback';
-import { UiFormField } from '../../components/ui/form-field';
+import { UiFormField, describedBy } from '../../components/ui/form-field';
 import { UiInput } from '../../components/ui/input';
 
 /**
@@ -96,7 +96,7 @@ import { UiInput } from '../../components/ui/input';
               [attr.autocomplete]="setupRequired() ? 'new-password' : 'current-password'"
               [attr.aria-invalid]="!!error()"
               [attr.aria-describedby]="
-                (setupRequired() ? 'password-description ' : '') + (error() ? 'password-error' : '')
+                describedBy('password', { description: setupRequired(), error: error() })
               "
             />
           </ui-form-field>
@@ -118,6 +118,7 @@ export class LoginPage {
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   protected readonly minLength = MIN_PASSWORD_LENGTH;
+  protected readonly describedBy = describedBy;
   protected readonly setupRequired = signal(false);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | undefined>(undefined);

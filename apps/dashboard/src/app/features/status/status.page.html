@@ -163,7 +163,7 @@
     <app-event-feed
       [items]="recentEvents()"
       [loading]="socket.historyLoading()"
-      [realtime]="socket.connected()"
+      [realtime]="!socket.lostConnection()"
       height="22rem"
     />
   </div>

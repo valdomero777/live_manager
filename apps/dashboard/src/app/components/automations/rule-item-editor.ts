@@ -10,7 +10,7 @@ import {
 import { AssetsStore } from '../../core/assets.store';
 import { GiftGrid } from '../shared/gift-grid/gift-grid';
 import { UiButton } from '../ui/button';
-import { UiFormField } from '../ui/form-field';
+import { UiFormField, describedBy } from '../ui/form-field';
 import { UiInput, UiNativeSelect, UiSlider } from '../ui/input';
 import { UiSwitch } from '../ui/switch';
 import { UiTooltip } from '../ui/tooltip';
@@ -80,6 +80,7 @@ export class RuleItemEditor {
     () => this.item().type === 'giftName' || this.item().type === 'giftId',
   );
   protected readonly display = displayParam;
+  protected readonly describedBy = describedBy;
 
   protected soundUrl(id: string): string | undefined {
     return this.assets.sounds().find((a) => String(a.id) === id)?.url;

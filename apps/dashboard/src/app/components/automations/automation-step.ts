@@ -31,7 +31,7 @@ const STEPS: Readonly<Record<StepKind, { overline: string; tone: string }>> = {
         <span class="mt-2 w-px flex-1 bg-border" aria-hidden="true"></span>
       }
     </div>
-    <section class="min-w-0 pb-8" [class.pb-0]="last()" [attr.aria-labelledby]="headingId()">
+    <section class="min-w-0" [class.pb-8]="!last()" [attr.aria-labelledby]="headingId()">
       <div class="mb-3 flex min-h-9 flex-wrap items-center gap-x-3 gap-y-1">
         <div class="grid">
           <span class="type-overline text-muted-foreground">{{ step().overline }}</span>

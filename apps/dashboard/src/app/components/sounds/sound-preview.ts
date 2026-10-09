@@ -3,15 +3,7 @@ import { LucidePlay, LucideSquare } from '@lucide/angular';
 import { AudioService } from '../../core/audio.service';
 import { UiButton, type ButtonVariants } from '../ui/button';
 import { UiSpinner } from '../ui/feedback';
-
-/** The browser reports audio.src as an absolute URL; compare like with like. */
-function absolute(url: string): string {
-  try {
-    return new URL(url, location.href).href;
-  } catch {
-    return url;
-  }
-}
+import { absoluteSoundUrl } from './sound-url';
 
 /**
  * Play/stop toggle for one sound. Presentation only: playback state lives in AudioService, so
@@ -56,7 +48,7 @@ export class SoundPreview {
   readonly disabled = input(false);
   readonly variant = input<ButtonVariants['variant']>('outline');
 
-  private readonly src = computed(() => absolute(this.url()));
+  private readonly src = computed(() => absoluteSoundUrl(this.url()));
   protected readonly playing = computed(() => this.audio.playingUrl() === this.src());
   protected readonly loading = computed(() => this.audio.loadingUrl() === this.src());
 

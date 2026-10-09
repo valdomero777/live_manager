@@ -28,7 +28,7 @@ import type {
   RuleTestResult,
 } from '@tiklive/contracts';
 import { AutomationBuilder } from '../../components/automations/automation-builder';
-import type { RuleOp } from '../../components/automations/rule-ops';
+import type { RuleList, RuleOp } from '../../components/automations/rule-ops';
 import { GiftGrid } from '../../components/shared/gift-grid/gift-grid';
 import { PageHeader } from '../../components/shared/page-header';
 import { UI_ALERT } from '../../components/ui/alert';
@@ -36,7 +36,7 @@ import { UiBadge } from '../../components/ui/badge';
 import { UiButton } from '../../components/ui/button';
 import { UI_CARD } from '../../components/ui/card';
 import { UiSpinner } from '../../components/ui/feedback';
-import { UiFormField } from '../../components/ui/form-field';
+import { UiFormField, describedBy } from '../../components/ui/form-field';
 import { UiInput, UiNativeSelect } from '../../components/ui/input';
 import { UiSwitch } from '../../components/ui/switch';
 import { ToastService } from '../../components/ui/toast';
@@ -62,9 +62,7 @@ import {
 } from '../../components/automations/rule-draft';
 import { RulesStore } from '../../core/rules.store';
 
-type ListKey = 'conditions' | 'actions';
-
-const CATALOG: Readonly<Record<ListKey, readonly TypeDef[]>> = {
+const CATALOG: Readonly<Record<RuleList, readonly TypeDef[]>> = {
   conditions: CONDITION_TYPES,
   actions: ACTION_TYPES,
 };
@@ -114,6 +112,7 @@ export class RuleEditorPage {
   private readonly toast = inject(ToastService);
   protected readonly assets = inject(AssetsStore);
   protected readonly catalog = CATALOG;
+  protected readonly describedBy = describedBy;
 
   protected readonly draft = signal<RuleDraft>(EMPTY_DRAFT);
   private readonly saved = signal<Rule | undefined>(undefined);
@@ -127,10 +126,10 @@ export class RuleEditorPage {
   protected readonly validation = computed(() => validateDraft(this.draft()));
   /** Errors shown next to their field (the rest are listed by the save bar). */
   protected readonly nameError = computed(() => {
-    if (!this.showErrors()) return undefined;
-    return this.validation()
-      .errors.find((e) => e.startsWith('Nombre'))
-      ?.replace(/^Nombre: /, '');
+    const error = this.showErrors() ? this.validation().fieldErrors['name'] : undefined;
+    if (!error) return undefined;
+    // The shared schema's messages are not localized; the common case gets a Spanish one.
+    return this.draft().name.trim() ? error : 'Ponle un nombre a la regla.';
   });
   protected readonly variables = computed(() => TEMPLATE_VARIABLES[this.draft().trigger] ?? []);
   protected readonly conditionTypes = computed(() =>
@@ -192,16 +191,16 @@ export class RuleEditorPage {
     }));
   }
 
-  protected addItem(list: ListKey, type: string): void {
+  protected addItem(list: RuleList, type: string): void {
     if (!type) return;
     this.draft.update((d) => ({ ...d, [list]: [...d[list], newItem(CATALOG[list], type)] }));
   }
 
-  protected removeItem(list: ListKey, index: number): void {
+  protected removeItem(list: RuleList, index: number): void {
     this.draft.update((d) => ({ ...d, [list]: d[list].filter((_, i) => i !== index) }));
   }
 
-  protected moveItem(list: ListKey, index: number, delta: number): void {
+  protected moveItem(list: RuleList, index: number, delta: number): void {
     this.draft.update((d) => {
       const items = [...d[list]];
       const target = index + delta;
@@ -211,11 +210,11 @@ export class RuleEditorPage {
     });
   }
 
-  protected changeType(list: ListKey, index: number, type: string): void {
+  protected changeType(list: RuleList, index: number, type: string): void {
     this.replaceItem(list, index, newItem(CATALOG[list], type));
   }
 
-  protected setParam(list: ListKey, index: number, param: ParamDef, raw: string | boolean): void {
+  protected setParam(list: RuleList, index: number, param: ParamDef, raw: string | boolean): void {
     const item = this.draft()[list][index];
     if (!item) return;
     this.replaceItem(list, index, {
@@ -285,7 +284,7 @@ export class RuleEditorPage {
     return Number(raw);
   }
 
-  private replaceItem(list: ListKey, index: number, item: ItemDraft): void {
+  private replaceItem(list: RuleList, index: number, item: ItemDraft): void {
     this.draft.update((d) => ({ ...d, [list]: d[list].map((x, i) => (i === index ? item : x)) }));
   }
 

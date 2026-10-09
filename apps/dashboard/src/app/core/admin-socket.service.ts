@@ -1,4 +1,4 @@
-import { DestroyRef, Injectable, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import {
   API_PREFIX,
   AdminServerMessageSchema,
@@ -25,6 +25,10 @@ const MAX_RETRY_MS = 15_000;
 @Injectable({ providedIn: 'root' })
 export class AdminSocketService {
   readonly connected = signal(false);
+  /** True once the socket has opened at least once: tells «reconnecting» from «first connect». */
+  readonly everConnected = signal(false);
+  /** The socket worked and dropped: what the UI warns about (not the first handshake). */
+  readonly lostConnection = computed(() => this.everConnected() && !this.connected());
   readonly connectorStatus = signal<ConnectorStatus | undefined>(undefined);
   readonly events = signal<readonly LiveEvent[]>([]);
   readonly lastError = signal<string | undefined>(undefined);
@@ -39,6 +43,8 @@ export class AdminSocketService {
   private wanted = false;
   /** Counts connector.status messages, so a slow /health reply never overwrites a newer one. */
   private statusVersion = 0;
+  /** Only the latest /health request may apply its result. */
+  private healthRequest = 0;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.disconnect());
@@ -53,6 +59,7 @@ export class AdminSocketService {
     socket.addEventListener('open', () => {
       this.attempt = 0;
       this.connected.set(true);
+      this.everConnected.set(true);
       void this.syncConnectorStatus();
     });
     socket.addEventListener('message', (e) => this.onMessage(e.data));
@@ -90,11 +97,13 @@ export class AdminSocketService {
   /** The socket only reports changes; ask once per (re)connection for the current state. */
   private async syncConnectorStatus(): Promise<void> {
     const version = this.statusVersion;
+    const request = ++this.healthRequest;
     try {
       const res = await fetch(`${API_PREFIX}/health`, { cache: 'no-store' });
       if (!res.ok) return;
       const health = (await res.json()) as HealthResponse;
-      if (version === this.statusVersion) this.connectorStatus.set(health.connector);
+      const latest = request === this.healthRequest && version === this.statusVersion;
+      if (latest) this.connectorStatus.set(health.connector);
     } catch {
       // the next connector.status message fills it in
     }

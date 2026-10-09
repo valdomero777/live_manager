@@ -81,10 +81,8 @@ export class StatusPage {
   protected readonly connector = computed(
     () => this.socket.connectorStatus() ?? this.health()?.connector,
   );
-  protected readonly isActive = computed(() => {
-    const state = this.connector()?.state;
-    return state !== undefined && state !== 'idle' && state !== 'stopped';
-  });
+  /** Only an idle connector has nothing to disconnect; when unsure, let the user try. */
+  protected readonly isActive = computed(() => this.connector()?.state !== 'idle');
   protected readonly screens = computed(() => Object.entries(this.health()?.screens ?? {}));
   protected readonly recentEvents = computed(() =>
     this.socket.events().slice(0, 50).map(toFeedItem),

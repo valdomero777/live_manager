@@ -56,7 +56,7 @@
         placeholder="p. ej. Nuevo seguidor"
         [value]="d.name"
         [attr.aria-invalid]="!!nameError()"
-        [attr.aria-describedby]="nameError() ? 't-name-error' : null"
+        [attr.aria-describedby]="describedBy('t-name', { error: nameError() })"
         (input)="patch({ name: $any($event.target).value })"
       />
     </ui-form-field>

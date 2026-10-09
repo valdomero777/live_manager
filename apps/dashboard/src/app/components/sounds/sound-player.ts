@@ -13,6 +13,7 @@ import { UI_ALERT } from '../ui/alert';
 import { UiButton } from '../ui/button';
 import { UiSpinner } from '../ui/feedback';
 import { UiSlider } from '../ui/input';
+import { absoluteSoundUrl } from './sound-url';
 
 /**
  * The chosen sound: play / pause / stop and the volume it will have on stream. Changing the
@@ -145,7 +146,7 @@ export class SoundPlayer {
   readonly volumeId = input('sound-volume');
   readonly volumeChange = output<number>();
 
-  private readonly src = computed(() => new URL(this.url(), location.href).href);
+  private readonly src = computed(() => absoluteSoundUrl(this.url()));
   protected readonly playing = computed(() => this.audio.playingUrl() === this.src());
   protected readonly paused = computed(() => this.audio.pausedUrl() === this.src());
   protected readonly loading = computed(() => this.audio.loadingUrl() === this.src());

@@ -37,8 +37,11 @@ function stateOf(status: ConnectorStatus | undefined): LiveState {
       return 'live';
     case 'reconnecting':
       return 'reconnecting';
+    case 'stopped':
+      // A failure stops the connector; a manual disconnect ends in idle (lastError is kept).
+      return status.lastError ? 'error' : 'disconnected';
     default:
-      return status?.lastError ? 'error' : 'disconnected';
+      return 'disconnected';
   }
 }
 

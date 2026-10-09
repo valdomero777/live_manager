@@ -29,7 +29,7 @@ import { UI_CARD } from '../../components/ui/card';
 import { ConfirmService } from '../../components/ui/confirm-dialog';
 import { UI_DROPDOWN_MENU } from '../../components/ui/dropdown-menu';
 import { UiSkeleton, UiSpinner } from '../../components/ui/feedback';
-import { UiFormField } from '../../components/ui/form-field';
+import { UiFormField, describedBy } from '../../components/ui/form-field';
 import { UiInput } from '../../components/ui/input';
 import { UiSwitch } from '../../components/ui/switch';
 import { ToastService } from '../../components/ui/toast';
@@ -112,6 +112,7 @@ export class TriggersPage {
   private readonly toast = inject(ToastService);
   protected readonly icons = { when: LucideRadio, then: LucideZap, empty: LucideVolume2 };
   protected readonly percent = percent;
+  protected readonly describedBy = describedBy;
 
   protected readonly draft = signal<Draft | undefined>(undefined);
   protected readonly busy = signal(false);
