@@ -1,118 +1,181 @@
-<h1>Simulador</h1>
-<p class="muted">
-  Los eventos simulados recorren el mismo camino que un live real: activan reglas, sonidos, voz,
-  rankings y metas. Si estás en vivo, se suman a la sesión actual.
-</p>
+<app-page-header
+  title="Simulador"
+  description="Los eventos simulados recorren el mismo camino que un live real: activan reglas, sonidos, voz, rankings y metas. Si estás en vivo, se suman a la sesión actual."
+/>
 
-<div class="card row">
-  <div>
-    <h2>Prueba completa</h2>
-    <p class="muted">Un regalo en racha, 100 likes, un comentario con !di y un nuevo seguidor.</p>
+<section
+  uiCard
+  class="overflow-hidden border-primary/30 bg-linear-to-br from-primary/10 via-card to-card"
+  aria-labelledby="sim-full"
+>
+  <div uiCardContent class="flex flex-col gap-4 sm:flex-row sm:items-center">
+    <div class="grid flex-1 gap-1">
+      <h2 class="type-card-title" id="sim-full">Prueba completa</h2>
+      <p class="type-secondary">
+        Un regalo en racha, 100 likes, un comentario con !di y un nuevo seguidor.
+      </p>
+    </div>
+    <button uiButton size="lg" type="button" (click)="fullTest()" [disabled]="busy()">
+      @if (busy()) {
+      <ui-spinner />
+      } @else {
+      <svg lucideRocket />
+      } Lanzar prueba completa
+    </button>
   </div>
-  <span style="flex: 1"></span>
-  <button class="primary" type="button" (click)="fullTest()" [disabled]="busy()">
-    Lanzar prueba completa
-  </button>
-</div>
+</section>
 
-@if (status(); as s) {
-<p class="notice" [class.ok]="s.ok" [class.danger]="!s.ok" role="status">{{ s.text }}</p>
+@if (error()) {
+<div uiAlert variant="destructive" role="alert">
+  <svg lucideCircleAlert />
+  <p uiAlertTitle>No se pudo enviar el evento</p>
+  <p uiAlertDescription>{{ error() }}</p>
+</div>
 }
 
-<div class="grid">
-  <form class="card stack" [formGroup]="gift" (ngSubmit)="sendGift()" aria-labelledby="sim-gift">
-    <h2 id="sim-gift">Regalo</h2>
-    <div class="field">
-      <label for="g-user">Usuario</label>
-      <input id="g-user" type="text" formControlName="user" />
-    </div>
-    <div class="field">
-      <label for="g-name">Nombre del regalo</label>
-      <input id="g-name" type="text" formControlName="giftName" />
-    </div>
-    <div class="row">
-      <div class="field">
-        <label for="g-diamonds">Diamantes c/u</label>
-        <input id="g-diamonds" type="number" min="0" formControlName="diamonds" />
+<div class="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+  <form uiCard [formGroup]="gift" (ngSubmit)="sendGift()" aria-labelledby="sim-gift">
+    <header uiCardHeader>
+      <h2 uiCardTitle id="sim-gift">
+        <span [class]="meta.gift.tone" class="grid size-7 place-items-center rounded-md"
+          ><svg [lucideIcon]="meta.gift.icon" class="size-3.5"
+        /></span>
+        Regalo
+      </h2>
+    </header>
+    <div uiCardContent class="grid gap-4">
+      <ui-form-field label="Usuario" for="g-user">
+        <input uiInput id="g-user" type="text" formControlName="user" />
+      </ui-form-field>
+      <ui-form-field label="Nombre del regalo" for="g-name">
+        <input uiInput id="g-name" type="text" formControlName="giftName" />
+      </ui-form-field>
+      <div class="grid grid-cols-2 gap-4">
+        <ui-form-field label="Diamantes c/u" for="g-diamonds">
+          <input uiInput id="g-diamonds" type="number" min="0" formControlName="diamonds" />
+        </ui-form-field>
+        <ui-form-field label="Cantidad" for="g-qty">
+          <input uiInput id="g-qty" type="number" min="1" formControlName="quantity" />
+        </ui-form-field>
       </div>
-      <div class="field">
-        <label for="g-qty">Cantidad</label>
-        <input id="g-qty" type="number" min="1" formControlName="quantity" />
+      <div class="flex items-center gap-3">
+        <ui-switch inputId="g-streak" formControlName="streak" />
+        <label for="g-streak" class="type-label"
+          >Enviar como racha
+          <span class="font-normal text-muted-foreground">(un mensaje por unidad)</span></label
+        >
       </div>
     </div>
-    <label class="check"
-      ><input type="checkbox" formControlName="streak" /> Enviar como racha (un mensaje por
-      unidad)</label
-    >
-    <button type="submit" [disabled]="busy()">Enviar regalo</button>
-  </form>
-
-  <form
-    class="card stack"
-    [formGroup]="comment"
-    (ngSubmit)="sendComment()"
-    aria-labelledby="sim-comment"
-  >
-    <h2 id="sim-comment">Comentario</h2>
-    <div class="field">
-      <label for="c-user">Usuario</label>
-      <input id="c-user" type="text" formControlName="user" />
-    </div>
-    <div class="field">
-      <label for="c-text">Texto</label>
-      <input id="c-text" type="text" formControlName="text" />
-    </div>
-    <button type="submit" [disabled]="busy()">Enviar comentario</button>
-  </form>
-
-  <form class="card stack" [formGroup]="likes" (ngSubmit)="sendLikes()" aria-labelledby="sim-likes">
-    <h2 id="sim-likes">Likes</h2>
-    <div class="field">
-      <label for="l-user">Usuario</label>
-      <input id="l-user" type="text" formControlName="user" />
-    </div>
-    <div class="field">
-      <label for="l-count">Cantidad</label>
-      <input id="l-count" type="number" min="1" formControlName="count" />
-    </div>
-    <button type="submit" [disabled]="busy()">Enviar likes</button>
-  </form>
-
-  <form
-    class="card stack"
-    [formGroup]="social"
-    (ngSubmit)="sendSocial()"
-    aria-labelledby="sim-social"
-  >
-    <h2 id="sim-social">Seguidor, entrada o compartido</h2>
-    <div class="field">
-      <label for="s-user">Usuario</label>
-      <input id="s-user" type="text" formControlName="user" />
-    </div>
-    <div class="field">
-      <label for="s-kind">Tipo</label>
-      <select id="s-kind" formControlName="kind">
-        <option value="follow">Nuevo seguidor</option>
-        <option value="join">Entró al live</option>
-        <option value="share">Compartió el live</option>
-      </select>
-    </div>
-    <button type="submit" [disabled]="busy()">Enviar</button>
-  </form>
-
-  <div class="card stack" aria-labelledby="sim-room">
-    <h2 id="sim-room">Sala</h2>
-    <div class="field">
-      <label for="v-count">Espectadores</label>
-      <input id="v-count" type="number" min="0" [formControl]="viewers" />
-    </div>
-    <div class="row">
-      <button type="button" (click)="sendViewers()" [disabled]="busy()">
-        Actualizar espectadores
+    <footer uiCardFooter>
+      <button uiButton variant="outline" type="submit" [disabled]="busy()">
+        <svg lucideSend /> Enviar regalo
       </button>
-      <button type="button" class="danger" (click)="endStream()" [disabled]="busy()">
-        Terminar live
-      </button>
+    </footer>
+  </form>
+
+  <form uiCard [formGroup]="comment" (ngSubmit)="sendComment()" aria-labelledby="sim-comment">
+    <header uiCardHeader>
+      <h2 uiCardTitle id="sim-comment">
+        <span [class]="meta.comment.tone" class="grid size-7 place-items-center rounded-md"
+          ><svg [lucideIcon]="meta.comment.icon" class="size-3.5"
+        /></span>
+        Comentario
+      </h2>
+    </header>
+    <div uiCardContent class="grid gap-4">
+      <ui-form-field label="Usuario" for="c-user">
+        <input uiInput id="c-user" type="text" formControlName="user" />
+      </ui-form-field>
+      <ui-form-field label="Texto" for="c-text">
+        <input uiInput id="c-text" type="text" formControlName="text" />
+      </ui-form-field>
     </div>
-  </div>
+    <footer uiCardFooter>
+      <button uiButton variant="outline" type="submit" [disabled]="busy()">
+        <svg lucideSend /> Enviar comentario
+      </button>
+    </footer>
+  </form>
+
+  <form uiCard [formGroup]="likes" (ngSubmit)="sendLikes()" aria-labelledby="sim-likes">
+    <header uiCardHeader>
+      <h2 uiCardTitle id="sim-likes">
+        <span [class]="meta.like.tone" class="grid size-7 place-items-center rounded-md"
+          ><svg [lucideIcon]="meta.like.icon" class="size-3.5"
+        /></span>
+        Likes
+      </h2>
+    </header>
+    <div uiCardContent class="grid gap-4">
+      <ui-form-field label="Usuario" for="l-user">
+        <input uiInput id="l-user" type="text" formControlName="user" />
+      </ui-form-field>
+      <ui-form-field label="Cantidad" for="l-count">
+        <input uiInput id="l-count" type="number" min="1" formControlName="count" />
+      </ui-form-field>
+    </div>
+    <footer uiCardFooter>
+      <button uiButton variant="outline" type="submit" [disabled]="busy()">
+        <svg lucideSend /> Enviar likes
+      </button>
+    </footer>
+  </form>
+
+  <form uiCard [formGroup]="social" (ngSubmit)="sendSocial()" aria-labelledby="sim-social">
+    <header uiCardHeader>
+      <h2 uiCardTitle id="sim-social">
+        <span [class]="meta.follow.tone" class="grid size-7 place-items-center rounded-md"
+          ><svg [lucideIcon]="meta.follow.icon" class="size-3.5"
+        /></span>
+        Seguidor, entrada o compartido
+      </h2>
+    </header>
+    <div uiCardContent class="grid gap-4">
+      <ui-form-field label="Usuario" for="s-user">
+        <input uiInput id="s-user" type="text" formControlName="user" />
+      </ui-form-field>
+      <ui-form-field label="Tipo" for="s-kind">
+        <select uiNativeSelect id="s-kind" formControlName="kind">
+          <option value="follow">Nuevo seguidor</option>
+          <option value="join">Entró al live</option>
+          <option value="share">Compartió el live</option>
+        </select>
+      </ui-form-field>
+    </div>
+    <footer uiCardFooter>
+      <button uiButton variant="outline" type="submit" [disabled]="busy()">
+        <svg lucideSend /> Enviar
+      </button>
+    </footer>
+  </form>
+
+  <section uiCard aria-labelledby="sim-room">
+    <header uiCardHeader>
+      <h2 uiCardTitle id="sim-room">
+        <span [class]="meta.viewerCount.tone" class="grid size-7 place-items-center rounded-md"
+          ><svg [lucideIcon]="meta.viewerCount.icon" class="size-3.5"
+        /></span>
+        Sala
+      </h2>
+    </header>
+    <div uiCardContent class="grid gap-4">
+      <ui-form-field label="Espectadores" for="v-count">
+        <input uiInput id="v-count" type="number" min="0" [formControl]="viewers" />
+      </ui-form-field>
+    </div>
+    <footer uiCardFooter>
+      <button uiButton variant="outline" type="button" (click)="sendViewers()" [disabled]="busy()">
+        <svg lucideSend /> Actualizar espectadores
+      </button>
+      <button
+        uiButton
+        variant="ghost-destructive"
+        type="button"
+        (click)="endStream()"
+        [disabled]="busy()"
+      >
+        <svg lucideCircleStop /> Terminar live
+      </button>
+    </footer>
+  </section>
 </div>

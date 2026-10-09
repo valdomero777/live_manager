@@ -8,62 +8,75 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import type {
-  ConnectorState,
-  HealthResponse,
-  LiveEvent,
-  SettingsResponse,
-} from '@tiklive/contracts';
+import {
+  LucideArchive,
+  LucideCircleAlert,
+  LucideDatabase,
+  LucideHardDrive,
+  LucideLink,
+  LucideMonitor,
+  LucidePlug,
+  LucideRadio,
+  LucideServer,
+  LucideTriangleAlert,
+  LucideUnplug,
+} from '@lucide/angular';
+import type { HealthResponse, SettingsResponse } from '@tiklive/contracts';
+import { EventFeed } from '../../components/live/event-feed';
+import { toFeedItem } from '../../components/live/event-format';
+import { LiveStatus } from '../../components/live/live-status';
+import { PageHeader } from '../../components/shared/page-header';
+import { UI_ALERT } from '../../components/ui/alert';
+import { UiBadge } from '../../components/ui/badge';
+import { UiButton } from '../../components/ui/button';
+import { UI_CARD } from '../../components/ui/card';
+import { UiSkeleton, UiSpinner } from '../../components/ui/feedback';
+import { UiInput } from '../../components/ui/input';
 import { AdminSocketService } from '../../core/admin-socket.service';
 import { ApiClient, ApiError } from '../../core/api-client';
 import { OverlayUrls } from './overlay-urls';
 
 const HEALTH_POLL_MS = 5_000;
 
-const STATE_LABELS: Readonly<Record<ConnectorState, string>> = {
-  idle: 'Sin conectar',
-  connecting: 'Conectando…',
-  connected: 'Conectado',
-  waiting_host: 'Esperando a que inicies el live',
-  reconnecting: 'Reconectando…',
-  stopped: 'Detenido',
-};
-
-function describeEvent(e: LiveEvent): string {
-  const who = 'viewer' in e ? `@${e.viewer.uniqueId}` : '';
-  switch (e.type) {
-    case 'comment':
-      return `${who}: ${e.text}`;
-    case 'gift':
-      return `${who} envió ${e.quantity} × ${e.giftName} (${e.diamondValue * e.quantity} 💎)`;
-    case 'like':
-      return `${who} dio ${e.likeDelta} likes`;
-    case 'follow':
-      return `${who} te sigue`;
-    case 'join':
-      return `${who} entró`;
-    case 'share':
-      return `${who} compartió el live`;
-    case 'viewerCount':
-      return `${e.viewerCount} espectadores`;
-    case 'streamEnd':
-      return 'El live terminó';
-  }
-}
-
 /** Operations overview: connector, system health, overlay URLs and the live event feed. */
 @Component({
   selector: 'app-status-page',
-  imports: [FormsModule, DatePipe, OverlayUrls],
+  imports: [
+    FormsModule,
+    DatePipe,
+    OverlayUrls,
+    PageHeader,
+    LiveStatus,
+    EventFeed,
+    UiBadge,
+    UiButton,
+    UiInput,
+    UiSkeleton,
+    UiSpinner,
+    ...UI_CARD,
+    ...UI_ALERT,
+    LucidePlug,
+    LucideUnplug,
+    LucideServer,
+    LucideDatabase,
+    LucideMonitor,
+    LucideLink,
+    LucideRadio,
+    LucideCircleAlert,
+    LucideTriangleAlert,
+    LucideHardDrive,
+    LucideArchive,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'page' },
   templateUrl: './status.page.html',
-  styleUrl: './status.page.css',
 })
 export class StatusPage {
   private readonly api = inject(ApiClient);
   protected readonly socket = inject(AdminSocketService);
 
   protected readonly health = signal<HealthResponse | undefined>(undefined);
+  protected readonly healthLoading = signal(true);
   protected readonly overlayKey = signal<string | undefined>(undefined);
   protected readonly addresses = signal<readonly string[]>([]);
   protected readonly username = signal('');
@@ -74,16 +87,11 @@ export class StatusPage {
   protected readonly connector = computed(
     () => this.socket.connectorStatus() ?? this.health()?.connector,
   );
-  protected readonly stateLabel = computed(() => {
-    const state = this.connector()?.state;
-    return state ? STATE_LABELS[state] : '—';
-  });
+  /** Only an idle connector has nothing to disconnect; when unsure, let the user try. */
+  protected readonly isActive = computed(() => this.connector()?.state !== 'idle');
   protected readonly screens = computed(() => Object.entries(this.health()?.screens ?? {}));
   protected readonly recentEvents = computed(() =>
-    this.socket
-      .events()
-      .slice(0, 25)
-      .map((e) => ({ id: e.id, at: e.occurredAt, type: e.type, text: describeEvent(e) })),
+    this.socket.events().slice(0, 50).map(toFeedItem),
   );
 
   constructor() {
@@ -130,6 +138,8 @@ export class StatusPage {
       this.health.set(await this.api.get<HealthResponse>('/health'));
     } catch {
       this.health.set(undefined);
+    } finally {
+      this.healthLoading.set(false);
     }
   }
 

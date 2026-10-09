@@ -1,8 +1,26 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import {
+  LucideCircleAlert,
+  LucideCircleStop,
+  LucideDynamicIcon,
+  LucideRocket,
+  LucideSend,
+} from '@lucide/angular';
 import type { SimulatorTemplateInput } from '@tiklive/contracts';
+import { EVENT_META } from '../../components/live/event-meta';
+import { PageHeader } from '../../components/shared/page-header';
+import { UI_ALERT } from '../../components/ui/alert';
+import { UiButton } from '../../components/ui/button';
+import { UI_CARD } from '../../components/ui/card';
+import { ConfirmService } from '../../components/ui/confirm-dialog';
+import { UiSpinner } from '../../components/ui/feedback';
+import { UiFormField } from '../../components/ui/form-field';
+import { UiInput, UiNativeSelect } from '../../components/ui/input';
+import { UiSwitch } from '../../components/ui/switch';
+import { ToastService } from '../../components/ui/toast';
 import { ApiClient } from '../../core/api-client';
-import { errorMessage } from '../../shared/labels';
+import { errorMessage } from '../../lib/labels';
 
 const FULL_TEST: readonly SimulatorTemplateInput[] = [
   { kind: 'gift', user: 'prueba', giftName: 'Rose', diamonds: 1, quantity: 5, streak: true },
@@ -17,38 +35,34 @@ const FULL_TEST: readonly SimulatorTemplateInput[] = [
  */
 @Component({
   selector: 'app-simulator-page',
-  imports: [ReactiveFormsModule],
+  imports: [
+    ReactiveFormsModule,
+    PageHeader,
+    UiButton,
+    UiInput,
+    UiNativeSelect,
+    UiFormField,
+    UiSwitch,
+    UiSpinner,
+    ...UI_CARD,
+    ...UI_ALERT,
+    LucideDynamicIcon,
+    LucideRocket,
+    LucideSend,
+    LucideCircleStop,
+    LucideCircleAlert,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'page' },
   templateUrl: './simulator.page.html',
-  styles: `
-    :host {
-      display: grid;
-      gap: 1.25rem;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
-      gap: 1.25rem;
-    }
-    .grid > * {
-      align-content: start;
-    }
-    .field {
-      display: grid;
-      gap: 0.3rem;
-    }
-    .check {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-weight: 500;
-    }
-  `,
 })
 export class SimulatorPage {
   private readonly api = inject(ApiClient);
+  private readonly confirm = inject(ConfirmService);
+  private readonly toast = inject(ToastService);
+  protected readonly meta = EVENT_META;
   protected readonly busy = signal(false);
-  protected readonly status = signal<{ ok: boolean; text: string } | undefined>(undefined);
+  protected readonly error = signal<string | undefined>(undefined);
 
   protected readonly gift = new FormGroup({
     user: new FormControl('ana', { nonNullable: true }),
@@ -91,12 +105,14 @@ export class SimulatorPage {
     return this.emit([{ kind: 'viewerCount', viewers: this.viewers.value }]);
   }
 
-  protected endStream(): Promise<void> {
-    return confirm(
-      'Se cerrará la sesión actual (los rankings de «Este live» empezarán de cero). ¿Continuar?',
-    )
-      ? this.emit([{ kind: 'streamEnd' }])
-      : Promise.resolve();
+  protected async endStream(): Promise<void> {
+    const ok = await this.confirm.confirm({
+      title: '¿Terminar el live simulado?',
+      description: 'Se cerrará la sesión actual y los rankings de «Este live» empezarán de cero.',
+      confirmLabel: 'Terminar live',
+      destructive: true,
+    });
+    if (ok) await this.emit([{ kind: 'streamEnd' }]);
   }
 
   /** "Prueba completa" (spec 13): gift, likes, comment and follow in one click. */
@@ -106,17 +122,18 @@ export class SimulatorPage {
 
   private async emit(templates: readonly SimulatorTemplateInput[]): Promise<void> {
     this.busy.set(true);
+    this.error.set(undefined);
     try {
       let emitted = 0;
       for (const t of templates) {
         emitted += (await this.api.post<{ emitted: number }>('/simulator/emit', t)).emitted;
       }
-      this.status.set({
-        ok: true,
-        text: `Enviado: ${emitted} mensaje(s). Mira Eventos y la pestaña de audio.`,
-      });
+      this.toast.success(
+        `Enviado: ${emitted} mensaje(s)`,
+        'Míralo en Eventos y en la pestaña de audio.',
+      );
     } catch (e) {
-      this.status.set({ ok: false, text: errorMessage(e) });
+      this.error.set(errorMessage(e));
     } finally {
       this.busy.set(false);
     }

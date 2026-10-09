@@ -1,108 +1,191 @@
-<h1>Estado</h1>
+<app-page-header
+  title="Conexión y estado"
+  description="Conecta el panel a tu TikTok LIVE, revisa el servidor y copia las URLs para OBS o LIVE Studio."
+/>
 
 @for (alert of health()?.alerts ?? []; track alert.code) {
-<p class="notice warn" role="alert">{{ alert.message }}</p>
+<div uiAlert variant="warning" role="alert">
+  <svg lucideTriangleAlert />
+  <p uiAlertDescription>{{ alert.message }}</p>
+</div>
 }
 
-<div class="grid">
-  <section class="card stack" aria-labelledby="connector-title">
-    <h2 id="connector-title">Conexión con TikTok</h2>
-    <p class="state">
-      <span
-        class="dot"
-        [class.ok]="connector()?.state === 'connected'"
-        [class.warn]="connector()?.state === 'reconnecting' || connector()?.state === 'waiting_host' || connector()?.state === 'connecting'"
-        aria-hidden="true"
-      ></span>
-      <strong>{{ stateLabel() }}</strong>
-      @if (connector()?.target; as target) {
-      <span class="muted">· &#64;{{ target }}</span>
+<div class="grid gap-4 lg:grid-cols-2">
+  <section uiCard aria-labelledby="connector-title">
+    <header uiCardHeader>
+      <h2 uiCardTitle id="connector-title"><svg lucideRadio /> Conexión con TikTok</h2>
+      <p uiCardDescription>Para conectar siempre al arrancar, guarda tu usuario en Ajustes.</p>
+    </header>
+    <div uiCardContent class="grid gap-4">
+      <div class="rounded-lg bg-muted p-3">
+        <app-live-status [status]="connector()" variant="full" />
+        @if (connector()?.nextRetryAt; as nextRetryAt) {
+        <p class="mt-2 type-caption">Próximo intento: {{ nextRetryAt | date: 'HH:mm:ss' }}</p>
+        }
+      </div>
+      @if (connector()?.lastError; as lastError) {
+      <div uiAlert variant="warning">
+        <svg lucideCircleAlert />
+        <p uiAlertTitle>Último error del conector</p>
+        <p uiAlertDescription>{{ lastError }}</p>
+      </div>
       }
-    </p>
-    @if (connector()?.lastError; as lastError) {
-    <p class="notice warn">Último error: {{ lastError }}</p>
-    } @if (connector()?.nextRetryAt; as nextRetryAt) {
-    <p class="muted">Próximo intento: {{ nextRetryAt | date: 'HH:mm:ss' }}</p>
-    }
-    <form class="row" (ngSubmit)="connect()">
-      <label class="sr-only" for="username">Usuario de TikTok</label>
-      <input
-        id="username"
-        type="text"
-        name="username"
-        placeholder="tu_usuario"
-        [ngModel]="username()"
-        (ngModelChange)="username.set($event)"
-        autocomplete="off"
-      />
-      <button class="primary" type="submit" [disabled]="busy()">Conectar</button>
-      <button type="button" (click)="disconnect()" [disabled]="busy()">Desconectar</button>
-    </form>
-    <p class="muted small">Para conectar siempre al arrancar, guarda tu usuario en Ajustes.</p>
-    @if (error()) {
-    <p class="notice danger" role="alert">{{ error() }}</p>
-    }
+      <form class="grid gap-2" (ngSubmit)="connect()">
+        <label class="type-label" for="username">Usuario de TikTok</label>
+        <div class="flex flex-col gap-2 sm:flex-row">
+          <div class="relative flex-1">
+            <span
+              class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+              >&#64;</span
+            >
+            <input
+              uiInput
+              id="username"
+              type="text"
+              name="username"
+              class="pl-7"
+              [placeholder]="connector()?.target || 'tu_usuario'"
+              [ngModel]="username()"
+              (ngModelChange)="username.set($event)"
+              autocomplete="off"
+              [attr.aria-invalid]="!!error()"
+              [attr.aria-describedby]="error() ? 'username-error' : null"
+            />
+          </div>
+          <div class="flex gap-2">
+            <button uiButton type="submit" class="flex-1" [disabled]="busy()">
+              @if (busy()) {
+              <ui-spinner />
+              } @else {
+              <svg lucidePlug />
+              } Conectar
+            </button>
+            <button
+              uiButton
+              variant="outline"
+              type="button"
+              class="flex-1"
+              (click)="disconnect()"
+              [disabled]="busy() || !isActive()"
+            >
+              <svg lucideUnplug /> Desconectar
+            </button>
+          </div>
+        </div>
+        @if (error()) {
+        <p
+          id="username-error"
+          class="flex items-center gap-1.5 text-xs font-medium text-danger-text"
+          role="alert"
+        >
+          <svg lucideCircleAlert class="size-3.5" /> {{ error() }}
+        </p>
+        }
+      </form>
+    </div>
   </section>
 
-  <section class="card stack" aria-labelledby="system-title">
-    <h2 id="system-title">Sistema</h2>
-    @if (health(); as h) {
-    <dl>
-      <dt>Estado</dt>
-      <dd>
-        <span class="badge" [class.ok]="h.status === 'ok'" [class.danger]="h.status !== 'ok'">
-          {{ h.status === 'ok' ? 'Correcto' : 'Degradado' }}
+  <section uiCard aria-labelledby="system-title">
+    <header uiCardHeader>
+      <h2 uiCardTitle id="system-title"><svg lucideServer /> Sistema</h2>
+      <p uiCardDescription>Se actualiza cada 5 segundos.</p>
+      @if (health(); as h) {
+      <div uiCardAction>
+        <span uiBadge [variant]="h.status === 'ok' ? 'success' : 'danger'">
+          {{ h.status === 'ok' ? 'Todo correcto' : 'Degradado' }}
         </span>
-      </dd>
-      <dt>Base de datos</dt>
-      <dd>{{ h.db === 'ok' ? 'Disponible' : 'Sin acceso' }}</dd>
-      <dt>Encendido hace</dt>
-      <dd>{{ uptime(h.uptimeS) }}</dd>
-      <dt>Espacio libre</dt>
-      <dd>{{ h.diskFreePercent === null ? '—' : h.diskFreePercent + ' %' }}</dd>
-      <dt>Último respaldo</dt>
-      <dd>
-        @if (h.lastBackupAt; as at) {{{ at | date: 'dd/MM HH:mm' }}} @else {<span class="muted"
-          >Aún no hay</span
-        >}
-      </dd>
-      <dt>Versión</dt>
-      <dd>{{ h.version }}</dd>
-      <dt>Pantallas conectadas</dt>
-      <dd>
-        @for (s of screens(); track s[0]) {
-        <span class="badge ok">{{ s[0] }} × {{ s[1] }}</span>
-        } @empty {
-        <span class="muted">Ninguna. Abre la pestaña de audio en la PC de stream.</span>
+      </div>
+      }
+    </header>
+    <div uiCardContent>
+      @if (health(); as h) {
+      <dl class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-sm">
+        <dt class="flex items-center gap-2 text-muted-foreground">
+          <svg lucideDatabase class="size-4" /> Base de datos
+        </dt>
+        <dd>
+          <span uiBadge [variant]="h.db === 'ok' ? 'success' : 'danger'"
+            >{{ h.db === 'ok' ? 'Disponible' : 'Sin acceso' }}</span
+          >
+        </dd>
+        <dt class="text-muted-foreground">Encendido hace</dt>
+        <dd class="tabular-nums">{{ uptime(h.uptimeS) }}</dd>
+        <dt class="flex items-center gap-2 text-muted-foreground">
+          <svg lucideHardDrive class="size-4" /> Espacio libre
+        </dt>
+        <dd class="tabular-nums">
+          {{ h.diskFreePercent === null ? '—' : h.diskFreePercent + ' %' }}
+        </dd>
+        <dt class="flex items-center gap-2 text-muted-foreground">
+          <svg lucideArchive class="size-4" /> Último respaldo
+        </dt>
+        <dd>
+          @if (h.lastBackupAt; as at) { {{ at | date: 'dd/MM HH:mm' }} } @else {
+          <span class="type-secondary">Aún no hay</span>
+          }
+        </dd>
+        <dt class="text-muted-foreground">Versión</dt>
+        <dd class="font-mono text-xs leading-5">{{ h.version }}</dd>
+        <dt class="flex items-center gap-2 text-muted-foreground">
+          <svg lucideMonitor class="size-4" /> Pantallas
+        </dt>
+        <dd class="flex flex-wrap gap-1.5">
+          @for (s of screens(); track s[0]) {
+          <span uiBadge variant="success">{{ s[0] }} × {{ s[1] }}</span>
+          } @empty {
+          <span class="type-secondary"
+            >Ninguna conectada. Abre la pestaña de audio en la PC de stream.</span
+          >
+          }
+        </dd>
+      </dl>
+      } @else if (healthLoading()) {
+      <div class="grid gap-3" aria-busy="true" aria-label="Cargando estado">
+        @for (i of [0, 1, 2, 3]; track i) {
+        <div uiSkeleton class="h-5"></div>
         }
-      </dd>
-    </dl>
-    } @else {
-    <p class="notice danger">No se pudo leer el estado del servidor.</p>
-    }
+      </div>
+      } @else {
+      <div uiAlert variant="destructive" role="alert">
+        <svg lucideCircleAlert />
+        <p uiAlertTitle>No se pudo leer el estado del servidor</p>
+        <p uiAlertDescription>Se reintenta automáticamente.</p>
+      </div>
+      }
+    </div>
   </section>
 </div>
 
-<section class="card stack" aria-labelledby="overlays-title">
-  <h2 id="overlays-title">URLs de los overlays</h2>
-  @if (overlayKey(); as key) {
-  <app-overlay-urls [overlayKey]="key" [lanAddresses]="addresses()" />
-  } @else {
-  <p class="muted">Cargando…</p>
-  }
+<section uiCard aria-labelledby="overlays-title">
+  <header uiCardHeader>
+    <h2 uiCardTitle id="overlays-title"><svg lucideLink /> URLs de los overlays</h2>
+    <p uiCardDescription>Pégalas en LIVE Studio (fuente Link) u OBS (Browser Source).</p>
+  </header>
+  <div uiCardContent>
+    @if (overlayKey(); as key) {
+    <app-overlay-urls [overlayKey]="key" [lanAddresses]="addresses()" />
+    } @else {
+    <div class="grid gap-3" aria-busy="true" aria-label="Cargando URLs">
+      @for (i of [0, 1, 2]; track i) {
+      <div uiSkeleton class="h-14"></div>
+      }
+    </div>
+    }
+  </div>
 </section>
 
-<section class="card stack" aria-labelledby="events-title">
-  <h2 id="events-title">Eventos en vivo</h2>
-  <ol class="events" aria-live="polite">
-    @for (e of recentEvents(); track e.id) {
-    <li>
-      <time class="muted">{{ e.at | date: 'HH:mm:ss' }}</time>
-      <span class="badge">{{ e.type }}</span>
-      <span>{{ e.text }}</span>
-    </li>
-    } @empty {
-    <li class="muted">Aún no llegan eventos. Inicia tu live o usa el simulador.</li>
-    }
-  </ol>
+<section uiCard aria-labelledby="events-title">
+  <header uiCardHeader>
+    <h2 uiCardTitle id="events-title">Eventos en vivo</h2>
+    <p uiCardDescription>Los últimos 50. La lista completa, con filtros, está en «Eventos».</p>
+  </header>
+  <div uiCardContent>
+    <app-event-feed
+      [items]="recentEvents()"
+      [loading]="socket.historyLoading()"
+      [realtime]="!socket.lostConnection()"
+      height="22rem"
+    />
+  </div>
 </section>

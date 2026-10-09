@@ -1,14 +1,20 @@
-import { DestroyRef, Injectable, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import {
   API_PREFIX,
   AdminServerMessageSchema,
   LiveEventSchema,
+  type AdminPayload,
   type ConnectorStatus,
+  type HealthResponse,
   type LiveEvent,
 } from '@tiklive/contracts';
 
+export type RuleExecution = AdminPayload<'rule.executed'> & { readonly at: number };
+
 /** Circular buffer of the latest events shown in the dashboard (spec 13). */
 const EVENT_BUFFER = 500;
+/** Rule executions kept for the dashboard's «Automatizaciones recientes». */
+const EXECUTION_BUFFER = 50;
 const BASE_RETRY_MS = 1_000;
 const MAX_RETRY_MS = 15_000;
 
@@ -19,14 +25,26 @@ const MAX_RETRY_MS = 15_000;
 @Injectable({ providedIn: 'root' })
 export class AdminSocketService {
   readonly connected = signal(false);
+  /** True once the socket has opened at least once: tells «reconnecting» from «first connect». */
+  readonly everConnected = signal(false);
+  /** The socket worked and dropped: what the UI warns about (not the first handshake). */
+  readonly lostConnection = computed(() => this.everConnected() && !this.connected());
   readonly connectorStatus = signal<ConnectorStatus | undefined>(undefined);
   readonly events = signal<readonly LiveEvent[]>([]);
   readonly lastError = signal<string | undefined>(undefined);
+  /** Newest first; only what happened since this tab opened (the server keeps no history). */
+  readonly ruleExecutions = signal<readonly RuleExecution[]>([]);
+  /** True until the first history request finishes, so feeds can show a skeleton. */
+  readonly historyLoading = signal(true);
 
   private socket: WebSocket | undefined;
   private attempt = 0;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private wanted = false;
+  /** Counts connector.status messages, so a slow /health reply never overwrites a newer one. */
+  private statusVersion = 0;
+  /** Only the latest /health request may apply its result. */
+  private healthRequest = 0;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.disconnect());
@@ -41,6 +59,8 @@ export class AdminSocketService {
     socket.addEventListener('open', () => {
       this.attempt = 0;
       this.connected.set(true);
+      this.everConnected.set(true);
+      void this.syncConnectorStatus();
     });
     socket.addEventListener('message', (e) => this.onMessage(e.data));
     socket.addEventListener('close', () => this.onClose());
@@ -69,6 +89,23 @@ export class AdminSocketService {
       });
     } catch {
       // history is a convenience; the live feed still works
+    } finally {
+      this.historyLoading.set(false);
+    }
+  }
+
+  /** The socket only reports changes; ask once per (re)connection for the current state. */
+  private async syncConnectorStatus(): Promise<void> {
+    const version = this.statusVersion;
+    const request = ++this.healthRequest;
+    try {
+      const res = await fetch(`${API_PREFIX}/health`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const health = (await res.json()) as HealthResponse;
+      const latest = request === this.healthRequest && version === this.statusVersion;
+      if (latest) this.connectorStatus.set(health.connector);
+    } catch {
+      // the next connector.status message fills it in
     }
   }
 
@@ -82,9 +119,16 @@ export class AdminSocketService {
     const parsed = AdminServerMessageSchema.safeParse(json);
     if (!parsed.success) return;
     const message = parsed.data;
-    if (message.type === 'connector.status') this.connectorStatus.set(message.payload);
+    if (message.type === 'connector.status') {
+      this.statusVersion++;
+      this.connectorStatus.set(message.payload);
+    }
     if (message.type === 'event.received') {
       this.events.update((list) => [message.payload, ...list].slice(0, EVENT_BUFFER));
+    }
+    if (message.type === 'rule.executed') {
+      const execution = { ...message.payload, at: message.ts };
+      this.ruleExecutions.update((list) => [execution, ...list].slice(0, EXECUTION_BUFFER));
     }
     if (message.type === 'error.reported') {
       this.lastError.set(`${message.payload.module}: ${message.payload.message}`);

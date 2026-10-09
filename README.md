@@ -81,8 +81,9 @@ apps/server/src/
   interface/       Fastify: /api/v1 y /ws
   main/            composition root, config, seed
 packages/contracts Zod: eventos, mensajes WS, reglas (compartido por servidor y overlays)
-apps/dashboard     panel Angular 21 (/admin): estado, eventos, reglas, rankings y metas, assets,
-                   overlays, simulador y ajustes
+apps/dashboard     panel Angular 21 (/admin): dashboard, estado, eventos, reglas, triggers, rankings
+                   y metas, assets, overlays, simulador y ajustes. UI con Tailwind v4 y componentes
+                   estilo shadcn/ui sobre Angular CDK + Lucide (docs/adr/0010-dashboard-design-system.md)
 packages/overlays  pantallas sin framework (Vite): /screen/audio, /screen/alerts, /overlay/*
 tools/simulate.ts  CLI del simulador
 ```

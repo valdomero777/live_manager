@@ -3,6 +3,26 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { SETTING_KEYS, type SettingKey, type SettingView } from '@tiklive/contracts';
 import { startWith } from 'rxjs';
+import {
+  LucideCircleAlert,
+  LucideCircleCheck,
+  LucideKeyRound,
+  LucideMic,
+  LucideRefreshCw,
+  LucideRotateCcw,
+  LucideSettings,
+  LucideShield,
+} from '@lucide/angular';
+import { PageHeader } from '../../components/shared/page-header';
+import { UI_ALERT } from '../../components/ui/alert';
+import { UiBadge } from '../../components/ui/badge';
+import { UiButton } from '../../components/ui/button';
+import { UI_CARD } from '../../components/ui/card';
+import { ConfirmService } from '../../components/ui/confirm-dialog';
+import { UiSkeleton, UiSpinner } from '../../components/ui/feedback';
+import { UiInput, UiNativeSelect } from '../../components/ui/input';
+import { UiSwitch } from '../../components/ui/switch';
+import { UI_TABS } from '../../components/ui/tabs';
 import { ApiError } from '../../core/api-client';
 import { ModerationForm } from './moderation-form';
 import { PasswordForm } from './password-form';
@@ -24,14 +44,39 @@ const LABELS = new Map(SETTING_SECTIONS.flatMap((s) => s.fields).map((f) => [f.k
  */
 @Component({
   selector: 'app-settings-page',
-  imports: [ReactiveFormsModule, ModerationForm, PasswordForm],
+  imports: [
+    ReactiveFormsModule,
+    ModerationForm,
+    PasswordForm,
+    PageHeader,
+    UiBadge,
+    UiButton,
+    UiInput,
+    UiNativeSelect,
+    UiSkeleton,
+    UiSpinner,
+    UiSwitch,
+    ...UI_CARD,
+    ...UI_ALERT,
+    ...UI_TABS,
+    LucideSettings,
+    LucideMic,
+    LucideShield,
+    LucideRefreshCw,
+    LucideRotateCcw,
+    LucideKeyRound,
+    LucideCircleAlert,
+    LucideCircleCheck,
+  ],
   providers: [SettingsStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'page pb-24' },
   templateUrl: './settings.page.html',
-  styleUrl: './settings.page.css',
 })
 export class SettingsPage {
   protected readonly store = inject(SettingsStore);
+  private readonly confirm = inject(ConfirmService);
+  protected readonly tab = signal('general');
   protected readonly sections = SETTING_SECTIONS;
   protected readonly applyLabels = APPLY_LABELS;
   protected readonly sourceLabel = sourceLabel;
@@ -104,17 +149,22 @@ export class SettingsPage {
   }
 
   protected async rotateOverlayKey(): Promise<void> {
-    const ok = confirm(
-      'Se generará una clave nueva y las URLs actuales de los overlays dejarán de funcionar. ' +
-        'Tendrás que pegar las nuevas URLs en LIVE Studio u OBS. ¿Continuar?',
-    );
+    const ok = await this.confirm.confirm({
+      title: '¿Generar una clave nueva?',
+      description:
+        'Las URLs actuales de los overlays dejarán de funcionar y tendrás que pegar las nuevas en LIVE Studio u OBS.',
+      confirmLabel: 'Generar clave',
+      destructive: true,
+    });
     if (ok) await this.run(() => this.store.rotateOverlayKey());
   }
 
   protected async restart(): Promise<void> {
-    const ok = confirm(
-      'El servidor se reiniciará (unos segundos). Los overlays y el conector se reconectan solos. ¿Continuar?',
-    );
+    const ok = await this.confirm.confirm({
+      title: '¿Reiniciar el servidor?',
+      description: 'Tarda unos segundos. Los overlays y el conector se reconectan solos.',
+      confirmLabel: 'Reiniciar ahora',
+    });
     if (!ok) return;
     await this.run(async () => {
       const outcome = await this.store.restart();

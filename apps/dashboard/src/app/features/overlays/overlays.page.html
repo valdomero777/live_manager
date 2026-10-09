@@ -1,124 +1,170 @@
-<h1>Overlays</h1>
+<app-page-header
+  title="Overlays"
+  description="Elige un overlay, ajusta sus parámetros y copia la URL final. La vista previa se actualiza al instante."
+/>
 
-<div class="layout">
-  <section class="card stack" aria-labelledby="cfg-title">
-    <h2 id="cfg-title">Configurar</h2>
-    <div class="field">
-      <label for="o-type">Overlay</label>
-      <select id="o-type" (change)="selectType($any($event.target).value)">
-        @for (t of types; track t.id) {
-        <option [value]="t.id" [selected]="t.id + '' === (typeId()) + ''">{{ t.label }}</option>
-        }
-      </select>
-      <small class="muted">{{ type().help }}</small>
-    </div>
+<div class="grid items-start gap-4 lg:grid-cols-[minmax(18rem,26rem)_minmax(0,1fr)]">
+  <section uiCard aria-labelledby="cfg-title">
+    <header uiCardHeader>
+      <h2 uiCardTitle id="cfg-title"><svg lucideSlidersHorizontal /> Configurar</h2>
+    </header>
+    <div uiCardContent class="grid gap-4">
+      <ui-form-field label="Overlay" for="o-type" [description]="type().help">
+        <select
+          uiNativeSelect
+          id="o-type"
+          aria-describedby="o-type-description"
+          (change)="selectType($any($event.target).value)"
+        >
+          @for (t of types; track t.id) {
+          <option [value]="t.id" [selected]="t.id === typeId()">{{ t.label }}</option>
+          }
+        </select>
+      </ui-form-field>
 
-    @for (p of type().params; track p.key) { @let id = 'o-' + type().id + '-' + p.key;
-    <div class="field">
-      @switch (p.kind) { @case ('boolean') {
-      <label class="check">
-        <input
-          type="checkbox"
+      @for (p of type().params; track p.key) { @let id = 'o-' + type().id + '-' + p.key; @switch
+      (p.kind) { @case ('boolean') {
+      <div class="flex items-center gap-3">
+        <ui-switch
+          [inputId]="id"
           [checked]="value(p) === '1'"
-          (change)="set(p, $any($event.target).checked ? '1' : '')"
+          (checkedChange)="set(p, $event ? '1' : '')"
         />
-        {{ p.label }}
-      </label>
+        <label class="type-label" [for]="id">{{ p.label }}</label>
+      </div>
       } @case ('multi') {
-      <fieldset>
-        <legend>{{ p.label }}</legend>
-        @for (o of p.options ?? []; track o.value) {
-        <label class="check">
-          <input
-            type="checkbox"
-            [checked]="isChecked(p, o.value)"
-            (change)="toggleMulti(p, o.value, $any($event.target).checked)"
-          />
-          {{ o.label }}
-        </label>
-        }
+      <fieldset class="m-0 grid gap-2 rounded-lg border p-3">
+        <legend class="px-1 type-label">{{ p.label }}</legend>
+        <div class="grid grid-cols-2 gap-2">
+          @for (o of p.options ?? []; track o.value) {
+          <label class="flex items-center gap-2 text-sm">
+            <input
+              uiCheckbox
+              type="checkbox"
+              [checked]="isChecked(p, o.value)"
+              (change)="toggleMulti(p, o.value, $any($event.target).checked)"
+            />
+            {{ o.label }}
+          </label>
+          }
+        </div>
       </fieldset>
       } @case ('select') {
-      <label [for]="id">{{ p.label }}</label>
-      <select [id]="id" (change)="set(p, $any($event.target).value)">
-        @for (o of p.options ?? []; track o.value) {
-        <option [value]="o.value" [selected]="o.value + '' === (value(p)) + ''">
-          {{ o.label }}
-        </option>
-        }
-      </select>
+      <ui-form-field [label]="p.label" [for]="id">
+        <select uiNativeSelect [id]="id" (change)="set(p, $any($event.target).value)">
+          @for (o of p.options ?? []; track o.value) {
+          <option [value]="o.value" [selected]="o.value === value(p)">{{ o.label }}</option>
+          }
+        </select>
+      </ui-form-field>
       } @case ('goal') {
-      <label [for]="id">{{ p.label }}</label>
-      <select [id]="id" (change)="set(p, $any($event.target).value)">
-        @for (g of goals(); track g.id) {
-        <option [value]="g.id" [selected]="g.id + '' === (value(p)) + ''">{{ g.name }}</option>
-        } @empty {
-        <option value="1" [selected]="'1' === (value(p)) + ''">
-          No hay metas: créalas en Rankings y metas
-        </option>
-        }
-      </select>
+      <ui-form-field [label]="p.label" [for]="id">
+        <select uiNativeSelect [id]="id" (change)="set(p, $any($event.target).value)">
+          @for (g of goals(); track g.id) {
+          <option [value]="g.id" [selected]="g.id + '' === value(p)">{{ g.name }}</option>
+          } @empty {
+          <option value="1" [selected]="value(p) === '1'">
+            No hay metas: créalas en Rankings y metas
+          </option>
+          }
+        </select>
+      </ui-form-field>
       } @case ('number') {
-      <label [for]="id">{{ p.label }}</label>
-      <input
-        [id]="id"
-        type="number"
-        [attr.min]="p.min"
-        [attr.max]="p.max"
-        [attr.step]="p.step"
-        [value]="value(p)"
-        (input)="set(p, $any($event.target).value)"
-      />
+      <ui-form-field [label]="p.label" [for]="id">
+        <input
+          uiInput
+          [id]="id"
+          type="number"
+          [attr.min]="p.min"
+          [attr.max]="p.max"
+          [attr.step]="p.step"
+          [value]="value(p)"
+          (input)="set(p, $any($event.target).value)"
+        />
+      </ui-form-field>
       } @default {
-      <label [for]="id">{{ p.label }}</label>
-      <input [id]="id" type="text" [value]="value(p)" (input)="set(p, $any($event.target).value)" />
-      } }
-    </div>
-    }
+      <ui-form-field [label]="p.label" [for]="id">
+        <input
+          uiInput
+          [id]="id"
+          type="text"
+          [value]="value(p)"
+          (input)="set(p, $any($event.target).value)"
+        />
+      </ui-form-field>
+      } } }
 
-    <div class="field">
-      <label for="o-host">Dirección para la PC de stream</label>
-      <select id="o-host" (change)="host.set($any($event.target).value)">
-        @for (h of hosts(); track h) {
-        <option [value]="h" [selected]="h + '' === (host()) + ''">{{ h }}</option>
-        }
-      </select>
-    </div>
+      <ui-form-field label="Dirección para la PC de stream" for="o-host">
+        <select uiNativeSelect id="o-host" (change)="host.set($any($event.target).value)">
+          @for (h of hosts(); track h) {
+          <option [value]="h" [selected]="h === host()">{{ h }}</option>
+          }
+        </select>
+      </ui-form-field>
 
-    <div class="url">
-      <code>{{ url() }}</code>
-      <div class="row">
-        <app-copy-button [value]="url()" label="URL del overlay" />
-        <a class="button" [href]="url()" target="_blank" rel="noopener">Abrir</a>
+      <div class="grid gap-2 rounded-lg border bg-muted/40 p-3">
+        <span class="type-label">URL del overlay</span>
+        <code class="font-mono text-xs break-all text-muted-foreground">{{ url() }}</code>
+        <div class="flex gap-2">
+          <app-copy-button [value]="url()" label="URL del overlay" />
+          <a uiButton variant="ghost" size="sm" [href]="url()" target="_blank" rel="noopener"
+            ><svg lucideExternalLink /> Abrir</a
+          >
+        </div>
       </div>
+      <p class="type-caption">
+        Pégala en LIVE Studio como fuente <strong>Link</strong> o en OBS como
+        <strong>Browser Source</strong>.
+      </p>
     </div>
-    <p class="muted small">
-      Pégala en LIVE Studio como fuente <strong>Link</strong> o en OBS como
-      <strong>Browser Source</strong>.
-    </p>
   </section>
 
-  <section class="card stack preview-card" aria-labelledby="prev-title">
-    <div class="row">
-      <h2 id="prev-title">Vista previa</h2>
-      <span class="spacer"></span>
-      <label for="o-bg" class="sr-only">Fondo de la vista previa</label>
-      <select id="o-bg" (change)="previewBg.set($any($event.target).value)">
-        <option value="checker" [selected]="'checker' === (previewBg()) + ''">
-          Fondo transparente
-        </option>
-        <option value="dark" [selected]="'dark' === (previewBg()) + ''">Fondo oscuro</option>
-        <option value="light" [selected]="'light' === (previewBg()) + ''">Fondo claro</option>
-      </select>
-      <button type="button" (click)="reloadToken.set(reloadToken() + 1)">Recargar</button>
+  <section uiCard class="lg:sticky lg:top-20" aria-labelledby="prev-title">
+    <header uiCardHeader>
+      <h2 uiCardTitle id="prev-title"><svg lucideTv /> Vista previa</h2>
+      <div uiCardAction>
+        <button
+          uiButton
+          variant="ghost"
+          size="icon-sm"
+          type="button"
+          aria-label="Recargar vista previa"
+          (click)="reloadToken.set(reloadToken() + 1)"
+        >
+          <svg lucideRefreshCw />
+        </button>
+      </div>
+    </header>
+    <div uiCardContent class="grid gap-3">
+      <div uiToggleGroup aria-label="Fondo de la vista previa">
+        @for (b of backgrounds; track b.value) {
+        <button
+          uiToggleGroupItem
+          [pressed]="previewBg() === b.value"
+          (click)="previewBg.set(b.value)"
+        >
+          {{ b.label }}
+        </button>
+        }
+      </div>
+      <!-- Stand-ins for the stream behind the overlay, not theme colors. -->
+      <div
+        class="aspect-video overflow-hidden rounded-lg border"
+        [class.bg-checker]="previewBg() === 'checker'"
+        [class.bg-zinc-950]="previewBg() === 'dark'"
+        [class.bg-zinc-100]="previewBg() === 'light'"
+      >
+        <iframe
+          [src]="previewUrl()"
+          title="Vista previa del overlay"
+          class="size-full border-0 bg-transparent scheme-light"
+        ></iframe>
+      </div>
+      <p class="type-caption">
+        Usa el Simulador para ver datos en movimiento. La pestaña de audio necesita un clic en
+        «Iniciar audio» incluso aquí.
+      </p>
     </div>
-    <div class="preview" [attr.data-bg]="previewBg()">
-      <iframe [src]="previewUrl()" title="Vista previa del overlay"></iframe>
-    </div>
-    <p class="muted small">
-      Usa el Simulador para ver datos en movimiento. La pestaña de audio necesita un clic en
-      «Iniciar audio» incluso aquí.
-    </p>
   </section>
 </div>
 

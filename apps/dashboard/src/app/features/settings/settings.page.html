@@ -1,140 +1,215 @@
-<h1>Ajustes</h1>
+<app-page-header
+  title="Ajustes"
+  description="Todo lo que antes eran variables de entorno, editable aquí. Lo guardado en el panel tiene prioridad sobre el archivo .env."
+/>
 
 @if (store.restarting()) {
-<p class="notice info" role="status">Reiniciando el servidor… esta página se actualizará sola.</p>
+<div uiAlert variant="info" role="status">
+  <ui-spinner class="col-start-1" />
+  <p uiAlertTitle>Reiniciando el servidor…</p>
+  <p uiAlertDescription>Esta página se actualizará sola.</p>
+</div>
 } @else if (store.restartPending()) {
-<div class="notice warn row" role="status">
-  <span>
-    <strong>Cambios pendientes de reinicio:</strong> {{ pendingRestartLabels().join(', ') }}.
-  </span>
-  <span class="spacer"></span>
-  <button class="primary" type="button" (click)="restart()" [disabled]="busy()">
-    Reiniciar ahora
-  </button>
-</div>
-} @if (resultSummary(); as r) {
-<div class="notice ok" role="status">
-  @if (r.applied.length) {
-  <div>Aplicado al instante: {{ r.applied.join(', ') }}.</div>
-  } @if (r.restart.length) {
-  <div>Se aplicará al reiniciar: {{ r.restart.join(', ') }}.</div>
-  } @if (!r.applied.length && !r.restart.length) {
-  <div>Guardado.</div>
-  }
-</div>
-} @if (error()) {
-<p class="notice danger" role="alert">{{ error() }}</p>
-}
-
-<form [formGroup]="form" (ngSubmit)="save()" class="stack" novalidate>
-  @for (section of sections; track section.id) {
-  <section class="card stack" [attr.aria-labelledby]="'sec-' + section.id">
-    <div>
-      <h2 [id]="'sec-' + section.id">{{ section.title }}</h2>
-      <p class="muted desc">{{ section.description }}</p>
-    </div>
-
-    @for (def of section.fields; track def.key) { @if (field(def.key); as view) {
-    <div class="field">
-      <div class="field-head">
-        @if (def.kind === 'boolean') {
-        <label class="check">
-          <input
-            type="checkbox"
-            [formControlName]="def.key"
-            [attr.aria-describedby]="'help-' + def.key"
-          />
-          {{ def.label }}
-        </label>
-        } @else {
-        <label [for]="'f-' + def.key">{{ def.label }}</label>
-        }
-        <span class="badge" [class.warn]="view.apply === 'restart'"
-          >{{ applyLabels[view.apply] }}</span
-        >
-        <span class="badge">{{ sourceLabel(view.source, view.env) }}</span>
-        @if (view.pendingRestart) {
-        <span class="badge warn">Pendiente de reinicio</span>
-        }
-      </div>
-
-      @switch (def.kind) { @case ('number') {
-      <input
-        [id]="'f-' + def.key"
-        type="number"
-        [formControlName]="def.key"
-        [attr.aria-describedby]="'help-' + def.key"
-      />
-      } @case ('select') {
-      <select
-        [id]="'f-' + def.key"
-        [formControlName]="def.key"
-        [attr.aria-describedby]="'help-' + def.key"
-      >
-        @for (o of def.options ?? []; track o.value) {
-        <option [value]="o.value">{{ o.label }}</option>
-        }
-      </select>
-      } @case ('secret') {
-      <input
-        [id]="'f-' + def.key"
-        type="password"
-        autocomplete="off"
-        [formControlName]="def.key"
-        [placeholder]="view.isSet ? '•••••••• (definida; escribe para reemplazarla)' : 'Sin definir'"
-        [attr.aria-describedby]="'help-' + def.key"
-      />
-      } @case ('text') {
-      <input
-        [id]="'f-' + def.key"
-        type="text"
-        autocomplete="off"
-        spellcheck="false"
-        [formControlName]="def.key"
-        [attr.aria-describedby]="'help-' + def.key"
-      />
-      } }
-
-      <small class="muted" [id]="'help-' + def.key">{{ def.help }}</small>
-      @if (errorFor(def); as message) {
-      <small class="field-error" role="alert">{{ message }}</small>
-      } @if (view.source === 'ui') {
-      <button type="button" class="link" (click)="useEnvironment(def.key)" [disabled]="busy()">
-        Quitar valor del panel (usar {{ view.env }} o el valor por defecto)
-      </button>
-      }
-    </div>
-    } } @if (section.id === 'overlays') {
-    <div class="row">
-      <button type="button" (click)="rotateOverlayKey()" [disabled]="busy()">
-        Generar clave nueva
-      </button>
-      <span class="muted">Útil si alguien obtuvo tus URLs de overlays.</span>
-    </div>
-    }
-  </section>
-  }
-
-  <div class="actions" [class.dirty]="changed().length > 0">
-    <span class="muted" aria-live="polite">
-      {{ changed().length ? changed().length + ' cambio(s) sin guardar' : 'Sin cambios' }}
-    </span>
-    <span class="spacer"></span>
-    <button type="button" (click)="discard()" [disabled]="busy() || !changed().length">
-      Descartar
-    </button>
-    <button class="primary" type="submit" [disabled]="busy() || !changed().length">
-      Guardar cambios
+<div uiAlert variant="warning" role="status">
+  <svg lucideRefreshCw />
+  <p uiAlertTitle>Cambios pendientes de reinicio</p>
+  <div uiAlertDescription>
+    <p>{{ pendingRestartLabels().join(', ') }}.</p>
+    <button uiButton size="sm" type="button" (click)="restart()" [disabled]="busy()">
+      <svg lucideRotateCcw /> Reiniciar ahora
     </button>
   </div>
-</form>
-
-<app-moderation-form />
-<app-password-form />
-
-@if (store.view(); as v) {
-<p class="muted small">
-  Los valores del panel se guardan en <code>{{ v.configPath }}</code> y tienen prioridad sobre el
-  archivo <code>.env</code>.
-</p>
+</div>
+} @if (resultSummary(); as r) {
+<div uiAlert variant="success" role="status">
+  <svg lucideCircleCheck />
+  <p uiAlertTitle>Ajustes guardados</p>
+  <div uiAlertDescription>
+    @if (r.applied.length) {
+    <p>Aplicado al instante: {{ r.applied.join(', ') }}.</p>
+    } @if (r.restart.length) {
+    <p>Se aplicará al reiniciar: {{ r.restart.join(', ') }}.</p>
+    }
+  </div>
+</div>
+} @if (error()) {
+<div uiAlert variant="destructive" role="alert">
+  <svg lucideCircleAlert />
+  <p uiAlertTitle>No se pudieron guardar los ajustes</p>
+  <p uiAlertDescription>{{ error() }}</p>
+</div>
 }
+
+<ui-tabs [(value)]="tab" name="settings">
+  <div uiTabsList aria-label="Secciones de ajustes">
+    <button uiTabsTrigger="general"><svg lucideSettings /> Configuración</button>
+    <button uiTabsTrigger="voz"><svg lucideMic /> Voz (TTS)</button>
+    <button uiTabsTrigger="seguridad"><svg lucideShield /> Seguridad</button>
+  </div>
+
+  <div uiTabsContent="general">
+    @if (!store.view()) {
+    <div class="grid gap-4" aria-busy="true" aria-label="Cargando ajustes">
+      @for (i of [0, 1, 2]; track i) {
+      <div uiSkeleton class="h-40 rounded-xl"></div>
+      }
+    </div>
+    }
+    <form [formGroup]="form" (ngSubmit)="save()" class="grid gap-4" novalidate>
+      @for (section of sections; track section.id) { @if (store.view()) {
+      <section uiCard [attr.aria-labelledby]="'sec-' + section.id">
+        <header uiCardHeader>
+          <h2 uiCardTitle [id]="'sec-' + section.id">{{ section.title }}</h2>
+          <p uiCardDescription>{{ section.description }}</p>
+        </header>
+        <div uiCardContent class="grid gap-5">
+          @for (def of section.fields; track def.key) { @if (field(def.key); as view) { @let fid =
+          'f-' + def.key; @let err = errorFor(def);
+          <div class="grid min-w-0 gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              @if (def.kind === 'boolean') {
+              <ui-switch [inputId]="fid" [formControlName]="def.key" />
+              }
+              <label class="type-label" [for]="fid">{{ def.label }}</label>
+              <span uiBadge [variant]="view.apply === 'restart' ? 'warning' : 'secondary'"
+                >{{ applyLabels[view.apply] }}</span
+              >
+              <span uiBadge variant="outline" class="max-w-full whitespace-normal"
+                >{{ sourceLabel(view.source, view.env) }}</span
+              >
+              @if (view.pendingRestart) {
+              <span uiBadge variant="warning">Pendiente de reinicio</span>
+              }
+            </div>
+            @switch (def.kind) { @case ('number') {
+            <input
+              uiInput
+              class="max-w-xs"
+              [id]="fid"
+              type="number"
+              [formControlName]="def.key"
+              [attr.aria-invalid]="!!err"
+              [attr.aria-describedby]="'help-' + def.key + (err ? ' err-' + def.key : '')"
+            />
+            } @case ('select') {
+            <select
+              uiNativeSelect
+              class="max-w-xs"
+              [id]="fid"
+              [formControlName]="def.key"
+              [attr.aria-describedby]="'help-' + def.key"
+            >
+              @for (o of def.options ?? []; track o.value) {
+              <option [value]="o.value">{{ o.label }}</option>
+              }
+            </select>
+            } @case ('secret') {
+            <input
+              uiInput
+              class="max-w-md"
+              [id]="fid"
+              type="password"
+              autocomplete="off"
+              [formControlName]="def.key"
+              [placeholder]="view.isSet ? '•••••••• (definida; escribe para reemplazarla)' : 'Sin definir'"
+              [attr.aria-invalid]="!!err"
+              [attr.aria-describedby]="'help-' + def.key + (err ? ' err-' + def.key : '')"
+            />
+            } @case ('text') {
+            <input
+              uiInput
+              class="max-w-md"
+              [id]="fid"
+              type="text"
+              autocomplete="off"
+              spellcheck="false"
+              [formControlName]="def.key"
+              [attr.aria-invalid]="!!err"
+              [attr.aria-describedby]="'help-' + def.key + (err ? ' err-' + def.key : '')"
+            />
+            } }
+            <p class="type-caption" [id]="'help-' + def.key">{{ def.help }}</p>
+            @if (err) {
+            <p
+              class="flex items-center gap-1.5 text-xs font-medium text-danger-text"
+              [id]="'err-' + def.key"
+              role="alert"
+            >
+              <svg lucideCircleAlert class="size-3.5" /> {{ err }}
+            </p>
+            } @if (view.source === 'ui') {
+            <button
+              uiButton
+              variant="link"
+              size="sm"
+              type="button"
+              class="h-auto justify-self-start text-left text-xs whitespace-normal"
+              (click)="useEnvironment(def.key)"
+              [disabled]="busy()"
+            >
+              Quitar valor del panel (usar {{ view.env }} o el valor por defecto)
+            </button>
+            }
+          </div>
+          } } @if (section.id === 'overlays') {
+          <div class="flex flex-wrap items-center gap-3 rounded-lg bg-muted p-3">
+            <button
+              uiButton
+              variant="outline"
+              size="sm"
+              type="button"
+              (click)="rotateOverlayKey()"
+              [disabled]="busy()"
+            >
+              <svg lucideKeyRound /> Generar clave nueva
+            </button>
+            <span class="type-caption">Útil si alguien obtuvo tus URLs de overlays.</span>
+          </div>
+          }
+        </div>
+      </section>
+      } } @if (store.view(); as v) {
+      <p class="type-caption">
+        Los valores del panel se guardan en <code class="font-mono">{{ v.configPath }}</code> y
+        tienen prioridad sobre el archivo <code class="font-mono">.env</code>.
+      </p>
+      }
+
+      <div
+        class="sticky bottom-4 z-20 flex flex-col gap-3 rounded-xl border bg-popover/95 p-3 shadow-overlay backdrop-blur sm:flex-row sm:items-center sm:px-4"
+      >
+        <p class="flex-1 type-secondary" aria-live="polite">
+          @if (changed().length) {
+          <span class="font-medium text-foreground"
+            >{{ changed().length }} cambio(s) sin guardar</span
+          >
+          } @else { Sin cambios }
+        </p>
+        <div class="flex gap-2">
+          <button
+            uiButton
+            variant="ghost"
+            type="button"
+            (click)="discard()"
+            [disabled]="busy() || !changed().length"
+          >
+            Descartar
+          </button>
+          <button uiButton type="submit" [disabled]="busy() || !changed().length">
+            @if (busy()) {
+            <ui-spinner />
+            } Guardar cambios
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div uiTabsContent="voz">
+    <app-moderation-form />
+  </div>
+
+  <div uiTabsContent="seguridad">
+    <app-password-form />
+  </div>
+</ui-tabs>

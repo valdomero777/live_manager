@@ -1,5 +1,5 @@
 import { METRICS, SCOPES, STATS_FIELDS } from '@tiklive/contracts';
-import { METRIC_LABELS, SCOPE_LABELS } from '../../shared/labels';
+import { METRIC_LABELS, SCOPE_LABELS } from '../../lib/labels';
 
 export type OverlayParamKind =
   'select' | 'number' | 'text' | 'boolean' | 'multi' | 'goal' | 'rotator';

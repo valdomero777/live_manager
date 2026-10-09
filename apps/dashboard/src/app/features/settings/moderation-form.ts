@@ -1,6 +1,14 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ModerationSettingsSchema, type ModerationSettings } from '@tiklive/contracts';
+import { LucideCircleAlert, LucideCircleCheck } from '@lucide/angular';
+import { UI_ALERT } from '../../components/ui/alert';
+import { UiButton } from '../../components/ui/button';
+import { UI_CARD } from '../../components/ui/card';
+import { UiSpinner } from '../../components/ui/feedback';
+import { UiFormField } from '../../components/ui/form-field';
+import { UiInput, UiNativeSelect, UiTextarea } from '../../components/ui/input';
+import { UiSwitch } from '../../components/ui/switch';
 import { ApiClient, ApiError } from '../../core/api-client';
 
 const PRONUNCIATION_SEPARATOR = '=';
@@ -26,93 +34,132 @@ function parsePronunciations(text: string): Record<string, string> {
 /** TTS moderation (RF-11): what gets read aloud and how. Applied at once when saved. */
 @Component({
   selector: 'app-moderation-form',
-  imports: [ReactiveFormsModule],
+  imports: [
+    ReactiveFormsModule,
+    UiButton,
+    UiFormField,
+    UiInput,
+    UiNativeSelect,
+    UiSpinner,
+    UiSwitch,
+    UiTextarea,
+    ...UI_CARD,
+    ...UI_ALERT,
+    LucideCircleAlert,
+    LucideCircleCheck,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <form
-      class="card stack"
-      [formGroup]="form"
-      (ngSubmit)="save()"
-      aria-labelledby="mod-title"
-      novalidate
-    >
-      <div>
-        <h2 id="mod-title">Moderación de la voz (TTS)</h2>
-        <p class="muted">
+    <form uiCard [formGroup]="form" (ngSubmit)="save()" aria-labelledby="mod-title" novalidate>
+      <header uiCardHeader>
+        <h2 uiCardTitle id="mod-title">Moderación de la voz (TTS)</h2>
+        <p uiCardDescription>
           Filtros que pasa cada comentario antes de leerse en voz alta. Se aplican al instante.
         </p>
-      </div>
-      <div class="grid">
-        <div class="field">
-          <label for="m-max">Largo máximo (caracteres)</label>
-          <input id="m-max" type="number" min="10" max="500" formControlName="maxLength" />
+      </header>
+      <div uiCardContent class="grid gap-5">
+        <div class="form-grid">
+          <ui-form-field label="Largo máximo (caracteres)" for="m-max">
+            <input
+              uiInput
+              id="m-max"
+              type="number"
+              min="10"
+              max="500"
+              formControlName="maxLength"
+            />
+          </ui-form-field>
+          <ui-form-field label="Lecturas por usuario por minuto" for="m-rate">
+            <input
+              uiInput
+              id="m-rate"
+              type="number"
+              min="1"
+              max="60"
+              formControlName="maxPerUserPerMinute"
+            />
+          </ui-form-field>
+          <ui-form-field label="Ignorar repetidos durante (s)" for="m-dup">
+            <input
+              uiInput
+              id="m-dup"
+              type="number"
+              min="0"
+              max="600"
+              formControlName="duplicateWindowS"
+            />
+          </ui-form-field>
+          <ui-form-field label="Palabras bloqueadas" for="m-mode">
+            <select uiNativeSelect id="m-mode" formControlName="blockMode">
+              <option value="drop">No leer el comentario</option>
+              <option value="mask">Leerlo ocultando la palabra</option>
+            </select>
+          </ui-form-field>
         </div>
-        <div class="field">
-          <label for="m-rate">Lecturas por usuario por minuto</label>
-          <input id="m-rate" type="number" min="1" max="60" formControlName="maxPerUserPerMinute" />
+        <div class="flex flex-wrap gap-x-8 gap-y-3">
+          <div class="flex items-center gap-3">
+            <ui-switch inputId="m-emoji" formControlName="stripEmojis" />
+            <label for="m-emoji" class="type-label">Quitar emojis</label>
+          </div>
+          <div class="flex items-center gap-3">
+            <ui-switch inputId="m-mentions" formControlName="readMentions" />
+            <label for="m-mentions" class="type-label">Leer &#64;menciones</label>
+          </div>
         </div>
-        <div class="field">
-          <label for="m-dup">Ignorar repetidos durante (segundos)</label>
-          <input id="m-dup" type="number" min="0" max="600" formControlName="duplicateWindowS" />
+        <div class="grid gap-4 md:grid-cols-2">
+          <ui-form-field
+            label="Lista de bloqueo"
+            for="m-block"
+            description="Una palabra o frase por línea."
+          >
+            <textarea
+              uiTextarea
+              id="m-block"
+              class="font-mono"
+              formControlName="blockedTerms"
+              aria-describedby="m-block-description"
+            ></textarea>
+          </ui-form-field>
+          <ui-form-field
+            label="Diccionario de pronunciación"
+            for="m-pron"
+            description="Una por línea: GG = buena partida"
+          >
+            <textarea
+              uiTextarea
+              id="m-pron"
+              class="font-mono"
+              formControlName="pronunciations"
+              aria-describedby="m-pron-description"
+            ></textarea>
+          </ui-form-field>
         </div>
-        <div class="field">
-          <label for="m-mode">Palabras bloqueadas</label>
-          <select id="m-mode" formControlName="blockMode">
-            <option value="drop">No leer el comentario</option>
-            <option value="mask">Leerlo ocultando la palabra</option>
-          </select>
-        </div>
-      </div>
-      <div class="row">
-        <label class="check"
-          ><input type="checkbox" formControlName="stripEmojis" /> Quitar emojis</label
-        >
-        <label class="check"
-          ><input type="checkbox" formControlName="readMentions" /> Leer &#64;menciones</label
-        >
-      </div>
-      <div class="field">
-        <label for="m-block">Lista de bloqueo</label>
-        <textarea
-          id="m-block"
-          formControlName="blockedTerms"
-          aria-describedby="m-block-help"
-        ></textarea>
-        <small id="m-block-help" class="muted">Una palabra o frase por línea.</small>
-      </div>
-      <div class="field">
-        <label for="m-pron">Diccionario de pronunciación</label>
-        <textarea
-          id="m-pron"
-          formControlName="pronunciations"
-          aria-describedby="m-pron-help"
-        ></textarea>
-        <small id="m-pron-help" class="muted">Una por línea: <code>GG = buena partida</code></small>
       </div>
       @if (message(); as m) {
-        <p class="notice" [class.ok]="m.ok" [class.danger]="!m.ok" role="status">{{ m.text }}</p>
+        <div uiCardContent>
+          <div
+            uiAlert
+            [variant]="m.ok ? 'success' : 'destructive'"
+            [attr.role]="m.ok ? 'status' : 'alert'"
+          >
+            @if (m.ok) {
+              <svg lucideCircleCheck />
+            } @else {
+              <svg lucideCircleAlert />
+            }
+            <p uiAlertDescription>{{ m.text }}</p>
+          </div>
+        </div>
       }
-      <div class="row">
-        <button class="primary" type="submit" [disabled]="busy()">Guardar moderación</button>
-      </div>
+      <footer uiCardFooter class="justify-end border-t border-border-subtle pt-4">
+        <button uiButton type="submit" [disabled]="busy()">
+          @if (busy()) {
+            <ui-spinner />
+          }
+          Guardar moderación
+        </button>
+      </footer>
     </form>
-  `,
-  styles: `
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-      gap: 1rem;
-    }
-    .field {
-      display: grid;
-      gap: 0.35rem;
-    }
-    .check {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-right: 1rem;
-    }
   `,
 })
 export class ModerationForm {

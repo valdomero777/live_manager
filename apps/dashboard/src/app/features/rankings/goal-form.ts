@@ -16,8 +16,14 @@ import {
   type Goal,
   type GoalDefinition,
 } from '@tiklive/contracts';
+import { LucideCircleAlert } from '@lucide/angular';
+import { UI_ALERT } from '../../components/ui/alert';
+import { UiButton } from '../../components/ui/button';
+import { UiFormField } from '../../components/ui/form-field';
+import { UiInput, UiNativeSelect } from '../../components/ui/input';
+import { UiSwitch } from '../../components/ui/switch';
 import { AssetsStore } from '../../core/assets.store';
-import { GOAL_METRIC_LABELS } from '../../shared/labels';
+import { GOAL_METRIC_LABELS } from '../../lib/labels';
 
 /** Celebration presets: sound + alert + speech. Other onReach actions are kept as they are. */
 function splitActions(actions: readonly ActionConfig[]) {
@@ -31,113 +37,112 @@ function splitActions(actions: readonly ActionConfig[]) {
 /** Create or edit a goal (RF-15) with a simple celebration made of sound, alert and voice. */
 @Component({
   selector: 'app-goal-form',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    UiButton,
+    UiInput,
+    UiNativeSelect,
+    UiFormField,
+    UiSwitch,
+    ...UI_ALERT,
+    LucideCircleAlert,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <form class="stack" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <div class="grid">
-        <div class="field wide">
-          <label for="g-name">Nombre</label>
-          <input id="g-name" type="text" formControlName="name" />
-        </div>
-        <div class="field">
-          <label for="g-metric">Cuenta</label>
-          <select id="g-metric" formControlName="metric">
+    <form class="grid gap-4" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <ui-form-field label="Nombre" for="g-name">
+        <input uiInput id="g-name" type="text" formControlName="name" />
+      </ui-form-field>
+      <div class="grid grid-cols-2 gap-4">
+        <ui-form-field label="Cuenta" for="g-metric">
+          <select uiNativeSelect id="g-metric" formControlName="metric">
             @for (m of metrics; track m) {
               <option [value]="m">{{ metricLabels[m] }}</option>
             }
           </select>
-        </div>
-        <div class="field">
-          <label for="g-target">Objetivo</label>
-          <input id="g-target" type="number" min="1" formControlName="target" />
-        </div>
-        <div class="field">
-          <label for="g-scope">Período</label>
-          <select id="g-scope" formControlName="scope">
+        </ui-form-field>
+        <ui-form-field label="Objetivo" for="g-target">
+          <input uiInput id="g-target" type="number" min="1" formControlName="target" />
+        </ui-form-field>
+        <ui-form-field label="Período" for="g-scope">
+          <select uiNativeSelect id="g-scope" formControlName="scope">
             <option value="session">Cada live</option>
             <option value="total">Acumulado histórico</option>
           </select>
-        </div>
-        <div class="field">
-          <label for="g-repeat">Al cumplirse</label>
-          <select id="g-repeat" formControlName="repeat">
+        </ui-form-field>
+        <ui-form-field label="Al cumplirse" for="g-repeat">
+          <select uiNativeSelect id="g-repeat" formControlName="repeat">
             <option value="">Termina</option>
             <option value="1.5">Siguiente nivel ×1,5</option>
             <option value="2">Siguiente nivel ×2</option>
             <option value="3">Siguiente nivel ×3</option>
           </select>
-        </div>
+        </ui-form-field>
       </div>
-      <fieldset class="stack">
-        <legend>Celebración al cumplirla</legend>
-        <div class="grid">
-          <div class="field">
-            <label for="g-sound">Sonido</label>
-            <select id="g-sound" formControlName="soundId">
-              <option value="">Sin sonido</option>
-              @for (a of assets.sounds(); track a.id) {
-                <option [value]="a.id">{{ a.originalName }}</option>
-              }
-            </select>
-            @if (!assets.sounds().length) {
-              <small class="muted"
-                >Sube sonidos en <a routerLink="/assets">Sonidos e imágenes</a>.</small
-              >
+      <fieldset class="m-0 grid gap-4 rounded-lg border p-4">
+        <legend class="px-1 type-label">Celebración al cumplirla</legend>
+        <ui-form-field label="Sonido" for="g-sound">
+          <select uiNativeSelect id="g-sound" formControlName="soundId">
+            <option value="">Sin sonido</option>
+            @for (a of assets.sounds(); track a.id) {
+              <option [value]="a.id">{{ a.originalName }}</option>
             }
-          </div>
-          <div class="field wide">
-            <label for="g-alert">Texto de la alerta (vacío = sin alerta)</label>
-            <input id="g-alert" type="text" formControlName="alertText" />
-          </div>
-          <div class="field wide">
-            <label for="g-speak">Texto a leer en voz alta (vacío = sin voz)</label>
-            <input id="g-speak" type="text" formControlName="speakText" />
-          </div>
-        </div>
-        <small class="muted"
-          >Variables: <code>{{ '{goalName} {cycle} {current}' }}</code></small
+          </select>
+          @if (!assets.sounds().length) {
+            <p uiFieldDescription class="type-caption">
+              Sube sonidos en
+              <a routerLink="/assets" class="font-medium text-primary hover:underline"
+                >Sonidos e imágenes</a
+              >.
+            </p>
+          }
+        </ui-form-field>
+        <ui-form-field label="Texto de la alerta" for="g-alert" description="Vacío = sin alerta.">
+          <input
+            uiInput
+            id="g-alert"
+            type="text"
+            formControlName="alertText"
+            aria-describedby="g-alert-description"
+          />
+        </ui-form-field>
+        <ui-form-field
+          label="Texto a leer en voz alta"
+          for="g-speak"
+          description="Vacío = sin voz."
         >
+          <input
+            uiInput
+            id="g-speak"
+            type="text"
+            formControlName="speakText"
+            aria-describedby="g-speak-description"
+          />
+        </ui-form-field>
+        <p class="type-caption">
+          Variables:
+          <code class="rounded bg-muted px-1 py-0.5 text-[0.6875rem] text-foreground">{{
+            '{goalName} {cycle} {current}'
+          }}</code>
+        </p>
       </fieldset>
-      <label class="check"><input type="checkbox" formControlName="active" /> Meta activa</label>
+      <div class="flex items-center gap-3">
+        <ui-switch inputId="g-active" formControlName="active" />
+        <label for="g-active" class="type-label">Meta activa</label>
+      </div>
       @if (error()) {
-        <p class="notice danger" role="alert">{{ error() }}</p>
+        <div uiAlert variant="destructive" role="alert">
+          <svg lucideCircleAlert />
+          <p uiAlertTitle>Revisa la meta</p>
+          <p uiAlertDescription>{{ error() }}</p>
+        </div>
       }
-      <div class="row">
-        <button class="primary" type="submit">{{ goal() ? 'Guardar meta' : 'Crear meta' }}</button>
-        <button type="button" (click)="cancelled.emit()">Cancelar</button>
+      <div class="flex justify-end gap-2">
+        <button uiButton variant="ghost" type="button" (click)="cancelled.emit()">Cancelar</button>
+        <button uiButton type="submit">{{ goal() ? 'Guardar meta' : 'Crear meta' }}</button>
       </div>
     </form>
-  `,
-  styles: `
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-      gap: 0.85rem 1rem;
-    }
-    .field {
-      display: grid;
-      gap: 0.3rem;
-      align-content: start;
-    }
-    .field.wide {
-      grid-column: 1 / -1;
-    }
-    fieldset {
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 0.85rem;
-    }
-    legend {
-      font-weight: 600;
-      padding: 0 0.35rem;
-    }
-    .check {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-weight: 500;
-    }
   `,
 })
 export class GoalForm {

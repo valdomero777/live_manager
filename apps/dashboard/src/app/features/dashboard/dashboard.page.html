@@ -1,0 +1,177 @@
+<app-page-header
+  title="Dashboard"
+  description="Lo que pasa en tu LIVE ahora mismo y cómo reaccionan tus automatizaciones."
+/>
+
+<app-live-session-card
+  [status]="socket.connectorStatus()"
+  [startedAt]="stats()?.startedAt ?? null"
+  [now]="now()"
+/>
+
+@if (statsError()) {
+<div uiAlert variant="warning" role="status">
+  <svg lucideCircleAlert />
+  <p uiAlertTitle>No se pudieron actualizar las métricas</p>
+  <p uiAlertDescription>Se muestran los últimos valores recibidos. Se reintenta cada 5 s.</p>
+</div>
+}
+
+<section aria-label="Métricas del live" class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+  <app-metric-card
+    label="Espectadores"
+    tone="analytics"
+    [icon]="icons.viewers"
+    [loading]="statsLoading()"
+    [value]="metric(stats()?.viewers)"
+    [hint]="'Pico del live: ' + formatMetric(stats()?.peakViewers ?? 0)"
+    emptyHint="Sin live en curso"
+  />
+  <app-metric-card
+    label="Likes"
+    tone="live"
+    [icon]="icons.likes"
+    [loading]="statsLoading()"
+    [value]="metric(stats()?.likes)"
+    hint="En este live"
+    emptyHint="Sin live en curso"
+  />
+  <app-metric-card
+    label="Diamantes"
+    tone="gift"
+    [icon]="icons.diamonds"
+    [loading]="statsLoading()"
+    [value]="metric(stats()?.diamonds)"
+    hint="Recibidos en regalos"
+    emptyHint="Sin live en curso"
+  />
+  <app-metric-card
+    label="Nuevos seguidores"
+    tone="follow"
+    [icon]="icons.followers"
+    [loading]="statsLoading()"
+    [value]="metric(stats()?.newFollowers)"
+    [hint]="stats()?.lastFollower ? 'Último: @' + stats()?.lastFollower?.uniqueId : 'En este live'"
+    emptyHint="Sin live en curso"
+  />
+</section>
+
+<div class="grid gap-4 lg:grid-cols-5">
+  <app-analytics-card
+    class="lg:col-span-3"
+    title="Actividad del LIVE"
+    titleId="activity-title"
+    description="Interacciones por minuto, últimos 15 minutos"
+    [icon]="icons.activity"
+  >
+    <app-chart-container
+      height="14rem"
+      [series]="chartSeries"
+      [loading]="socket.historyLoading()"
+      [empty]="quietChart()"
+      emptyTitle="Sin actividad reciente"
+      emptyDescription="Las barras aparecen en cuanto llegan regalos, likes o comentarios."
+    >
+      <app-activity-chart [buckets]="activity()" />
+    </app-chart-container>
+  </app-analytics-card>
+
+  <app-analytics-card
+    class="lg:col-span-2"
+    title="Eventos en tiempo real"
+    titleId="feed-title"
+    [icon]="icons.sparkles"
+  >
+    <a analyticsCardAction uiButton variant="ghost" size="sm" routerLink="/eventos">
+      Ver todos <svg lucideArrowRight />
+    </a>
+    <app-event-feed
+      [items]="feed()"
+      [loading]="socket.historyLoading()"
+      [realtime]="!socket.lostConnection()"
+      height="17.5rem"
+      label="Últimos eventos"
+    />
+  </app-analytics-card>
+</div>
+
+<div class="grid gap-4 lg:grid-cols-5">
+  <app-analytics-card
+    class="lg:col-span-3"
+    title="Automatizaciones recientes"
+    titleId="automations-title"
+    description="Reglas que reaccionaron desde que abriste el panel"
+    [icon]="icons.workflow"
+  >
+    <a analyticsCardAction uiButton variant="ghost" size="sm" routerLink="/reglas">
+      Reglas <svg lucideArrowRight />
+    </a>
+    <app-recent-automations
+      [executions]="socket.ruleExecutions()"
+      [rules]="rules.rules()"
+      [triggerLabels]="eventLabels"
+    />
+  </app-analytics-card>
+
+  <app-analytics-card
+    class="lg:col-span-2"
+    title="Destacados"
+    titleId="highlights-title"
+    description="De la sesión actual"
+    [icon]="icons.crown"
+  >
+    <dl class="grid gap-3">
+      <div class="flex items-center gap-3 rounded-lg bg-muted p-3">
+        <span
+          class="grid size-9 shrink-0 place-items-center rounded-lg bg-gift-soft text-gift-text"
+        >
+          <svg [lucideIcon]="icons.crown" class="size-4" />
+        </span>
+        <div class="grid min-w-0">
+          <dt class="type-caption">Mayor regalo</dt>
+          <dd class="truncate text-sm font-medium">
+            @if (stats()?.topGift; as g) { &#64;{{ g.uniqueId }} · {{ g.quantity }} × {{ g.giftName
+            }}
+            <span class="text-gift-text">· {{ formatMetric(g.diamonds) }} diamantes</span>
+            } @else {
+            <span class="text-muted-foreground">Todavía sin regalos</span>
+            }
+          </dd>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 rounded-lg bg-muted p-3">
+        <span
+          class="grid size-9 shrink-0 place-items-center rounded-lg bg-gift-soft text-gift-text"
+        >
+          <svg [lucideIcon]="icons.gift" class="size-4" />
+        </span>
+        <div class="grid min-w-0">
+          <dt class="type-caption">Último regalo</dt>
+          <dd class="truncate text-sm font-medium">
+            @if (stats()?.lastGift; as g) { &#64;{{ g.uniqueId }} · {{ g.quantity }} × {{ g.giftName
+            }} } @else {
+            <span class="text-muted-foreground">Todavía sin regalos</span>
+            }
+          </dd>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 rounded-lg bg-muted p-3">
+        <span
+          class="grid size-9 shrink-0 place-items-center rounded-lg bg-follow-soft text-follow-text"
+        >
+          <svg [lucideIcon]="icons.followers" class="size-4" />
+        </span>
+        <div class="grid min-w-0">
+          <dt class="type-caption">Último seguidor</dt>
+          <dd class="truncate text-sm font-medium">
+            @if (stats()?.lastFollower; as f) { {{ f.nickname }}
+            <span class="text-muted-foreground">&#64;{{ f.uniqueId }}</span>
+            } @else {
+            <span class="text-muted-foreground">Todavía sin seguidores nuevos</span>
+            }
+          </dd>
+        </div>
+      </div>
+    </dl>
+  </app-analytics-card>
+</div>

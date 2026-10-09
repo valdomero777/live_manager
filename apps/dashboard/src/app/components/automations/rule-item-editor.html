@@ -1,0 +1,186 @@
+@let d = def();
+<div class="flex items-center gap-1.5 border-b border-border-subtle px-2 py-2 sm:gap-2 sm:px-3">
+  <span
+    [class]="iconTone()"
+    class="grid size-7 shrink-0 place-items-center rounded-md"
+    aria-hidden="true"
+  >
+    <svg [lucideIcon]="icon()" class="size-3.5" />
+  </span>
+  <label class="sr-only" [for]="idPrefix() + '-type'">
+    Tipo de {{ kind() === 'condition' ? 'condición' : 'acción' }} {{ index() + 1 }}
+  </label>
+  <select
+    uiNativeSelect
+    class="h-8 min-w-0 flex-1 border-transparent sm:max-w-xs bg-transparent font-medium shadow-none hover:bg-surface-hover"
+    [id]="idPrefix() + '-type'"
+    (change)="op.emit({ kind: 'type', type: $any($event.target).value })"
+  >
+    @for (t of types(); track t.type) {
+    <option [value]="t.type" [selected]="t.type === item().type">{{ t.label }}</option>
+    }
+  </select>
+  <span class="hidden flex-1 sm:block"></span>
+  <div class="flex shrink-0 items-center">
+    <button
+      uiButton
+      variant="ghost"
+      size="icon-sm"
+      type="button"
+      [disabled]="index() === 0"
+      aria-label="Subir"
+      uiTooltip="Subir"
+      (click)="op.emit({ kind: 'move', delta: -1 })"
+    >
+      <svg lucideArrowUp />
+    </button>
+    <button
+      uiButton
+      variant="ghost"
+      size="icon-sm"
+      type="button"
+      [disabled]="index() === total() - 1"
+      aria-label="Bajar"
+      uiTooltip="Bajar"
+      (click)="op.emit({ kind: 'move', delta: 1 })"
+    >
+      <svg lucideArrowDown />
+    </button>
+    <button
+      uiButton
+      variant="ghost-destructive"
+      size="icon-sm"
+      type="button"
+      aria-label="Quitar"
+      uiTooltip="Quitar"
+      (click)="op.emit({ kind: 'remove' })"
+    >
+      <svg lucideTrash />
+    </button>
+  </div>
+</div>
+
+@if (d) {
+<div class="grid gap-4 p-3 sm:p-4">
+  @if (d.help) {
+  <p class="type-caption -mt-1">{{ d.help }}</p>
+  } @if (d.params.length) {
+  <div class="form-grid">
+    @for (p of d.params; track p.key) { @let fieldId = idPrefix() + '-' + p.key; @switch (p.kind) {
+    @case ('boolean') {
+    <div class="flex items-center gap-3 self-end py-2">
+      <ui-switch
+        [inputId]="fieldId"
+        [checked]="!!item().params[p.key]"
+        (checkedChange)="set(p, $event)"
+      />
+      <label class="type-label" [for]="fieldId">{{ p.label }}</label>
+    </div>
+    } @case ('select') {
+    <ui-form-field [label]="p.label" [for]="fieldId" [description]="p.help">
+      <select
+        uiNativeSelect
+        [id]="fieldId"
+        [attr.aria-describedby]="describedBy(fieldId, { description: !!p.help })"
+        (change)="set(p, $any($event.target).value)"
+      >
+        @for (o of p.options ?? []; track o.value) {
+        <option [value]="o.value" [selected]="o.value === display(item(), p)">{{ o.label }}</option>
+        }
+      </select>
+    </ui-form-field>
+    } @case ('sound') { @let current = display(item(), p);
+    <ui-form-field [label]="p.label" [for]="fieldId" class="col-span-full sm:col-span-1">
+      <div class="flex gap-2">
+        <select
+          uiNativeSelect
+          class="min-w-0 flex-1"
+          [id]="fieldId"
+          (change)="set(p, $any($event.target).value)"
+        >
+          <option value="" [selected]="current === ''">— Elige un sonido —</option>
+          @for (a of assets.sounds(); track a.id) {
+          <option [value]="a.id" [selected]="a.id + '' === current">{{ a.originalName }}</option>
+          }
+        </select>
+        @if (soundUrl(current); as url) {
+        <app-sound-preview [url]="url" title="el sonido elegido" />
+        }
+      </div>
+      @if (!assets.sounds().length) {
+      <p uiFieldDescription class="type-caption">
+        Sube sonidos en
+        <a routerLink="/assets" class="font-medium text-primary hover:underline"
+          >Sonidos e imágenes</a
+        >.
+      </p>
+      }
+    </ui-form-field>
+    } @case ('visual') {
+    <ui-form-field [label]="p.label" [for]="fieldId">
+      <select uiNativeSelect [id]="fieldId" (change)="set(p, $any($event.target).value)">
+        <option value="" [selected]="display(item(), p) === ''">Sin imagen</option>
+        @for (a of assets.visuals(); track a.id) {
+        <option [value]="a.id" [selected]="a.id + '' === display(item(), p)">
+          {{ a.originalName }}
+        </option>
+        }
+      </select>
+    </ui-form-field>
+    } @case ('percent') {
+    <ui-form-field [label]="p.label" [for]="fieldId" [description]="p.help">
+      <div class="flex h-9 items-center gap-3">
+        <input
+          uiSlider
+          type="range"
+          min="0"
+          max="100"
+          step="5"
+          [id]="fieldId"
+          [value]="display(item(), p)"
+          [attr.aria-describedby]="describedBy(fieldId, { description: !!p.help })"
+          [attr.aria-valuetext]="display(item(), p) + '%'"
+          (input)="set(p, $any($event.target).value)"
+        />
+        <output class="w-10 text-right text-sm font-medium tabular-nums" [attr.for]="fieldId"
+          >{{ display(item(), p) }}%</output
+        >
+      </div>
+    </ui-form-field>
+    } @default {
+    <ui-form-field
+      [label]="p.label"
+      [for]="fieldId"
+      [description]="p.help"
+      [class.col-span-full]="p.key === 'text'"
+    >
+      <input
+        uiInput
+        [id]="fieldId"
+        [type]="p.kind === 'text' ? 'text' : 'number'"
+        [attr.step]="p.kind === 'seconds' ? '0.5' : null"
+        [attr.aria-describedby]="describedBy(fieldId, { description: !!p.help })"
+        [value]="display(item(), p)"
+        (input)="set(p, $any($event.target).value)"
+      />
+    </ui-form-field>
+    } } }
+  </div>
+  } @if (isGiftCondition()) {
+  <details class="group rounded-lg border bg-muted/40" open>
+    <summary
+      class="flex cursor-pointer list-none items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium outline-none select-none hover:bg-surface-hover focus-visible:ring-[3px] focus-visible:ring-ring/40 [&::-webkit-details-marker]:hidden"
+    >
+      <svg lucideChevronRight class="size-4 transition-transform group-open:rotate-90" />
+      Elegir de la lista de regalos
+    </summary>
+    <div class="p-3 pt-1">
+      <app-gift-grid
+        [selected]="$any(item().params['value'])"
+        (pick)="op.emit({ kind: 'gift', gift: $event })"
+      />
+    </div>
+  </details>
+  }
+</div>
+}

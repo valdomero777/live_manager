@@ -1,5 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
-import { CopyButton } from '../../shared/copy-button';
+import { LucideExternalLink } from '@lucide/angular';
+import { CopyButton } from '../../components/shared/copy-button';
+import { UiButton } from '../../components/ui/button';
+import { UiFormField } from '../../components/ui/form-field';
+import { UiNativeSelect } from '../../components/ui/input';
 
 interface OverlayLink {
   readonly name: string;
@@ -48,56 +52,49 @@ const OVERLAYS: readonly OverlayLink[] = [
 /** Ready-to-paste overlay URLs using a LAN address, so they work from the stream PC. */
 @Component({
   selector: 'app-overlay-urls',
-  imports: [CopyButton],
+  imports: [CopyButton, UiButton, UiNativeSelect, UiFormField, LucideExternalLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'grid gap-4' },
   template: `
-    <div class="row">
-      <label for="host">Dirección del servidor</label>
-      <select id="host" (change)="host.set($any($event.target).value)">
+    <ui-form-field
+      label="Dirección del servidor"
+      for="host"
+      description="Usa la IP de la red local para la PC de stream; «localhost» solo funciona en esta misma máquina."
+      class="max-w-sm"
+    >
+      <select
+        uiNativeSelect
+        id="host"
+        aria-describedby="host-description"
+        (change)="host.set($any($event.target).value)"
+      >
         @for (h of hosts(); track h) {
-          <option [value]="h" [selected]="h + '' === host() + ''">{{ h }}</option>
+          <option [value]="h" [selected]="h === host()">{{ h }}</option>
         }
       </select>
-    </div>
-    <p class="muted">
-      Usa la IP de la red local para la PC de stream; «localhost» solo funciona en esta misma
-      máquina.
-    </p>
-    <ul class="list">
+    </ui-form-field>
+    <ul class="grid divide-y divide-border-subtle rounded-lg border">
       @for (o of links(); track o.name) {
-        <li>
-          <div>
-            <strong>{{ o.name }}</strong>
-            <span class="muted"> · {{ o.help }}</span>
+        <li class="grid gap-2 p-3 sm:p-4">
+          <div class="flex flex-wrap items-baseline gap-x-2">
+            <span class="text-sm font-medium">{{ o.name }}</span>
+            <span class="type-caption">{{ o.help }}</span>
           </div>
-          <div class="row url">
-            <code>{{ o.url }}</code>
-            <app-copy-button [value]="o.url" [label]="o.name" />
-            <a class="button" [href]="o.url" target="_blank" rel="noopener">Abrir</a>
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <code
+              class="min-w-0 flex-1 rounded-md bg-muted px-2.5 py-1.5 font-mono text-xs break-all text-muted-foreground"
+              >{{ o.url }}</code
+            >
+            <div class="flex gap-2">
+              <app-copy-button [value]="o.url" [label]="o.name" />
+              <a uiButton variant="ghost" size="sm" [href]="o.url" target="_blank" rel="noopener">
+                <svg lucideExternalLink /> Abrir
+              </a>
+            </div>
           </div>
         </li>
       }
     </ul>
-  `,
-  styles: `
-    select {
-      width: auto;
-      min-width: 14rem;
-    }
-    .list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      gap: 0.85rem;
-    }
-    .url code {
-      flex: 1 1 20rem;
-      padding: 0.35rem 0.5rem;
-      background: var(--surface-2);
-      border-radius: 6px;
-      overflow-wrap: anywhere;
-    }
   `,
 })
 export class OverlayUrls {
