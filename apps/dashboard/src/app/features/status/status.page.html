@@ -1,5 +1,9 @@
 <h1>Estado</h1>
 
+@for (alert of health()?.alerts ?? []; track alert.code) {
+<p class="notice warn" role="alert">{{ alert.message }}</p>
+}
+
 <div class="grid">
   <section class="card stack" aria-labelledby="connector-title">
     <h2 id="connector-title">Conexión con TikTok</h2>
@@ -54,6 +58,14 @@
       <dd>{{ h.db === 'ok' ? 'Disponible' : 'Sin acceso' }}</dd>
       <dt>Encendido hace</dt>
       <dd>{{ uptime(h.uptimeS) }}</dd>
+      <dt>Espacio libre</dt>
+      <dd>{{ h.diskFreePercent === null ? '—' : h.diskFreePercent + ' %' }}</dd>
+      <dt>Último respaldo</dt>
+      <dd>
+        @if (h.lastBackupAt; as at) {{{ at | date: 'dd/MM HH:mm' }}} @else {<span class="muted"
+          >Aún no hay</span
+        >}
+      </dd>
       <dt>Versión</dt>
       <dd>{{ h.version }}</dd>
       <dt>Pantallas conectadas</dt>

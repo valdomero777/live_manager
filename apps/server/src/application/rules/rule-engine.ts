@@ -1,4 +1,10 @@
-import type { ActionConfig, LiveEvent, Rule, RuleTestResult } from '@tiklive/contracts';
+import type {
+  ActionConfig,
+  LiveEvent,
+  Rule,
+  RuleTestResult,
+  ServerActionConfig,
+} from '@tiklive/contracts';
 import type { ActionHandlerRegistry } from '../../domain/rules/actions.js';
 import { type AssetCatalog } from '../../domain/rules/actions.js';
 import { CompiledRule, byPriority } from '../../domain/rules/compiled-rule.js';
@@ -13,6 +19,7 @@ import { ViewerActivityTracker } from '../../domain/session/viewer-activity.js';
 import type { Random } from '../../domain/shared/time.js';
 import type { TextFilterChain } from '../../domain/tts/text-filters.js';
 import type { ActionSink } from '../actions/action-scheduler.js';
+import type { ServerActionRunner } from '../actions/server-action-runner.js';
 import type { LiveEventConsumer } from '../ingest/ingest-live-event.js';
 import type { AdminNotifier } from '../ports/admin-notifier.js';
 import type { Logger } from '../ports/logger.js';
@@ -28,6 +35,7 @@ export interface RuleEngineDeps {
   readonly actions: ActionHandlerRegistry;
   readonly limiter: RuleRateLimiter;
   readonly sink: ActionSink;
+  readonly serverActions: ServerActionRunner;
   readonly assets: AssetCatalog;
   readonly moderation: () => TextFilterChain;
   readonly ids: IdGenerator;
@@ -55,13 +63,26 @@ class CommentVariables {
     }
     if (this.moderated === null) return null;
     const commandArgs = stripCommand(this.moderated);
-    if (action.text.includes('{commandArgs}') && commandArgs.length === 0) return null;
+    if (viewerTemplate(action).includes('{commandArgs}') && commandArgs.length === 0) return null;
     return { ...this.base, comment: this.moderated, commandArgs };
   }
 }
 
-function usesViewerText(action: ActionConfig): action is Extract<ActionConfig, { text: string }> {
-  return 'text' in action && VIEWER_TEXT_PLACEHOLDERS.some((p) => action.text.includes(p));
+/** The template of an action that can carry viewer text: screen text or webhook body. */
+function viewerTemplate(action: ActionConfig): string {
+  if (action.type === 'webhook') return action.body;
+  return 'text' in action ? action.text : '';
+}
+
+function usesViewerText(action: ActionConfig): boolean {
+  const template = viewerTemplate(action);
+  return VIEWER_TEXT_PLACEHOLDERS.some((p) => template.includes(p));
+}
+
+const SERVER_ACTION_TYPES: readonly string[] = ['updateGoal', 'webhook'];
+
+function isServerAction(action: ActionConfig): action is ServerActionConfig {
+  return SERVER_ACTION_TYPES.includes(action.type);
 }
 
 /**
@@ -105,7 +126,7 @@ export class RuleEngine implements LiveEventConsumer {
     const vars = new CommentVariables(event, templateVariables(event), this.deps.moderation);
     const outcomes = compiled
       .selectActions(this.deps.random)
-      .map((action) => this.planAction(compiled, event, action, vars));
+      .map((action) => this.planAction(compiled, event, action, vars, true));
     const actionsQueued = outcomes.filter(Boolean).length;
     return { matched, conditions, actionsQueued, actionsSkipped: outcomes.length - actionsQueued };
   }
@@ -143,10 +164,13 @@ export class RuleEngine implements LiveEventConsumer {
     event: LiveEvent,
     action: ActionConfig,
     vars: CommentVariables,
+    dryRun = false,
   ): boolean {
     try {
       const actionVars = vars.for(action);
       if (actionVars === null) return true; // moderated out: intentionally silent
+      if (isServerAction(action))
+        return this.runServerAction(rule, event, action, actionVars, dryRun);
       const planned = this.deps.actions.plan(action, {
         actionId: this.deps.ids.next(),
         origin: { kind: 'rule', id: rule.id },
@@ -172,6 +196,18 @@ export class RuleEngine implements LiveEventConsumer {
       );
       return false;
     }
+  }
+
+  private runServerAction(
+    rule: CompiledRule,
+    event: LiveEvent,
+    action: ServerActionConfig,
+    vars: TemplateVariables,
+    dryRun: boolean,
+  ): boolean {
+    // A test must not call external URLs or move goal progress.
+    if (dryRun) return false;
+    return this.deps.serverActions.run(action, { vars, eventId: event.id, ruleId: rule.id });
   }
 
   private tryCompile(rule: Rule): CompiledRule | undefined {

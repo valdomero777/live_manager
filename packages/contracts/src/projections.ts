@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ActionConfigSchema } from './rules.js';
+import { ScreenActionConfigSchema } from './rules.js';
 
 // ---------- Leaderboards ----------
 
@@ -58,7 +58,7 @@ export const GoalDefinitionSchema = z.object({
   target: z.number().int().positive(),
   scope: z.enum(['session', 'total']).default('session'),
   /** Actions run once per reached cycle (sound, alert, speech). */
-  onReach: z.array(ActionConfigSchema).default([]),
+  onReach: z.array(ScreenActionConfigSchema).default([]),
   /** When set, a reached goal starts a new cycle with target x repeatFactor. */
   repeatFactor: z.number().min(1.01).max(100).nullable().default(null),
   active: z.boolean().default(true),

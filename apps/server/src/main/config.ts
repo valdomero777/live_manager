@@ -10,6 +10,7 @@ import {
 } from '@tiklive/contracts';
 import type { ConfigStore } from '../application/ports/config-store.js';
 import { resolveSettings } from '../application/settings/resolve-settings.js';
+import { parseHostList, type WebhookPolicy } from '../domain/webhook/network-guard.js';
 import { DEFAULT_MYINSTANTS_API_URL } from '../infrastructure/myinstants/myinstants-provider.js';
 import { JsonConfigStore } from '../infrastructure/config/json-config-store.js';
 
@@ -55,6 +56,12 @@ export interface AppConfig {
   readonly version: string;
   /** Base URL of the community MyInstants API; a deployment detail, not a UI setting. */
   readonly myInstantsApiUrl: string;
+  /** Hosts the webhook action may call (WEBHOOK_ALLOWED_HOSTS); empty = webhooks disabled. */
+  readonly webhookPolicy: WebhookPolicy;
+  /** BACKUP_DIR: where daily database and weekly assets backups go. */
+  readonly backupDir: string;
+  /** RECORD_PATH: append every raw event of a real live to this JSONL file (for replay). */
+  readonly recordPath: string | undefined;
   /** Raw resolved values, as the settings UI shows them. */
   readonly settings: SettingsValues;
   readonly env: Partial<SettingsValues>;
@@ -121,6 +128,12 @@ export function loadConfig(env: NodeJS.ProcessEnv, version: string): AppConfig {
     signApiKey: s.signApiKey || undefined,
     version,
     myInstantsApiUrl: env['MYINSTANTS_API_URL'] || DEFAULT_MYINSTANTS_API_URL,
+    backupDir: absolute(env['BACKUP_DIR'] || './data/backups'),
+    recordPath: env['RECORD_PATH'] ? absolute(env['RECORD_PATH']) : undefined,
+    webhookPolicy: {
+      allowedHosts: parseHostList(env['WEBHOOK_ALLOWED_HOSTS']),
+      privateHosts: parseHostList(env['WEBHOOK_PRIVATE_HOSTS']),
+    },
     settings: s,
     env: envValues,
     configStore: store,

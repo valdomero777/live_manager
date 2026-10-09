@@ -1,4 +1,4 @@
-import type { ActionConfig, ScreenActionMessage } from '@tiklive/contracts';
+import type { ScreenActionConfig, ScreenActionMessage } from '@tiklive/contracts';
 import { UnknownActionError } from '../shared/errors.js';
 import { resolveTemplate, type TemplateVariables } from './template.js';
 
@@ -42,7 +42,7 @@ export interface PlanContext {
 }
 
 /** Strategy per action type. plan() is pure: no I/O. Returns null when it cannot run. */
-export interface ActionHandler<T extends ActionConfig = ActionConfig> {
+export interface ActionHandler<T extends ScreenActionConfig = ScreenActionConfig> {
   readonly type: T['type'];
   plan(config: T, ctx: PlanContext): PlannedAction | null;
 }
@@ -64,7 +64,7 @@ function base(ctx: PlanContext, screen: string, timeoutMs: number) {
   };
 }
 
-type Cfg<K extends ActionConfig['type']> = Extract<ActionConfig, { type: K }>;
+type Cfg<K extends ScreenActionConfig['type']> = Extract<ScreenActionConfig, { type: K }>;
 
 export const playSoundHandler: ActionHandler<Cfg<'playSound'>> = {
   type: 'playSound',
@@ -127,12 +127,12 @@ export const speakHandler: ActionHandler<Cfg<'speak'>> = {
 export class ActionHandlerRegistry {
   private readonly handlers = new Map<string, ActionHandler>();
 
-  register<T extends ActionConfig>(handler: ActionHandler<T>): this {
+  register<T extends ScreenActionConfig>(handler: ActionHandler<T>): this {
     this.handlers.set(handler.type, handler);
     return this;
   }
 
-  plan(config: ActionConfig, ctx: PlanContext): PlannedAction | null {
+  plan(config: ScreenActionConfig, ctx: PlanContext): PlannedAction | null {
     const handler = this.handlers.get(config.type);
     if (!handler) throw new UnknownActionError(config.type);
     return handler.plan(config, ctx);

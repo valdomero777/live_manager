@@ -43,3 +43,21 @@ export function resolveTemplate(template: string, vars: TemplateVariables): stri
 export function stripCommand(text: string): string {
   return text.replace(LEADING_COMMAND, '').trim();
 }
+
+/**
+ * Like resolveTemplate for JSON text: values are escaped as JSON string contents, so a viewer's
+ * quotes or newlines cannot break out of the string they are placed in. Returns undefined when
+ * the result is not valid JSON.
+ */
+export function resolveJsonTemplate(template: string, vars: TemplateVariables): string | undefined {
+  const rendered = template.replace(PLACEHOLDER, (match, name: string) => {
+    const value = vars[name];
+    return value === undefined ? match : JSON.stringify(value).slice(1, -1);
+  });
+  try {
+    JSON.parse(rendered);
+    return rendered;
+  } catch {
+    return undefined;
+  }
+}

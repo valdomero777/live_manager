@@ -42,7 +42,9 @@ export class SnapshotPublisher implements LiveEventConsumer {
   private readonly seqs = new Map<string, number>();
   private readonly pending = new Map<string, Cancel>();
 
-  constructor(private readonly deps: PublisherDeps) {}
+  constructor(private readonly deps: PublisherDeps) {
+    deps.goals.onProgress((id) => this.markDirty(`goal:${id}`));
+  }
 
   async handle(event: LiveEvent): Promise<void> {
     if (this.deps.stats.apply(event)) this.markDirty('stats');

@@ -13,6 +13,12 @@ export const ConnectRequestSchema = z.object({
 });
 export type ConnectRequest = z.infer<typeof ConnectRequestSchema>;
 
+export const HealthAlertSchema = z.object({
+  code: z.enum(['connector_down', 'queue_full', 'audio_offline', 'disk_low', 'backup_stale']),
+  message: z.string(),
+});
+export type HealthAlert = z.infer<typeof HealthAlertSchema>;
+
 export const HealthResponseSchema = z.object({
   status: z.enum(['ok', 'degraded']),
   uptimeS: z.number(),
@@ -21,6 +27,13 @@ export const HealthResponseSchema = z.object({
   db: z.enum(['ok', 'down']),
   screens: z.record(z.string(), z.number()),
   queueDepth: z.record(z.string(), z.number()),
+  process: z.object({ rssBytes: z.number(), eventLoopLagMs: z.number() }),
+  /** Free space of the data volume, in percent; null when it cannot be read. */
+  diskFreePercent: z.number().nullable(),
+  /** Timestamp of the newest database backup; null when none is known yet. */
+  lastBackupAt: z.number().nullable(),
+  /** Things worth the streamer's attention right now (spec 15). */
+  alerts: z.array(HealthAlertSchema),
 });
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 

@@ -21,11 +21,11 @@ Los IDs (RF/RNF) refieren a la sección 2 de la especificación.
 
 | Fase | Contenido | Estado |
 | --- | --- | --- |
-| 0 | Laptop, SO, firewall, verificación de supuestos (sección 18) | Manual — pendiente del usuario |
+| 0 | Laptop, SO, firewall, verificación de supuestos (sección 18) | Manual — checklist en [fase-0.md](fase-0.md) y `npm run phase0`; pendiente de ejecutar |
 | 1 | Monorepo + CI, `contracts`, dominio, `LiveEventSource` (conector + simulador), normalizador, SQLite + migraciones, pestaña de audio | **Hecha** (falta validar con un live real) |
-| 2 | Motor de reglas, condiciones/acciones, cola con prioridad, limitadores, TTS + filtros, assets, overlay de alertas | **Mayormente hecha**: falta subida de assets, webhook, updateGoal |
+| 2 | Motor de reglas, condiciones/acciones, cola con prioridad, limitadores, TTS + filtros, assets, overlay de alertas | **Hecha** (acciones `webhook` y `updateGoal` el 2026-10-08) |
 | 3 | Proyecciones, leaderboards, metas, stats, rotator | **Hecha** (ver abajo) |
-| 4 | Dashboard Angular, auth, respaldos, `/health` completo, métricas, runbook, despliegue | Pendiente |
+| 4 | Dashboard Angular, auth, respaldos, `/health` completo, métricas, runbook, despliegue | **En curso**: hechos respaldos, restauración, retención, `/health`, `/metrics`, alertas y despliegue en Windows (ver `docs/operacion.md`, `docs/despliegue-windows.md`); falta ensayo en la laptop y de 4 h |
 | 5 | v2/v3 | Pendiente |
 
 ## Fase 1 — tareas
@@ -65,9 +65,10 @@ Pendiente, en orden propuesto:
 
 1. **Fase 0 (manual):** verificar los supuestos de la sección 18 con un live real
    (`SIMULATE=false`, `TIKTOK_USERNAME=…`), LIVE Studio con fuente Link y transparencia.
-2. Modo `record` (JSONL de un live real) para pruebas de regresión del mapeo; el `replay` ya existe.
-3. Resto de fase 2: subida de assets con validación por *magic bytes* (RF-19), acciones `webhook`
-   (con protección SSRF) y `updateGoal`, `POST /rules/:id/test`, ajustes TTS persistidos.
+2. ~~Modo `record`~~ hecho: `RECORD_PATH=data/live.jsonl` graba cada evento crudo del conector real
+   (no del simulador) y `npm run simulate -- replay data/live.jsonl` lo reproduce. Pendiente: grabar
+   un live real y convertir un fragmento en prueba de regresión del mapeo.
+3. ~~Resto de fase 2~~ hecho (ver abajo).
 4. Fase 3: proyecciones, leaderboards, metas, stats y rotator.
 5. Fase 4: dashboard Angular, autenticación (argon2id + cookie), respaldos, `/metrics`, systemd.
 
@@ -101,7 +102,7 @@ Pendiente o diferido:
 - Acción `updateGoal` (sumar progreso manual) y `webhook`: necesitan un ejecutor de acciones del
   lado del servidor; quedan junto con el resto de la fase 2.
 - Métrica `top_gift` como ranking: hoy solo existe como "mejor regalo" en stats.
-- Retención de 90 días de `live_event` (tarea de limpieza): pendiente para la fase 4.
+- ~~Retención de 90 días de `live_event`~~: hecha en la fase 4 (limpieza diaria en bloques).
 
 ## Configuración desde el panel (adelanto de fase 4) — 2026-10-07
 
@@ -133,3 +134,33 @@ Pendiente o diferido:
 - Reconexión con backoff probada con reloj falso.
 - `npm run simulate -- gift` produce sonido en la pestaña de audio.
 - Pendiente manual: reconexión tras cortar la red 60 s con un live real.
+
+## Acciones de servidor — 2026-10-08
+
+- `updateGoal` (`goalId`, `amount` entero, negativo resta): el progreso manual se guarda en
+  `goal_adjustment` (migración 0005) y se suma al total de la sala. Cuenta como progreso ganado:
+  al cruzar la meta se celebra una sola vez por ciclo. También `POST /goals/:id/progress`.
+- `webhook` (`url`, `POST|PUT`, `body` JSON con `{variables}` escapadas): fire-and-forget, nunca
+  frena el ingest. Protección SSRF: solo hosts de `WEBHOOK_ALLOWED_HOSTS`; las direcciones
+  privadas/loopback/metadata se bloquean al conectar salvo hosts en `WEBHOOK_PRIVATE_HOSTS`; sin
+  redirecciones, 3 s de timeout, respuesta máx. 64 KB, *circuit breaker* de 5 fallos por host
+  (1 min). Sin lista, los webhooks quedan desactivados. `{comment}`/`{commandArgs}` pasan por la
+  moderación también en el cuerpo.
+- «Probar» una regla no ejecuta acciones de servidor (las cuenta como omitidas).
+- Las metas (`onReach`) solo aceptan acciones de pantalla: evita bucles meta → meta.
+- Variables de entorno de despliegue (no están en el panel): `WEBHOOK_ALLOWED_HOSTS`,
+  `WEBHOOK_PRIVATE_HOSTS` (separadas por comas).
+
+## Fase 4 — avance 2026-10-08
+
+- Mantenimiento en proceso (sin cron): respaldo diario de SQLite (14 días), copia semanal de
+  assets, limpieza diaria de eventos > 90 días; `npm run restore` verifica el archivo y guarda la
+  base anterior. Probado: respaldo con la base en uso → restauración → mismas filas.
+- `/health` ampliado (memoria, retraso del bucle, disco, último respaldo, alertas de la spec §15) y
+  `/metrics` en formato Prometheus (detrás de la sesión). Alertas visibles en Estado.
+- Despliegue en **Windows** (elegido): `npm run package` genera `release/tiklive-*.tgz`; los
+  scripts de `deploy/windows` instalan una tarea de arranque con reinicio en ~3 s, despliegan con
+  copia previa de la base y rollback automático. El paquete se probó en Linux (extraer, `npm ci
+  --omit=dev`, arrancar, `/health`, panel y overlays); **los scripts de PowerShell no se han
+  podido ejecutar** y hay que ensayarlos (lista al final de `despliegue-windows.md`).
+- Pendiente: runbook de incidentes completo, textos i18n, e2e con Playwright y el ensayo de 4 h.

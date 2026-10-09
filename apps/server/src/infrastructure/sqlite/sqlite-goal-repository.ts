@@ -95,4 +95,28 @@ export class SqliteGoalRepository implements GoalRepository {
       .executeTakeFirst();
     return Number(result.numInsertedOrUpdatedRows ?? 0) > 0;
   }
+
+  async adjustment(goalId: number, scopeKey: string): Promise<number> {
+    const row = await this.db
+      .selectFrom('goal_adjustment')
+      .select('amount')
+      .where('goal_id', '=', goalId)
+      .where('scope_key', '=', scopeKey)
+      .executeTakeFirst();
+    return row?.amount ?? 0;
+  }
+
+  async addAdjustment(goalId: number, scopeKey: string, amount: number): Promise<number> {
+    const row = await this.db
+      .insertInto('goal_adjustment')
+      .values({ goal_id: goalId, scope_key: scopeKey, amount })
+      .onConflict((oc) =>
+        oc.columns(['goal_id', 'scope_key']).doUpdateSet((eb) => ({
+          amount: eb('goal_adjustment.amount', '+', amount),
+        })),
+      )
+      .returning('amount')
+      .executeTakeFirstOrThrow();
+    return row.amount;
+  }
 }

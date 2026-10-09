@@ -10,4 +10,8 @@ export interface GoalRepository {
   lastCycle(goalId: number, scopeKey: string): Promise<number>;
   /** Records a reached cycle. False if it was already recorded (restart, race): never fire twice. */
   recordCycle(goalId: number, scopeKey: string, cycle: number, reachedAt: number): Promise<boolean>;
+  /** Manual progress (updateGoal) for the goal in that scope key; 0 when none. */
+  adjustment(goalId: number, scopeKey: string): Promise<number>;
+  /** Adds (or subtracts) manual progress and returns the new adjustment. */
+  addAdjustment(goalId: number, scopeKey: string, amount: number): Promise<number>;
 }

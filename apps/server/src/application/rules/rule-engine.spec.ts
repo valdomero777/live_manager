@@ -8,11 +8,20 @@ import { RuleRateLimiter } from '../../domain/rules/rate-limiter.js';
 import { FakeClock } from '../../domain/shared/time.js';
 import { DEFAULT_MODERATION, buildModerationChain } from '../../domain/tts/text-filters.js';
 import { silentLogger } from '../ports/logger.js';
+import type { ServerActionConfig } from '@tiklive/contracts';
+import type { ServerActionRunner } from '../actions/server-action-runner.js';
 import { RuleEngine } from './rule-engine.js';
 
 function setup(rules: Rule[]) {
+  const serverRuns: { action: ServerActionConfig; vars: Record<string, string> }[] = [];
   const clock = new FakeClock(0);
   const planned: PlannedAction[] = [];
+  const fakeRunner = {
+    run: (action: ServerActionConfig, ctx: { vars: Record<string, string> }) => {
+      serverRuns.push({ action, vars: { ...ctx.vars } });
+      return true;
+    },
+  };
   const notifier = new RecordingNotifier();
   const disabled: number[] = [];
   const moderation = buildModerationChain({ ...DEFAULT_MODERATION, blockedTerms: ['feo'] }, clock);
@@ -22,6 +31,7 @@ function setup(rules: Rule[]) {
     actions: createDefaultActionRegistry(),
     limiter: new RuleRateLimiter(clock, { next: () => 0 }),
     sink: { enqueue: (a) => planned.push(a) },
+    serverActions: fakeRunner as unknown as ServerActionRunner,
     assets: { urlFor: (id) => `/media/${id}.mp3` },
     moderation: () => moderation,
     ids: new SequentialIds(),
@@ -32,7 +42,7 @@ function setup(rules: Rule[]) {
       disabled.push(rule.id);
     },
   });
-  return { engine, planned, notifier, disabled, clock };
+  return { engine, planned, notifier, disabled, clock, serverRuns };
 }
 
 describe('RuleEngine', () => {
@@ -163,5 +173,51 @@ describe('RuleEngine', () => {
     await engine.reload();
     engine.handle(aGiftEvent());
     expect(planned).toHaveLength(1);
+  });
+
+  describe('server actions', () => {
+    const goalAndHook: Rule['actions'] = [
+      { type: 'updateGoal', goalId: 3, amount: 5 },
+      {
+        type: 'webhook',
+        url: 'https://hooks.example.com/x',
+        method: 'POST',
+        body: '{"c":"{comment}"}',
+      },
+    ];
+
+    it('given updateGoal and webhook, when the rule matches, then runs them without screens', async () => {
+      const { engine, planned, serverRuns } = setup([
+        aRule({ id: 1, trigger: 'comment', actions: goalAndHook }),
+      ]);
+      await engine.reload();
+
+      engine.handle(aCommentEvent({ text: 'hola' }));
+
+      expect(planned).toEqual([]);
+      expect(serverRuns.map((r) => r.action.type)).toEqual(['updateGoal', 'webhook']);
+      expect(serverRuns[1]?.vars['comment']).toBe('hola');
+    });
+
+    it('given a blocked comment in a webhook body, when it arrives, then the webhook does not run', async () => {
+      const { engine, serverRuns } = setup([
+        aRule({ id: 1, trigger: 'comment', actions: [goalAndHook[1] as ServerActionConfig] }),
+      ]);
+      await engine.reload();
+
+      engine.handle(aCommentEvent({ text: 'eres feo' }));
+
+      expect(serverRuns).toEqual([]);
+    });
+
+    it('given a rule test, when it has server actions, then they are skipped, not run', async () => {
+      const rule = aRule({ id: 1, trigger: 'comment', actions: goalAndHook });
+      const { engine, serverRuns } = setup([rule]);
+
+      const result = engine.test(rule, aCommentEvent({ text: 'hola' }));
+
+      expect(serverRuns).toEqual([]);
+      expect(result).toMatchObject({ matched: true, actionsQueued: 0, actionsSkipped: 2 });
+    });
   });
 });

@@ -234,6 +234,42 @@ export const ACTION_TYPES: readonly TypeDef[] = [
       },
     ],
   },
+  {
+    type: 'updateGoal',
+    label: 'Sumar a una meta',
+    help: 'Suma progreso manual a una meta (negativo para restar). Cuenta como progreso ganado.',
+    params: [
+      { key: 'goalId', label: 'ID de la meta', kind: 'number', default: 1 },
+      { key: 'amount', label: 'Cantidad', kind: 'number', default: 1 },
+    ],
+  },
+  {
+    type: 'webhook',
+    label: 'Llamar a un webhook',
+    help:
+      'Envía JSON a una URL. El host debe estar en WEBHOOK_ALLOWED_HOSTS del servidor; ' +
+      '{comment} y {commandArgs} pasan por la moderación.',
+    params: [
+      { key: 'url', label: 'URL', kind: 'text', default: 'https://' },
+      {
+        key: 'method',
+        label: 'Método',
+        kind: 'select',
+        default: 'POST',
+        options: [
+          { value: 'POST', label: 'POST' },
+          { value: 'PUT', label: 'PUT' },
+        ],
+      },
+      {
+        key: 'body',
+        label: 'Cuerpo JSON',
+        kind: 'text',
+        default: '{"user":"{nickname}"}',
+        help: 'Las variables se escapan solas dentro de las comillas.',
+      },
+    ],
+  },
 ];
 
 export const TEMPLATE_VARIABLES: Readonly<Partial<Record<LiveEventType, readonly string[]>>> = {
@@ -275,12 +311,14 @@ export function describeAction(
 ): string {
   if (a.type === 'playSound') return `Sonido: ${assetName(a.assetId)}`;
   if (a.type === 'showAlert') return `Alerta: ${a.text}`;
+  if (a.type === 'updateGoal') return `Meta #${a.goalId}: ${a.amount > 0 ? '+' : ''}${a.amount}`;
+  if (a.type === 'webhook') return `Webhook: ${URL.canParse(a.url) ? new URL(a.url).host : a.url}`;
   return `Voz: ${a.text}`;
 }
 
 /** Screens a rule writes to, for the collision warning. */
 export function screensOf(rule: Pick<Rule, 'actions'>): Set<string> {
-  return new Set(rule.actions.map((a) => a.screen));
+  return new Set(rule.actions.flatMap((a) => ('screen' in a ? [a.screen] : [])));
 }
 
 /**
