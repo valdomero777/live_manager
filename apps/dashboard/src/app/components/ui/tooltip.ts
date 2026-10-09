@@ -6,6 +6,7 @@ import {
   Directive,
   ElementRef,
   type OnDestroy,
+  effect,
   inject,
   input,
   signal,
@@ -63,6 +64,7 @@ export class UiTooltip implements OnDestroy {
   private readonly overlay = inject(Overlay);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private ref: OverlayRef | undefined;
+  private content: UiTooltipContent | undefined;
 
   readonly text = input('', { alias: 'uiTooltip' });
   readonly side = input<'top' | 'right' | 'bottom'>('top', { alias: 'tooltipSide' });
@@ -70,28 +72,52 @@ export class UiTooltip implements OnDestroy {
   protected readonly id = `ui-tooltip-${nextId++}`;
   protected readonly open = signal(false);
 
+  constructor() {
+    // An open tooltip follows its text, and closes when it no longer applies.
+    effect(() => {
+      const text = this.text();
+      if (!this.content) return;
+      if (!text || this.disabled()) this.hide();
+      else this.content.text.set(text);
+    });
+  }
+
   protected show(): void {
     if (this.disabled() || !this.text() || this.ref?.hasAttached()) return;
-    this.ref ??= this.overlay.create({
-      positionStrategy: this.overlay
-        .position()
-        .flexibleConnectedTo(this.host)
-        .withPositions(POSITIONS[this.side()]),
-      scrollStrategy: this.overlay.scrollStrategies.close(),
-      panelClass: 'pointer-events-none',
-    });
-    const content = this.ref.attach(new ComponentPortal(UiTooltipContent)).instance;
-    content.text.set(this.text());
-    content.id.set(this.id);
+    const ref = (this.ref ??= this.createOverlay());
+    ref.updatePositionStrategy(this.positionStrategy());
+    this.content = ref.attach(new ComponentPortal(UiTooltipContent)).instance;
+    this.content.text.set(this.text());
+    this.content.id.set(this.id);
     this.open.set(true);
   }
 
   protected hide(): void {
     this.ref?.detach();
-    this.open.set(false);
   }
 
   ngOnDestroy(): void {
     this.ref?.dispose();
+  }
+
+  private createOverlay(): OverlayRef {
+    const ref = this.overlay.create({
+      positionStrategy: this.positionStrategy(),
+      scrollStrategy: this.overlay.scrollStrategies.close(),
+      panelClass: 'pointer-events-none',
+    });
+    // Every way of closing (hide, Escape, scrolling) clears the aria link and the content ref.
+    ref.detachments().subscribe(() => {
+      this.content = undefined;
+      this.open.set(false);
+    });
+    return ref;
+  }
+
+  private positionStrategy() {
+    return this.overlay
+      .position()
+      .flexibleConnectedTo(this.host)
+      .withPositions(POSITIONS[this.side()]);
   }
 }

@@ -59,7 +59,8 @@ export interface AutomationActionView {
             [ariaLabel]="'Activar ' + name()"
             [checked]="enabled()"
             [disabled]="busy()"
-            (checkedChange)="toggle.emit($event)"
+            [controlled]="true"
+            (toggled)="toggle.emit($event)"
           />
         </div>
       </header>

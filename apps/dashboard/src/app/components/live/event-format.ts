@@ -106,8 +106,9 @@ export function activityPerMinute(
     social: 0,
   }));
   for (const e of events) {
-    const bucket =
-      e.occurredAt < first ? undefined : buckets[Math.floor((e.occurredAt - first) / MINUTE)];
+    // Events stamped slightly in the future (clock skew) count in the current minute.
+    const index = Math.min(minutes - 1, Math.floor((e.occurredAt - first) / MINUTE));
+    const bucket = e.occurredAt < first ? undefined : buckets[index];
     const series = SERIES_OF[e.type];
     if (bucket && series) bucket[series] += 1;
   }

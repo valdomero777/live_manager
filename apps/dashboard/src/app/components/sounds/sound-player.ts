@@ -57,7 +57,18 @@ import { UiSlider } from '../ui/input';
         role="group"
         [attr.aria-label]="'Reproducción de ' + title()"
       >
-        @if (playing()) {
+        @if (loading()) {
+          <button
+            uiButton
+            variant="outline"
+            size="icon-sm"
+            type="button"
+            aria-label="Cargando sonido; pulsa para cancelar"
+            (click)="audio.stopSound()"
+          >
+            <ui-spinner />
+          </button>
+        } @else if (playing()) {
           <button
             uiButton
             variant="outline"
@@ -77,11 +88,7 @@ import { UiSlider } from '../ui/input';
             [attr.aria-label]="paused() ? 'Reanudar' : 'Reproducir'"
             (click)="play()"
           >
-            @if (loading()) {
-              <ui-spinner />
-            } @else {
-              <svg lucidePlay class="fill-current" />
-            }
+            <svg lucidePlay class="fill-current" />
           </button>
         }
         <button
@@ -145,12 +152,18 @@ export class SoundPlayer {
   protected readonly percent = computed(() => Math.round(this.volume() * 100));
 
   protected play(): void {
-    if (this.paused()) void this.audio.resume();
-    else void this.audio.playSound(this.src(), this.volume());
+    if (!this.paused()) {
+      void this.audio.playSound(this.src(), this.volume());
+      return;
+    }
+    // The slider may have moved while paused: resume at the volume it shows now.
+    this.audio.setVolume(this.volume());
+    void this.audio.resume();
   }
 
   protected setVolume(volume: number): void {
     this.volumeChange.emit(volume);
-    if (this.playing()) this.audio.setVolume(volume); // what is playing follows the slider
+    // What is playing (or paused, waiting to resume) follows the slider.
+    if (this.playing() || this.paused() || this.loading()) this.audio.setVolume(volume);
   }
 }

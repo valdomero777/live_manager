@@ -76,10 +76,12 @@ describe('event formatting', () => {
         totalLikes: 50,
       },
       { id: 'd', sessionId: 1, occurredAt: at(1), type: 'follow', viewer },
+      // two minutes ahead of the browser clock: still counted, in the current minute
+      { id: 'e', sessionId: 1, occurredAt: at(12), type: 'comment', viewer, text: 'skew' },
     ] satisfies LiveEvent[];
     const buckets = activityPerMinute(events, now, 3);
     expect(buckets).toHaveLength(3);
-    expect(buckets[2]).toMatchObject({ comments: 1, social: 1, likes: 0 });
+    expect(buckets[2]).toMatchObject({ comments: 2, social: 1, likes: 0 });
     expect(buckets[1]).toMatchObject({ likes: 1 });
     expect(buckets[0]).toMatchObject({ comments: 0, social: 0 });
   });

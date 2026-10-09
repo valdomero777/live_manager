@@ -37,6 +37,8 @@ export class AdminSocketService {
   private attempt = 0;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private wanted = false;
+  /** Counts connector.status messages, so a slow /health reply never overwrites a newer one. */
+  private statusVersion = 0;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.disconnect());
@@ -87,11 +89,12 @@ export class AdminSocketService {
 
   /** The socket only reports changes; ask once per (re)connection for the current state. */
   private async syncConnectorStatus(): Promise<void> {
+    const version = this.statusVersion;
     try {
       const res = await fetch(`${API_PREFIX}/health`, { cache: 'no-store' });
       if (!res.ok) return;
       const health = (await res.json()) as HealthResponse;
-      this.connectorStatus.set(health.connector);
+      if (version === this.statusVersion) this.connectorStatus.set(health.connector);
     } catch {
       // the next connector.status message fills it in
     }
@@ -107,7 +110,10 @@ export class AdminSocketService {
     const parsed = AdminServerMessageSchema.safeParse(json);
     if (!parsed.success) return;
     const message = parsed.data;
-    if (message.type === 'connector.status') this.connectorStatus.set(message.payload);
+    if (message.type === 'connector.status') {
+      this.statusVersion++;
+      this.connectorStatus.set(message.payload);
+    }
     if (message.type === 'event.received') {
       this.events.update((list) => [message.payload, ...list].slice(0, EVENT_BUFFER));
     }

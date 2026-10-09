@@ -158,7 +158,12 @@ function badgesOf(rule: Rule): string[] {
 
     <ng-template #more let-rule>
       <div cdkMenu uiDropdownMenu>
-        <button cdkMenuItem uiDropdownMenuItem (cdkMenuItemTriggered)="duplicate(rule)">
+        <button
+          cdkMenuItem
+          uiDropdownMenuItem
+          [cdkMenuItemDisabled]="busy()"
+          (cdkMenuItemTriggered)="duplicate(rule)"
+        >
           <svg lucideCopy /> Duplicar
         </button>
         <div uiDropdownMenuSeparator></div>
@@ -166,6 +171,7 @@ function badgesOf(rule: Rule): string[] {
           cdkMenuItem
           uiDropdownMenuItem
           variant="destructive"
+          [cdkMenuItemDisabled]="busy()"
           (cdkMenuItemTriggered)="remove(rule)"
         >
           <svg lucideTrash /> Eliminar
@@ -217,6 +223,7 @@ export class RuleListPage {
   }
 
   protected duplicate(rule: Rule): Promise<void> {
+    if (this.busy()) return Promise.resolve();
     return this.run(async () => {
       await this.store.duplicate(rule);
       this.toast.success(
@@ -227,6 +234,7 @@ export class RuleListPage {
   }
 
   protected async remove(rule: Rule): Promise<void> {
+    if (this.busy()) return;
     const ok = await this.confirm.confirm({
       title: `¿Eliminar la regla «${rule.name}»?`,
       description: 'Dejará de reaccionar a los eventos del LIVE. Esta acción no se puede deshacer.',

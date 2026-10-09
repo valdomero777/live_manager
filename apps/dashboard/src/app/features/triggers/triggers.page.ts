@@ -191,6 +191,7 @@ export class TriggersPage {
   }
 
   protected async remove(trigger: Trigger): Promise<void> {
+    if (this.busy()) return;
     const ok = await this.confirm.confirm({
       title: `¿Eliminar el trigger «${trigger.name}»?`,
       description: 'El sonido dejará de reproducirse con este evento.',

@@ -66,7 +66,7 @@ import { toRuleOp, type RuleOp } from './rule-ops';
           <button
             cdkMenuItem
             uiDropdownMenuItem
-            [disabled]="!k.available"
+            [cdkMenuItemDisabled]="!k.available"
             (cdkMenuItemTriggered)="
               k.type && op.emit({ kind: 'add', list: 'actions', type: k.type })
             "

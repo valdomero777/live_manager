@@ -198,6 +198,7 @@
       cdkMenuItem
       uiDropdownMenuItem
       variant="destructive"
+      [cdkMenuItemDisabled]="busy()"
       (cdkMenuItemTriggered)="remove(trigger)"
     >
       <svg lucideTrash /> Eliminar

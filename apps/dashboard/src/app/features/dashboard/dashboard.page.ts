@@ -106,14 +106,27 @@ export class DashboardPage {
     this.activity().every((b) => b.gifts + b.likes + b.comments + b.social === 0),
   );
 
+  /** A /stats request is in flight: the next tick waits instead of racing it. */
+  private statsInFlight = false;
+
   constructor() {
     void this.loadStats();
     void this.rules.load().catch(() => undefined);
-    const poll = setInterval(() => void this.loadStats(), STATS_POLL_MS);
-    const clock = setInterval(() => this.now.set(Date.now()), CLOCK_MS);
+    // Hidden tabs neither poll nor redraw; coming back refreshes at once.
+    const poll = setInterval(() => {
+      if (!document.hidden) void this.loadStats();
+    }, STATS_POLL_MS);
+    const clock = setInterval(() => {
+      if (!document.hidden) this.now.set(Date.now());
+    }, CLOCK_MS);
+    const onVisible = () => {
+      if (!document.hidden) void this.loadStats();
+    };
+    document.addEventListener('visibilitychange', onVisible);
     inject(DestroyRef).onDestroy(() => {
       clearInterval(poll);
       clearInterval(clock);
+      document.removeEventListener('visibilitychange', onVisible);
     });
   }
 
@@ -122,12 +135,15 @@ export class DashboardPage {
   }
 
   private async loadStats(): Promise<void> {
+    if (this.statsInFlight) return;
+    this.statsInFlight = true;
     try {
       this.stats.set(await this.api.get<StatsSnapshot>('/stats'));
       this.statsError.set(false);
     } catch {
       this.statsError.set(true);
     } finally {
+      this.statsInFlight = false;
       this.statsLoading.set(false);
       this.now.set(Date.now());
     }

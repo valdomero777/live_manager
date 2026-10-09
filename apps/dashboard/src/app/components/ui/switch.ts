@@ -5,6 +5,7 @@ import {
   forwardRef,
   input,
   model,
+  output,
   signal,
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
@@ -13,6 +14,9 @@ import { cn } from '../../lib/utils';
 /**
  * shadcn/ui Switch: a real <button role="switch">. Works with [(checked)] or with reactive forms
  * (formControlName). A <label for="inputId"> activates it like a native control.
+ *
+ * With [controlled]="true" a click only emits (toggled) with the requested value and the switch
+ * keeps showing [checked]: the parent decides, so a failed save never leaves it out of sync.
  */
 @Component({
   selector: 'ui-switch',
@@ -42,6 +46,8 @@ import { cn } from '../../lib/utils';
 export class UiSwitch implements ControlValueAccessor {
   readonly checked = model(false);
   readonly disabled = input(false);
+  readonly controlled = input(false);
+  readonly toggled = output<boolean>();
   readonly inputId = input<string>('');
   readonly ariaLabel = input<string>('');
   readonly userClass = input<string>('', { alias: 'class' });
@@ -63,8 +69,13 @@ export class UiSwitch implements ControlValueAccessor {
 
   protected toggle(): void {
     if (this.isDisabled()) return;
+    if (this.controlled()) {
+      this.toggled.emit(!this.checked());
+      return;
+    }
     this.checked.update((c) => !c);
     this.onChange(this.checked());
+    this.toggled.emit(this.checked());
   }
 
   writeValue(value: unknown): void {

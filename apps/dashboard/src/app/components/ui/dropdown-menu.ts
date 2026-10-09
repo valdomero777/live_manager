@@ -31,7 +31,7 @@ export class UiDropdownMenuItem {
   protected readonly classes = computed(() =>
     cn(
       'relative flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none select-none',
-      'hover:bg-surface-hover focus:bg-surface-hover disabled:pointer-events-none disabled:opacity-50',
+      'hover:bg-surface-hover focus:bg-surface-hover aria-disabled:pointer-events-none aria-disabled:opacity-50 disabled:pointer-events-none disabled:opacity-50',
       "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg]:text-muted-foreground",
       this.variant() === 'destructive' &&
         'text-danger-text hover:bg-danger-soft focus:bg-danger-soft [&_svg]:text-danger-text',

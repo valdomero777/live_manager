@@ -1,6 +1,15 @@
 import { JsonPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  Injector,
+  afterNextRender,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   LucideArrowLeft,
   LucideChevronRight,
@@ -100,6 +109,8 @@ export class RuleEditorPage {
 
   private readonly store = inject(RulesStore);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly injector = inject(Injector);
   private readonly toast = inject(ToastService);
   protected readonly assets = inject(AssetsStore);
   protected readonly catalog = CATALOG;
@@ -287,6 +298,18 @@ export class RuleEditorPage {
       this.saved.set(rule);
       this.draft.set(draftFromRule(rule));
     });
+    this.scrollToFragment();
+  }
+
+  /** «Probar» from the rules list links to #probar; jump there once the rule has rendered. */
+  private scrollToFragment(): void {
+    const fragment = this.route.snapshot.fragment;
+    if (!fragment) return;
+    afterNextRender(
+      () =>
+        document.getElementById(fragment)?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      { injector: this.injector },
+    );
   }
 
   private async run(action: () => Promise<unknown>): Promise<void> {
