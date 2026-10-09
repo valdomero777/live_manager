@@ -11,8 +11,8 @@ import { RuleItemEditor } from './rule-item-editor';
 import { toRuleOp, type RuleOp } from './rule-ops';
 
 /**
- * THEN: the list of actions (Actions[]), in order. Built for many action kinds: today sound, voice
- * and overlay alerts; Webhook and OBS are shown as upcoming.
+ * THEN: the list of actions (Actions[]), in order. Built for many action kinds: sound, voice,
+ * overlay alerts, goal progress and webhooks today; OBS is shown as upcoming.
  */
 @Component({
   selector: 'app-action-builder',
@@ -40,7 +40,7 @@ import { toRuleOp, type RuleOp } from './rule-ops';
     } @empty {
       <app-empty-state
         title="Sin acciones"
-        description="Agrega al menos una: reproducir un sonido, leer en voz alta o mostrar una alerta."
+        description="Agrega al menos una: reproducir un sonido, leer en voz alta, mostrar una alerta o llamar a un webhook."
         class="py-6"
       />
     }

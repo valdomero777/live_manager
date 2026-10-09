@@ -39,7 +39,8 @@ export type ConditionType = ConditionConfig['type'];
 
 const volume = z.number().min(0).max(1);
 
-export const ActionConfigSchema = z.discriminatedUnion('type', [
+/** Actions that run on a screen (audio, alerts) and wait for its action.done. */
+export const ScreenActionConfigSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('playSound'),
     screen: z.string().default('audio'),
@@ -63,6 +64,37 @@ export const ActionConfigSchema = z.discriminatedUnion('type', [
     pitch: z.number().min(0).max(2).optional(),
     volume: volume.default(1),
   }),
+]);
+export type ScreenActionConfig = z.infer<typeof ScreenActionConfigSchema>;
+
+export const WEBHOOK_BODY_MAX = 2000;
+
+/** Actions the server runs itself (spec 9). Goals do not accept them: no goal -> goal loops. */
+export const ServerActionConfigSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('updateGoal'),
+    goalId: z.number().int().positive(),
+    /** Added to the goal's progress; negative values take progress back. */
+    amount: z
+      .number()
+      .int()
+      .min(-1_000_000)
+      .max(1_000_000)
+      .refine((n) => n !== 0, 'amount must not be 0'),
+  }),
+  z.object({
+    type: z.literal('webhook'),
+    url: z.url({ protocol: /^https?$/ }).max(2000),
+    method: z.enum(['POST', 'PUT']).default('POST'),
+    /** JSON text with {placeholders}; each value is escaped so the result stays valid JSON. */
+    body: z.string().max(WEBHOOK_BODY_MAX).default('{}'),
+  }),
+]);
+export type ServerActionConfig = z.infer<typeof ServerActionConfigSchema>;
+
+export const ActionConfigSchema = z.discriminatedUnion('type', [
+  ...ScreenActionConfigSchema.options,
+  ...ServerActionConfigSchema.options,
 ]);
 export type ActionConfig = z.infer<typeof ActionConfigSchema>;
 export type ActionType = ActionConfig['type'];

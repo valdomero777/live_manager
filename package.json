@@ -26,6 +26,9 @@
     "seed": "tsx --conditions=development --env-file-if-exists=.env apps/server/src/main/seed.ts",
     "dev:overlays": "npm run dev -w @tiklive/overlays",
     "load-test": "tsx --conditions=development tools/load-test.ts",
+    "package": "tsx --conditions=development tools/package.ts",
+    "restore": "tsx --conditions=development apps/server/src/main/restore.ts",
+    "phase0": "tsx --conditions=development tools/phase0-check.ts",
     "watch-events": "tsx --conditions=development tools/watch-events.ts",
     "dev:dashboard": "npm run start -w @tiklive/dashboard"
   },

@@ -29,6 +29,7 @@ function setup(subscribed: string[]) {
     invalidateAll: () => undefined,
   } as unknown as LeaderboardService;
   const goals = {
+    onProgress: () => undefined,
     evaluate: async () => [7],
     list: () => [{ id: 7 }],
     progress: async (id: number) => ({

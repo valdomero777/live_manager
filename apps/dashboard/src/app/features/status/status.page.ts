@@ -9,13 +9,16 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
+  LucideArchive,
   LucideCircleAlert,
   LucideDatabase,
+  LucideHardDrive,
   LucideLink,
   LucideMonitor,
   LucidePlug,
   LucideRadio,
   LucideServer,
+  LucideTriangleAlert,
   LucideUnplug,
 } from '@lucide/angular';
 import type { HealthResponse, SettingsResponse } from '@tiklive/contracts';
@@ -60,6 +63,9 @@ const HEALTH_POLL_MS = 5_000;
     LucideLink,
     LucideRadio,
     LucideCircleAlert,
+    LucideTriangleAlert,
+    LucideHardDrive,
+    LucideArchive,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'page' },

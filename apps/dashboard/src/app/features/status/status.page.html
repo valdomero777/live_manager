@@ -3,6 +3,13 @@
   description="Conecta el panel a tu TikTok LIVE, revisa el servidor y copia las URLs para OBS o LIVE Studio."
 />
 
+@for (alert of health()?.alerts ?? []; track alert.code) {
+<div uiAlert variant="warning" role="alert">
+  <svg lucideTriangleAlert />
+  <p uiAlertDescription>{{ alert.message }}</p>
+</div>
+}
+
 <div class="grid gap-4 lg:grid-cols-2">
   <section uiCard aria-labelledby="connector-title">
     <header uiCardHeader>
@@ -104,6 +111,20 @@
         </dd>
         <dt class="text-muted-foreground">Encendido hace</dt>
         <dd class="tabular-nums">{{ uptime(h.uptimeS) }}</dd>
+        <dt class="flex items-center gap-2 text-muted-foreground">
+          <svg lucideHardDrive class="size-4" /> Espacio libre
+        </dt>
+        <dd class="tabular-nums">
+          {{ h.diskFreePercent === null ? '—' : h.diskFreePercent + ' %' }}
+        </dd>
+        <dt class="flex items-center gap-2 text-muted-foreground">
+          <svg lucideArchive class="size-4" /> Último respaldo
+        </dt>
+        <dd>
+          @if (h.lastBackupAt; as at) { {{ at | date: 'dd/MM HH:mm' }} } @else {
+          <span class="type-secondary">Aún no hay</span>
+          }
+        </dd>
         <dt class="text-muted-foreground">Versión</dt>
         <dd class="font-mono text-xs leading-5">{{ h.version }}</dd>
         <dt class="flex items-center gap-2 text-muted-foreground">

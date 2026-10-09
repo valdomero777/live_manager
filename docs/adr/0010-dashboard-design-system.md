@@ -142,7 +142,8 @@ Tema: claro, oscuro o según el sistema (`ThemeService`, recordado en `localStor
   no likes para no esconder un regalo bajo 500 likes) y `rule.executed` (automatizaciones
   recientes). Sin sesión, las métricas muestran «—» y no un cero inventado.
 - **Automatizaciones** se leen como una frase: CUANDO → SI → ENTONCES. El builder trata las
-  acciones como lista (`Actions[]`) y muestra Webhook y OBS como «Próximamente» deshabilitados.
+  acciones como lista (`Actions[]`): sonido, voz, alerta, sumar a una meta y webhook; OBS aparece
+  como «Próximamente» deshabilitado.
 - **Errores de formulario** junto al campo (`ui-form-field`), con `aria-invalid` y
   `aria-describedby`; los toasts solo confirman acciones, nunca son el único aviso de un error.
 - **Borrar** pide confirmación con un AlertDialog accesible (foco en «Cancelar», Escape cierra).

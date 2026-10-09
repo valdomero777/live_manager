@@ -14,6 +14,9 @@ import { notFound } from './problem.js';
 import type { ProjectionServices } from './services.js';
 
 const IdParams = z.object({ id: z.coerce.number().int().positive() });
+const GoalAdjustmentSchema = z.object({
+  amount: z.number().int().min(-1_000_000).max(1_000_000),
+});
 const RotatorParams = z.object({ id: z.string().regex(ROTATOR_ID) });
 const LeaderboardQuery = z.object({
   scope: ScopeSchema.default('session'),
@@ -77,6 +80,15 @@ function registerGoalRoutes(app: FastifyInstance, p: ProjectionServices): void {
     if (!goal) return notFound(reply, `goal ${id}`);
     p.publisher.markDirty(`goal:${id}`);
     return goal;
+  });
+
+  /** Manual progress, the same effect as a rule's updateGoal action. */
+  app.post('/goals/:id/progress', async (req, reply) => {
+    const { id } = IdParams.parse(req.params);
+    const { amount } = GoalAdjustmentSchema.parse(req.body);
+    const found = await p.goals.adjust(id, amount, `manual:${Date.now()}`);
+    if (!found) return notFound(reply, `goal ${id}`);
+    return { ...p.goals.get(id), progress: await p.goals.progress(id) };
   });
 
   app.delete('/goals/:id', async (req, reply) => {

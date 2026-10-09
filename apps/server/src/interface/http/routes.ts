@@ -17,11 +17,15 @@ const IDEMPOTENCY_HEADER = 'idempotency-key';
 
 export function registerApiRoutes(app: FastifyInstance, s: HttpServices): void {
   app.get('/health', async (_req, reply) => {
-    const health = s.health.check();
+    const health = await s.health.check();
     return reply.status(health.db === 'ok' ? 200 : 503).send(health);
   });
 
   registerConnectorRoutes(app, s);
+  registerBackupRoutes(app, s);
+  app.get('/metrics', (_req, reply) =>
+    reply.type('text/plain; version=0.0.4; charset=utf-8').send(s.metrics.render()),
+  );
   registerRuleRoutes(app, s);
   registerProjectionRoutes(app, s.projections);
 
@@ -99,5 +103,17 @@ function registerRuleRoutes(app: FastifyInstance, s: HttpServices): void {
     const { id } = IdParams.parse(req.params);
     await s.rules.delete(id);
     return reply.status(204).send();
+  });
+}
+
+/** Backups: the schedule runs by itself; these are for checking it and for "back up now". */
+function registerBackupRoutes(app: FastifyInstance, s: HttpServices): void {
+  app.get('/backups', () => s.maintenance.status());
+
+  app.post('/backups', async (req, reply) => {
+    const { kind } = z
+      .object({ kind: z.enum(['db', 'assets']).default('db') })
+      .parse(req.body ?? {});
+    return reply.status(201).send(await s.maintenance.backupNow(kind));
   });
 }

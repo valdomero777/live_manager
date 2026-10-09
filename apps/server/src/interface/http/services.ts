@@ -5,6 +5,8 @@ import type { AssetLibrary } from '../../application/assets/asset-library.js';
 import type { AssetService } from '../../application/assets/asset-service.js';
 import type { ConnectorSupervisor } from '../../application/connector/connector-supervisor.js';
 import type { GiftCatalogService } from '../../application/gifts/gift-catalog-service.js';
+import type { MetricsRegistry } from '../../application/metrics/metrics-registry.js';
+import type { MaintenanceService } from '../../application/maintenance/maintenance-service.js';
 import type { HealthService } from '../../application/health/health-service.js';
 import type { AdminNotifier } from '../../application/ports/admin-notifier.js';
 import type { ChannelGateway } from '../../application/ports/channel-gateway.js';
@@ -41,6 +43,8 @@ export interface HttpServices {
   readonly gifts: GiftCatalogService;
   readonly sounds: SoundSearchService;
   readonly triggers: TriggerService;
+  readonly maintenance: MaintenanceService;
+  readonly metrics: Pick<MetricsRegistry, 'render'>;
 }
 
 /** Leaderboards, goals, stats and rotators (phase 3). */

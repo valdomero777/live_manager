@@ -239,6 +239,31 @@ describe('goals', () => {
     expect(await t.goals.progress(goal.id)).toMatchObject({ ratio: 1, reached: true });
   });
 
+  it('manual progress counts toward the goal and celebrates once (updateGoal)', async () => {
+    const t = await setup();
+    const goal = await t.goals.create(
+      define({ name: 'Rosas', metric: 'diamonds', target: 10, onReach: celebrate }),
+    );
+    const seen: number[] = [];
+    t.goals.onProgress((id) => seen.push(id));
+
+    await t.gift('ana', 4);
+    expect(await t.goals.adjust(goal.id, 5, 'manual')).toBe(true);
+    expect(t.planned).toHaveLength(0);
+    expect(await t.goals.progress(goal.id)).toMatchObject({ current: 9, reached: false });
+
+    await t.goals.adjust(goal.id, 2, 'manual');
+    expect(t.planned).toHaveLength(1);
+    await t.restartGoals();
+    await t.goals.adjust(goal.id, 1, 'manual');
+    expect(t.planned).toHaveLength(1);
+    expect(seen).toEqual([goal.id, goal.id]);
+
+    await t.goals.adjust(goal.id, -100, 'manual');
+    expect(await t.goals.progress(goal.id)).toMatchObject({ current: 0 });
+    expect(await t.goals.adjust(999, 1, 'manual')).toBe(false);
+  });
+
   it('a repeating goal fires each cycle with a growing target', async () => {
     const t = await setup();
     const goal = await t.goals.create(

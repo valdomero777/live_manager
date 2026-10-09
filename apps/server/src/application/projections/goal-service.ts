@@ -1,6 +1,7 @@
 import type { Goal, GoalDefinition, GoalProgress, LiveEvent, Metric } from '@tiklive/contracts';
 import { goalStatus, newlyReachedCycles } from '../../domain/projections/goal-progress.js';
 import { goalMetricToMetric } from '../../domain/projections/scopes.js';
+import type { GoalAdjuster } from '../actions/server-action-runner.js';
 import type { ActionHandlerRegistry, AssetCatalog } from '../../domain/rules/actions.js';
 import type { Clock } from '../../domain/shared/time.js';
 import type { ActionSink } from '../actions/action-scheduler.js';
@@ -30,8 +31,9 @@ interface GoalDeps {
  * Goals as a projection over room totals (RF-15). Progress is derived, never stored; only
  * reached cycles are persisted, keyed by scope, so on_reach fires once even across restarts.
  */
-export class GoalService {
+export class GoalService implements GoalAdjuster {
   private goals: readonly Goal[] = [];
+  private readonly listeners: ((goalId: number) => void)[] = [];
 
   constructor(private readonly deps: GoalDeps) {}
 
@@ -72,6 +74,26 @@ export class GoalService {
     );
     for (const goal of affected) await this.checkReached(goal, event.id);
     return affected.map((g) => g.id);
+  }
+
+  /** Called when a goal's progress changes without an event (manual adjustment). */
+  onProgress(listener: (goalId: number) => void): void {
+    this.listeners.push(listener);
+  }
+
+  /**
+   * Adds manual progress (updateGoal, RF-08). It counts like earned progress: reaching a target
+   * this way celebrates once. False if the goal does not exist or has no scope yet.
+   */
+  async adjust(goalId: number, amount: number, eventId: string): Promise<boolean> {
+    const goal = this.get(goalId);
+    if (!goal) return false;
+    const key = this.scopeKeyOf(goal);
+    if (key === undefined) return false;
+    await this.deps.repo.addAdjustment(goal.id, key, amount);
+    if (goal.active) await this.checkReached(goal, eventId);
+    this.listeners.forEach((notify) => notify(goal.id));
+    return true;
   }
 
   async progress(goalId: number): Promise<GoalProgressView | undefined> {
@@ -126,7 +148,9 @@ export class GoalService {
     return sessionId === undefined ? undefined : `session:${sessionId}`;
   }
 
-  private currentValue(goal: Goal, key: string): Promise<number> {
-    return this.deps.totals.roomTotal(goalMetricToMetric(goal.metric), key);
+  private async currentValue(goal: Goal, key: string): Promise<number> {
+    const earned = await this.deps.totals.roomTotal(goalMetricToMetric(goal.metric), key);
+    const manual = await this.deps.repo.adjustment(goal.id, key);
+    return Math.max(0, earned + manual);
   }
 }
