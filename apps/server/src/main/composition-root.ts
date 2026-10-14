@@ -36,6 +36,7 @@ import { JsonlRecorder } from '../infrastructure/recording/jsonl-recorder.js';
 import { HttpWebhookClient } from '../infrastructure/http/http-webhook-client.js';
 import { GoalService } from '../application/projections/goal-service.js';
 import { LeaderboardService } from '../application/projections/leaderboard-service.js';
+import { OverlayTemplateService } from '../application/projections/overlay-template-service.js';
 import { RotatorService } from '../application/projections/rotator-service.js';
 import { SnapshotPublisher } from '../application/projections/snapshot-publisher.js';
 import { RuleEngine } from '../application/rules/rule-engine.js';
@@ -242,7 +243,8 @@ function buildProjections(rt: Runtime, db: Persistence, screens: ScreenSocketHub
     publisher.refreshAll();
   });
   const rotators = new RotatorService(db.settings);
-  return { leaderboards, goals, stats, publisher, rotators, channels: screens };
+  const overlayTemplates = new OverlayTemplateService(db.settings, rt.ids, rt.clock);
+  return { leaderboards, goals, stats, publisher, rotators, overlayTemplates, channels: screens };
 }
 type Projections = ReturnType<typeof buildProjections>;
 

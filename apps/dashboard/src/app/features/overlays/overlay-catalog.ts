@@ -203,7 +203,7 @@ export const OVERLAY_TYPES: readonly OverlayType[] = [
     id: 'audio',
     label: 'Pestaña de audio',
     path: '/screen/audio/',
-    help: 'Ábrela en un navegador de la PC de stream (no como fuente) y pulsa «Iniciar audio».',
+    help: 'Opcional: el panel ya reproduce el sonido. Úsala solo para llevar el audio a otra PC (ábrela en un navegador y pulsa «Iniciar audio»).',
     params: [
       {
         key: 'master',

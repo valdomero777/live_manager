@@ -4,6 +4,7 @@ import {
   LeaderboardSettingsSchema,
   MAX_LEADERBOARD_LIMIT,
   MetricSchema,
+  OverlayTemplateInputSchema,
   RotatorConfigSchema,
   ScopeSchema,
 } from '@tiklive/contracts';
@@ -18,6 +19,7 @@ const GoalAdjustmentSchema = z.object({
   amount: z.number().int().min(-1_000_000).max(1_000_000),
 });
 const RotatorParams = z.object({ id: z.string().regex(ROTATOR_ID) });
+const TemplateParams = z.object({ id: z.string().min(1).max(40) });
 const LeaderboardQuery = z.object({
   scope: ScopeSchema.default('session'),
   limit: z.coerce.number().int().min(1).max(MAX_LEADERBOARD_LIMIT).default(10),
@@ -34,6 +36,34 @@ export function registerProjectionRoutes(app: FastifyInstance, p: ProjectionServ
   app.put('/rotators/:id', (req) =>
     p.rotators.save(RotatorParams.parse(req.params).id, RotatorConfigSchema.parse(req.body)),
   );
+
+  registerOverlayTemplateRoutes(app, p);
+}
+
+function registerOverlayTemplateRoutes(app: FastifyInstance, p: ProjectionServices): void {
+  app.get('/overlay-templates', () => p.overlayTemplates.list());
+
+  app.post('/overlay-templates', async (req, reply) => {
+    const template = await p.overlayTemplates.create(OverlayTemplateInputSchema.parse(req.body));
+    return reply.status(201).send(template);
+  });
+
+  app.put('/overlay-templates/:id', async (req, reply) => {
+    const { id } = TemplateParams.parse(req.params);
+    const template = await p.overlayTemplates.update(
+      id,
+      OverlayTemplateInputSchema.parse(req.body),
+    );
+    return template ?? notFound(reply, `overlay template ${id} not found`);
+  });
+
+  app.delete('/overlay-templates/:id', async (req, reply) => {
+    const { id } = TemplateParams.parse(req.params);
+    if (!(await p.overlayTemplates.remove(id))) {
+      return notFound(reply, `overlay template ${id} not found`);
+    }
+    return reply.status(204).send();
+  });
 }
 
 function registerLeaderboardRoutes(app: FastifyInstance, p: ProjectionServices): void {

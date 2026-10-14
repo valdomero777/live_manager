@@ -197,6 +197,33 @@ describe('app end to end (simulator -> rules -> queue -> overlay)', () => {
     expect(unconfirmed.statusCode).toBe(400);
   });
 
+  it('saves, lists, updates and deletes overlay templates', async () => {
+    const base = `${API_PREFIX}/overlay-templates`;
+    const created = await t.api({
+      method: 'POST',
+      url: base,
+      payload: { name: 'Top regalos', type: 'leaderboard', params: { limit: '3' } },
+    });
+    expect(created.statusCode).toBe(201);
+    const { id } = created.json<{ id: string }>();
+    const updated = await t.api({
+      method: 'PUT',
+      url: `${base}/${id}`,
+      payload: { name: 'Top regalos', type: 'leaderboard', params: {}, pinned: true },
+    });
+    expect(updated.json()).toMatchObject({ id, pinned: true, params: {} });
+    const list = await t.api({ url: base });
+    expect(list.json()).toEqual([expect.objectContaining({ id, name: 'Top regalos' })]);
+    const invalid = await t.api({
+      method: 'POST',
+      url: base,
+      payload: { name: '', type: 'audio' },
+    });
+    expect(invalid.statusCode).toBe(400);
+    expect((await t.api({ method: 'DELETE', url: `${base}/${id}` })).statusCode).toBe(204);
+    expect((await t.api({ method: 'DELETE', url: `${base}/${id}` })).statusCode).toBe(404);
+  });
+
   it('serves rotator configs to overlays only with the key', async () => {
     const saved = await t.api({
       method: 'PUT',
