@@ -1,22 +1,11 @@
 import type { GiftInfo } from '@tiklive/contracts';
 import { describe, expect, it } from 'vitest';
-import type { z } from 'zod';
+import { MemorySettings } from '../../../test/support/fakes.js';
 import { FakeClock } from '../../domain/shared/time.js';
 import { silentLogger } from '../ports/logger.js';
-import type { SettingsRepository } from '../ports/settings-repository.js';
 import { GIFT_CATALOG_TTL_MS, GiftCatalogService } from './gift-catalog-service.js';
 
 const ROSE: GiftInfo = { id: 5655, name: 'Rose', diamonds: 1 };
-
-class MemorySettings implements SettingsRepository {
-  readonly values = new Map<string, unknown>();
-  async get<S extends z.ZodType>(key: string, schema: S) {
-    return this.values.has(key) ? schema.parse(this.values.get(key)) : undefined;
-  }
-  async set(key: string, value: unknown) {
-    this.values.set(key, value);
-  }
-}
 
 function setup() {
   const clock = new FakeClock(1_000);

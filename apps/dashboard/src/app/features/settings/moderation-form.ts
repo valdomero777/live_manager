@@ -105,6 +105,10 @@ function parsePronunciations(text: string): Record<string, string> {
             <ui-switch inputId="m-mentions" formControlName="readMentions" />
             <label for="m-mentions" class="type-label">Leer &#64;menciones</label>
           </div>
+          <div class="flex items-center gap-3">
+            <ui-switch inputId="m-fancy" formControlName="normalizeFancyText" />
+            <label for="m-fancy" class="type-label">Convertir letras decoradas (𝓗𝓸𝓵𝓪 → Hola)</label>
+          </div>
         </div>
         <div class="grid gap-4 md:grid-cols-2">
           <ui-form-field
@@ -173,6 +177,7 @@ export class ModerationForm {
     blockMode: new FormControl<'drop' | 'mask'>('drop', { nonNullable: true }),
     stripEmojis: new FormControl(true, { nonNullable: true }),
     readMentions: new FormControl(false, { nonNullable: true }),
+    normalizeFancyText: new FormControl(true, { nonNullable: true }),
     blockedTerms: new FormControl('', { nonNullable: true }),
     pronunciations: new FormControl('', { nonNullable: true }),
   });
@@ -190,6 +195,7 @@ export class ModerationForm {
       blockMode: v.blockMode,
       stripEmojis: v.stripEmojis,
       readMentions: v.readMentions,
+      normalizeFancyText: v.normalizeFancyText,
       blockedTerms: lines(v.blockedTerms),
       pronunciations: parsePronunciations(v.pronunciations),
     });
@@ -219,6 +225,7 @@ export class ModerationForm {
       blockMode: s.blockMode,
       stripEmojis: s.stripEmojis,
       readMentions: s.readMentions,
+      normalizeFancyText: s.normalizeFancyText,
       blockedTerms: s.blockedTerms.join('\n'),
       pronunciations: Object.entries(s.pronunciations)
         .map(([word, spoken]) => `${word} ${PRONUNCIATION_SEPARATOR} ${spoken}`)

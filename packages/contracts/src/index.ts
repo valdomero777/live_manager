@@ -9,3 +9,4 @@ export * from './settings.js';
 export * from './assets.js';
 export * from './gifts.js';
 export * from './sounds.js';
+export * from './tts.js';

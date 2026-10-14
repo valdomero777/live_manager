@@ -89,6 +89,45 @@
       <ui-form-field label="Texto" for="c-text">
         <input uiInput id="c-text" type="text" formControlName="text" />
       </ui-form-field>
+      <fieldset class="grid gap-3">
+        <legend class="type-caption mb-1">Quién comenta (para probar a quién lee la voz)</legend>
+        <div class="flex flex-wrap gap-x-6 gap-y-2">
+          <div class="flex items-center gap-2">
+            <ui-switch inputId="c-follower" formControlName="isFollower" />
+            <label for="c-follower" class="type-label">Seguidor</label>
+          </div>
+          <div class="flex items-center gap-2">
+            <ui-switch inputId="c-superfan" formControlName="isSubscriber" />
+            <label for="c-superfan" class="type-label">Super fan</label>
+          </div>
+          <div class="flex items-center gap-2">
+            <ui-switch inputId="c-mod" formControlName="isModerator" />
+            <label for="c-mod" class="type-label">Moderador</label>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <ui-form-field label="Nivel de gifter" for="c-gifter">
+            <input
+              uiInput
+              id="c-gifter"
+              type="number"
+              min="0"
+              max="60"
+              formControlName="gifterLevel"
+            />
+          </ui-form-field>
+          <ui-form-field label="Nivel fan club" for="c-fan">
+            <input
+              uiInput
+              id="c-fan"
+              type="number"
+              min="0"
+              max="50"
+              formControlName="fanClubLevel"
+            />
+          </ui-form-field>
+        </div>
+      </fieldset>
     </div>
     <footer uiCardFooter>
       <button uiButton variant="outline" type="submit" [disabled]="busy()">

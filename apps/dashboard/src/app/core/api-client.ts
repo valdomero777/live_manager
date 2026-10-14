@@ -35,6 +35,11 @@ export class ApiClient {
     return this.call(this.http.post<T>(`${API_PREFIX}${path}`, body));
   }
 
+  /** POST that answers with a file (audio preview). */
+  postForBlob(path: string, body: unknown): Promise<Blob> {
+    return this.call(this.http.post(`${API_PREFIX}${path}`, body, { responseType: 'blob' }));
+  }
+
   put<T>(path: string, body: unknown): Promise<T> {
     return this.call(this.http.put<T>(`${API_PREFIX}${path}`, body));
   }

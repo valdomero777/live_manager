@@ -7,6 +7,7 @@ import {
   blocklistFilter,
   buildModerationChain,
   emojiFilter,
+  fancyTextFilter,
   lengthFilter,
   linksFilter,
   normalizeFilter,
@@ -67,6 +68,19 @@ describe('text filters', () => {
     expect(filter.apply('hola')).toBe('hola');
   });
 
+  it('fancy text becomes plain letters and zalgo is trimmed', () => {
+    const filter = fancyTextFilter(true);
+    expect(filter.apply('𝓗𝓸𝓵𝓪 ｍｕｎｄｏ', ctx)).toBe('Hola mundo');
+    expect(filter.apply('Ⓗⓞⓛⓐ 🅷🅾🅻🅰 🄷🄾🄻🄰', ctx)).toBe('Hola HOLA HOLA');
+    expect(filter.apply('canción', ctx)).toBe('canción');
+    expect(filter.apply('h́̂̃̄ola', ctx)).toBe('h́̂ola');
+    expect(fancyTextFilter(false).apply('𝓗𝓸𝓵𝓪', ctx)).toBe('𝓗𝓸𝓵𝓪');
+  });
+
+  it('emoji also strips flags (regional indicators)', () => {
+    expect(emojiFilter(true).apply('saludos desde 🇲🇽', ctx)).toBe('saludos desde');
+  });
+
   it('pronunciation replaces whole words', () => {
     expect(pronunciationFilter({ GG: 'buena partida' }).apply('gg wp', ctx)).toBe(
       'buena partida wp',
@@ -81,6 +95,14 @@ describe('moderation chain (RF-11)', () => {
       new FakeClock(0),
     );
     expect(chain.apply('eres un TONTO', ctx)).toBeNull();
+  });
+
+  it('a blocked word written in a fancy font is still blocked', () => {
+    const chain = buildModerationChain(
+      { ...DEFAULT_MODERATION, blockedTerms: ['tonto'] },
+      new FakeClock(0),
+    );
+    expect(chain.apply('eres un 𝓽𝓸𝓷𝓽𝓸', ctx)).toBeNull();
   });
 
   it('cleans a typical comment end to end', () => {

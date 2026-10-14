@@ -8,6 +8,10 @@ export const ViewerRefSchema = z.object({
   isFollower: z.boolean(),
   isSubscriber: z.boolean(),
   isModerator: z.boolean(),
+  /** TikTok-wide gifter level from the user's badge (0 or absent: none). Best effort. */
+  gifterLevel: z.number().int().nonnegative().optional(),
+  /** Level in this streamer's fan club (absent: not a member). Best effort. */
+  fanClubLevel: z.number().int().nonnegative().optional(),
 });
 export type ViewerRef = z.infer<typeof ViewerRefSchema>;
 

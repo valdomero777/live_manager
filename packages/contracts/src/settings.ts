@@ -114,6 +114,8 @@ export const ModerationSettingsSchema = z.object({
   pronunciations: z
     .record(z.string().trim().min(1).max(40), z.string().trim().min(1).max(80))
     .default({}),
+  /** Fancy fonts and zalgo to plain letters, before any other filter (blocklist included). */
+  normalizeFancyText: z.boolean().default(true),
 });
 export type ModerationSettings = z.infer<typeof ModerationSettingsSchema>;
 

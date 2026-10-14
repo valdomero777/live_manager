@@ -45,8 +45,10 @@ import { TriggerExecutor } from '../application/triggers/trigger-executor.js';
 import { TriggerService } from '../application/triggers/trigger-service.js';
 import { ModerationService } from '../application/settings/moderation-service.js';
 import { SettingsService } from '../application/settings/settings-service.js';
+import { TtsService } from '../application/tts/tts-service.js';
 import { SIMULATOR_TARGET, SimulatorService } from '../application/simulator/simulator-service.js';
 import { StatsProjection } from '../domain/projections/stats-projection.js';
+import { scopeKey } from '../domain/projections/scopes.js';
 import { createDefaultActionRegistry } from '../domain/rules/actions.js';
 import { createDefaultConditionRegistry } from '../domain/rules/conditions.js';
 import { RuleRateLimiter } from '../domain/rules/rate-limiter.js';
@@ -77,6 +79,8 @@ import {
   UuidGenerator,
 } from '../infrastructure/system/system.js';
 import { TikTokGiftCatalog } from '../infrastructure/tiktok/tiktok-gift-catalog.js';
+import { EdgeSpeechSynthesizer } from '../infrastructure/tts/edge-speech-synthesizer.js';
+import { francLanguageScorer } from '../infrastructure/tts/franc-language-scorer.js';
 import { TikTokLiveConnectorAdapter } from '../infrastructure/tiktok/tiktok-live-connector.adapter.js';
 import { AdminSocketHub } from '../infrastructure/ws/admin-socket-hub.js';
 import { ScreenSocketHub } from '../infrastructure/ws/screen-socket-hub.js';
@@ -168,6 +172,24 @@ function buildActionScheduler(rt: Runtime, screens: ScreenSocketHub, metrics: Me
   });
 }
 
+/** TTS settings plus the room's diamond ranking for the "top gifters" audience. */
+function buildTts(rt: Runtime, db: Persistence) {
+  return new TtsService({
+    repo: db.settings,
+    synthesizer: new EdgeSpeechSynthesizer(),
+    scoreLanguages: francLanguageScorer,
+    topGifters: async (scope, limit) => {
+      const sessionId = db.sessions.currentId();
+      if (scope === 'session' && sessionId === undefined) return [];
+      const key = scopeKey(scope, sessionId ?? 0, rt.clock.now());
+      const rows = await db.leaderboards.top('diamonds', key, limit, []);
+      return rows.map((row) => row.uniqueId);
+    },
+    clock: rt.clock,
+    logger: rt.logger.child({ module: 'tts' }),
+  });
+}
+
 function buildReactions(
   cfg: AppConfig,
   hooks: AppHooks,
@@ -179,6 +201,7 @@ function buildReactions(
 ) {
   const actions = buildActionScheduler(rt, screens, metrics);
   const moderation = new ModerationService(db.settings, rt.clock);
+  const tts = buildTts(rt, db);
   const handlers = createDefaultActionRegistry();
   const { serverActions, goalLink } = buildServerActions(cfg, hooks, rt);
   const engine = new RuleEngine({
@@ -190,6 +213,7 @@ function buildReactions(
     sink: actions,
     assets: db.assets,
     moderation: () => moderation.chain(),
+    speech: tts,
     ids: rt.ids,
     random: rt.random,
     notifier: admin,
@@ -202,7 +226,7 @@ function buildReactions(
     ids: rt.ids,
     logger: rt.logger.child({ module: 'triggers' }),
   });
-  return { actions, engine, handlers, moderation, triggers, goalLink };
+  return { actions, engine, handlers, moderation, tts, triggers, goalLink };
 }
 type Reactions = ReturnType<typeof buildReactions>;
 
@@ -222,6 +246,7 @@ function buildProjections(rt: Runtime, db: Persistence, screens: ScreenSocketHub
     actions: r.handlers,
     assets: db.assets,
     sink: r.actions,
+    speech: () => r.tts.voice(),
     ids: rt.ids,
     clock: rt.clock,
     logger: rt.logger.child({ module: 'goals' }),
@@ -443,6 +468,7 @@ function buildServices(p: ServiceParts): HttpServices {
     auth: p.auth,
     settings: buildSettings(p),
     moderation: p.reactions.moderation,
+    tts: p.reactions.tts,
     gifts: buildGiftService(p),
     maintenance: p.maintenance,
     metrics: p.metrics,
@@ -569,6 +595,7 @@ function appLifecycle(p: LifecycleParts): Pick<App, 'start' | 'stop'> {
       await p.db.sessions.recoverAfterRestart();
       await p.db.assets.refresh();
       await p.reactions.moderation.load();
+      await p.reactions.tts.load();
       await p.reactions.engine.reload();
       await p.reactions.triggers.reload();
       await p.projections.leaderboards.loadSettings();

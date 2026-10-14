@@ -7,12 +7,21 @@ import type { RawLiveEvent, ViewerRef } from '@tiklive/contracts';
 interface ImageLike {
   urlList?: string[];
 }
+interface BadgeLike {
+  sceneType?: number;
+  privilegeLogExtra?: { level?: string } | undefined;
+}
 interface UserLike {
   id?: string;
   displayId?: string;
   nickname?: string;
   avatarThumb?: ImageLike | undefined;
   followInfo?: { followStatus?: string } | undefined;
+  badgeList?: BadgeLike[];
+  /** TikTok-wide gifter grade. */
+  payGrade?: { level?: number } | undefined;
+  /** Membership of this streamer's fan club. */
+  fansClub?: { data?: { level?: number; userFansClubStatus?: number } | undefined } | undefined;
 }
 interface IdentityLike {
   isFollowerOfAnchor?: boolean;
@@ -57,6 +66,12 @@ export interface RoomUserMessageLike {
   totalUser?: string;
 }
 
+/** BadgeSceneType in tiktok-live-proto: the gifter level badge and the fan club badge. */
+const USER_GRADE_BADGE = 8;
+const FANS_CLUB_BADGE = 10;
+/** UserFansClubStatus.ACTIVE: a lapsed membership does not count. */
+const FANS_CLUB_ACTIVE = 1;
+
 /** Gift type 1 is the streakable ("combo") kind in TikTok's gift catalogue. */
 const STREAKABLE_GIFT_TYPE = 1;
 
@@ -76,6 +91,34 @@ function isFollower(user: UserLike, identity: IdentityLike | undefined): boolean
   return identity?.isFollowerOfAnchor ?? toInt(user.followInfo?.followStatus) > 0;
 }
 
+function badgeLevel(user: UserLike, sceneType: number): number {
+  const badge = user.badgeList?.find((b) => b.sceneType === sceneType);
+  return toInt(badge?.privilegeLogExtra?.level);
+}
+
+/** Best effort: the badge when TikTok sends it, otherwise the grade field. */
+function gifterLevel(user: UserLike): number {
+  return badgeLevel(user, USER_GRADE_BADGE) || toInt(user.payGrade?.level);
+}
+
+function fanClubLevel(user: UserLike): number {
+  const data = user.fansClub?.data;
+  if (data?.userFansClubStatus === FANS_CLUB_ACTIVE && toInt(data.level) > 0) {
+    return toInt(data.level);
+  }
+  return badgeLevel(user, FANS_CLUB_BADGE);
+}
+
+/** Only levels TikTok actually sent: 0 means "unknown or none". */
+function levels(user: UserLike): Pick<ViewerRef, 'gifterLevel' | 'fanClubLevel'> {
+  const gifter = gifterLevel(user);
+  const fanClub = fanClubLevel(user);
+  return {
+    ...(gifter > 0 ? { gifterLevel: gifter } : {}),
+    ...(fanClub > 0 ? { fanClubLevel: fanClub } : {}),
+  };
+}
+
 export function mapViewer(message: BaseMessage): ViewerRef | null {
   const user = message.user;
   if (!user?.id) return null;
@@ -90,6 +133,7 @@ export function mapViewer(message: BaseMessage): ViewerRef | null {
     isFollower: isFollower(user, identity),
     isSubscriber: identity?.isSubscriberOfAnchor === true,
     isModerator: identity?.isModeratorOfAnchor === true,
+    ...levels(user),
   };
 }
 

@@ -1,4 +1,9 @@
-import type { ScreenActionConfig, ScreenActionMessage } from '@tiklive/contracts';
+import type {
+  ScreenActionConfig,
+  ScreenActionMessage,
+  TtsEngine,
+  VoiceGender,
+} from '@tiklive/contracts';
 import { UnknownActionError } from '../shared/errors.js';
 import { resolveTemplate, type TemplateVariables } from './template.js';
 
@@ -32,6 +37,17 @@ export interface AssetCatalog {
   urlFor(assetId: number): string | undefined;
 }
 
+/** The configured voice (TTS settings); a speak action's own voice/rate/pitch override it. */
+export interface SpeechVoice {
+  readonly engine: TtsEngine;
+  /** BCP 47; may differ from the configured language after a switchVoice decision. */
+  readonly lang: string;
+  readonly gender: VoiceGender;
+  readonly voiceName?: string;
+  readonly rate: number;
+  readonly pitch: number;
+}
+
 export interface PlanContext {
   readonly actionId: string;
   readonly origin: ActionOrigin;
@@ -39,6 +55,8 @@ export interface PlanContext {
   readonly priority: number;
   readonly vars: TemplateVariables;
   readonly assets: AssetCatalog;
+  /** Absent: the audio screen picks a browser voice on its own (previous behaviour). */
+  readonly speech?: SpeechVoice;
 }
 
 /** Strategy per action type. plan() is pure: no I/O. Returns null when it cannot run. */
@@ -52,6 +70,8 @@ export const DEFAULT_SOUND_TIMEOUT_MS = 15_000;
 /** Rough upper bound for speech: ~80 ms per character plus a fixed margin. */
 const SPEECH_MS_PER_CHAR = 80;
 const SPEECH_BASE_MS = 3_000;
+/** Server-side synthesis (Edge) adds a round trip before the audio starts. */
+const SYNTHESIS_MS = 4_000;
 
 function base(ctx: PlanContext, screen: string, timeoutMs: number) {
   return {
@@ -101,23 +121,35 @@ export const showAlertHandler: ActionHandler<Cfg<'showAlert'>> = {
   },
 };
 
+function optional<K extends string, V>(key: K, value: V | undefined): { [P in K]?: V } {
+  return value === undefined ? {} : ({ [key]: value } as { [P in K]: V });
+}
+
+/** The action's own voice/rate/pitch win; the configured voice fills the rest. */
+function voiceFields(config: Cfg<'speak'>, speech: SpeechVoice | undefined) {
+  return {
+    ...optional('voice', config.voice ?? speech?.voiceName),
+    ...optional('rate', config.rate ?? speech?.rate),
+    ...optional('pitch', config.pitch ?? speech?.pitch),
+    ...(speech ? { engine: speech.engine, lang: speech.lang, gender: speech.gender } : {}),
+  };
+}
+
 export const speakHandler: ActionHandler<Cfg<'speak'>> = {
   type: 'speak',
   plan(config, ctx) {
     const text = resolveTemplate(config.text, ctx.vars).trim();
     if (text.length === 0) return null;
-    const { voice, rate, pitch } = config;
+    const synthesisMs = ctx.speech?.engine === 'edge' ? SYNTHESIS_MS : 0;
     return {
-      ...base(ctx, config.screen, SPEECH_BASE_MS + text.length * SPEECH_MS_PER_CHAR),
+      ...base(ctx, config.screen, SPEECH_BASE_MS + synthesisMs + text.length * SPEECH_MS_PER_CHAR),
       command: {
         type: 'action.speak',
         payload: {
           actionId: ctx.actionId,
           text,
           volume: config.volume,
-          ...(voice === undefined ? {} : { voice }),
-          ...(rate === undefined ? {} : { rate }),
-          ...(pitch === undefined ? {} : { pitch }),
+          ...voiceFields(config, ctx.speech),
         },
       },
     };

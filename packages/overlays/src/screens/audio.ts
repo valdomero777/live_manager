@@ -1,4 +1,5 @@
 import type { ScreenServerMessage } from '@tiklive/contracts';
+import { pickBrowserVoice } from '../core/browser-voice.js';
 import { readCommonParams, readNumber } from '../core/params.js';
 import { ScreenSocket } from '../core/ws-client.js';
 
@@ -53,7 +54,15 @@ class WebAudioPlayer {
 
   async play(url: string, volume: number, maxMs?: number): Promise<number> {
     if (isRemoteUrl(url)) return this.playRemote(url, volume, maxMs);
-    const buffer = await this.load(url);
+    return this.playBuffer(await this.load(url), volume, maxMs);
+  }
+
+  /** Encoded audio (MP3 from the server's Edge voice), decoded and played once. */
+  async playData(data: ArrayBuffer, volume: number): Promise<number> {
+    return this.playBuffer(await this.ctx.decodeAudioData(data), volume);
+  }
+
+  private async playBuffer(buffer: AudioBuffer, volume: number, maxMs?: number): Promise<number> {
     const gain = this.ctx.createGain();
     gain.gain.value = volume;
     gain.connect(this.master);
@@ -128,9 +137,9 @@ class BrowserSpeech {
   speak(p: Speak): Promise<number> {
     return new Promise((resolve, reject) => {
       const utterance = new SpeechSynthesisUtterance(p.text);
-      const voice = this.pickVoice(p.voice);
+      const voice = pickBrowserVoice(this.voices, p);
       if (voice) utterance.voice = voice;
-      utterance.lang = voice?.lang ?? p.voice ?? 'es-MX';
+      utterance.lang = voice?.lang ?? p.lang ?? 'es-MX';
       utterance.volume = p.volume * this.masterVolume();
       if (p.rate !== undefined) utterance.rate = p.rate;
       if (p.pitch !== undefined) utterance.pitch = p.pitch;
@@ -140,11 +149,39 @@ class BrowserSpeech {
       speechSynthesis.speak(utterance);
     });
   }
+}
 
-  /** Accepts a voice name or a language tag such as "es-MX". */
-  private pickVoice(wanted: string | undefined): SpeechSynthesisVoice | undefined {
-    if (!wanted) return this.voices.find((v) => v.lang.startsWith('es'));
-    return this.voices.find((v) => v.name === wanted) ?? this.voices.find((v) => v.lang === wanted);
+/**
+ * Edge neural voices: the server synthesises the text and returns MP3. Any failure (service
+ * down, no internet) falls back to the browser voice so the viewer is still read.
+ */
+class ServerSpeech {
+  constructor(
+    private readonly key: string,
+    private readonly player: WebAudioPlayer,
+    private readonly fallback: BrowserSpeech,
+  ) {}
+
+  async speak(p: Speak): Promise<number> {
+    try {
+      const response = await fetch(`/overlay-data/tts?key=${encodeURIComponent(this.key)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: p.text,
+          lang: p.lang ?? 'es-MX',
+          gender: p.gender ?? 'any',
+          ...(p.voice === undefined ? {} : { voice: p.voice }),
+          ...(p.rate === undefined ? {} : { rate: p.rate }),
+          ...(p.pitch === undefined ? {} : { pitch: p.pitch }),
+        }),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await this.player.playData(await response.arrayBuffer(), p.volume);
+    } catch (error) {
+      log(`Voz de Edge no disponible (${describe(error)}); uso la del navegador`);
+      return this.fallback.speak(p);
+    }
   }
 }
 
@@ -169,6 +206,7 @@ class AudioActionRunner {
   constructor(
     private readonly player: WebAudioPlayer,
     private readonly speech: BrowserSpeech,
+    private readonly serverSpeech: ServerSpeech,
     private readonly socket: () => ScreenSocket,
   ) {}
 
@@ -186,7 +224,8 @@ class AudioActionRunner {
       }
       case 'action.speak': {
         const p = message.payload;
-        await this.run(p.actionId, `Voz: ${p.text}`, () => this.speech.speak(p));
+        const engine = p.engine === 'edge' ? this.serverSpeech : this.speech;
+        await this.run(p.actionId, `Voz: ${p.text}`, () => engine.speak(p));
         break;
       }
       default:
@@ -217,7 +256,8 @@ async function start(): Promise<void> {
   await player.unlock();
   masterInput?.addEventListener('input', () => player.setMaster(Number(masterInput.value)));
   const speech = new BrowserSpeech(() => Number(masterInput?.value ?? 1));
-  const runner = new AudioActionRunner(player, speech, () => socket);
+  const serverSpeech = new ServerSpeech(params.key, player, speech);
+  const runner = new AudioActionRunner(player, speech, serverSpeech, () => socket);
 
   // Connecting only after unlock means the server holds actions until audio can play.
   const socket = new ScreenSocket({

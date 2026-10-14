@@ -18,6 +18,16 @@ export const SimulatorTemplateSchema = z.discriminatedUnion('kind', [
     kind: z.literal('comment'),
     user: z.string().optional(),
     text: z.string().default('hola!'),
+    /** Who the simulated viewer is, to try the TTS audience filters. */
+    viewer: z
+      .object({
+        isFollower: z.boolean().optional(),
+        isSubscriber: z.boolean().optional(),
+        isModerator: z.boolean().optional(),
+        gifterLevel: z.number().int().nonnegative().optional(),
+        fanClubLevel: z.number().int().nonnegative().optional(),
+      })
+      .optional(),
   }),
   z.object({
     kind: z.literal('like'),
@@ -31,7 +41,9 @@ export const SimulatorTemplateSchema = z.discriminatedUnion('kind', [
 export type SimulatorTemplate = z.infer<typeof SimulatorTemplateSchema>;
 export type SimulatorTemplateInput = z.input<typeof SimulatorTemplateSchema>;
 
-export function simulatedViewer(user = 'tester'): ViewerRef {
+type ViewerTraits = { [K in keyof ViewerRef]?: ViewerRef[K] | undefined };
+
+export function simulatedViewer(user = 'tester', traits: ViewerTraits = {}): ViewerRef {
   return {
     tiktokUserId: `sim-${user}`,
     uniqueId: user,
@@ -39,7 +51,12 @@ export function simulatedViewer(user = 'tester'): ViewerRef {
     isFollower: true,
     isSubscriber: false,
     isModerator: false,
+    ...stripUndefined(traits),
   };
+}
+
+function stripUndefined(traits: ViewerTraits): Partial<ViewerRef> {
+  return Object.fromEntries(Object.entries(traits).filter(([, v]) => v !== undefined));
 }
 
 /** Expands a template into the raw messages TikTok would send (a streak is N messages). */
@@ -53,7 +70,9 @@ export function expandSimulatorTemplate(
     case 'gift':
       return expandGift(t, now, nextMsgId);
     case 'comment':
-      return [{ ...base, kind: 'comment', viewer: simulatedViewer(t.user), text: t.text }];
+      return [
+        { ...base, kind: 'comment', viewer: simulatedViewer(t.user, t.viewer), text: t.text },
+      ];
     case 'like':
       return [{ ...base, kind: 'like', viewer: simulatedViewer(t.user), likeCount: t.count }];
     case 'viewerCount':
