@@ -11,7 +11,13 @@ import {
   LucideVolumeX,
   LucideZap,
 } from '@lucide/angular';
-import type { LiveEventType, Sound, Trigger, TriggerDefinitionInput } from '@tiklive/contracts';
+import {
+  SOUND_SOURCE_LABELS,
+  type LiveEventType,
+  type Sound,
+  type Trigger,
+  type TriggerDefinitionInput,
+} from '@tiklive/contracts';
 import {
   AutomationCard,
   type AutomationActionView,
@@ -72,7 +78,7 @@ function percent(volume: number): number {
   return Math.round(volume * 100);
 }
 
-/** Sound triggers: WHEN a LIVE event happens, THEN play a MyInstants sound at a set volume. */
+/** Sound triggers: WHEN a LIVE event happens, THEN play a remote sound at a set volume. */
 @Component({
   selector: 'app-triggers-page',
   imports: [
@@ -112,6 +118,7 @@ export class TriggersPage {
   private readonly toast = inject(ToastService);
   protected readonly icons = { when: LucideRadio, then: LucideZap, empty: LucideVolume2 };
   protected readonly percent = percent;
+  protected readonly sourceLabels = SOUND_SOURCE_LABELS;
   protected readonly describedBy = describedBy;
 
   protected readonly draft = signal<Draft | undefined>(undefined);

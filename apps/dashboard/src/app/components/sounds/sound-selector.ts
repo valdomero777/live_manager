@@ -16,7 +16,12 @@ import {
   LucideSearchX,
   LucideVolumeX,
 } from '@lucide/angular';
-import type { Sound } from '@tiklive/contracts';
+import {
+  SOUND_SOURCES,
+  SOUND_SOURCE_LABELS,
+  type Sound,
+  type SoundLicense,
+} from '@tiklive/contracts';
 import { AudioService } from '../../core/audio.service';
 import { SoundsStore } from '../../core/sounds.store';
 import { EmptyState } from '../shared/empty-state';
@@ -25,11 +30,18 @@ import { UiButton, type ButtonVariants } from '../ui/button';
 import { UI_DIALOG, UiDialogService } from '../ui/dialog';
 import { UiSkeleton, UiSpinner } from '../ui/feedback';
 import { UiInput } from '../ui/input';
+import { UI_TOGGLE_GROUP } from '../ui/toggle-group';
 import { SoundPreview } from './sound-preview';
 
+/** Licence notes shown next to Freesound results. */
+const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
+  cc0: 'CC0 · uso libre',
+  'cc-by': 'CC BY · menciona al autor',
+};
+
 /**
- * Search MyInstants (through our API: SoundsStore), preview and pick a sound, in a dialog.
- * The search logic is untouched; this is only its presentation.
+ * Search MyInstants or Freesound (through our API: SoundsStore), preview and pick a sound, in a
+ * dialog. The search logic lives in the store; this is only its presentation.
  */
 @Component({
   selector: 'app-sound-selector',
@@ -42,6 +54,7 @@ import { SoundPreview } from './sound-preview';
     SoundPreview,
     ...UI_DIALOG,
     ...UI_ALERT,
+    ...UI_TOGGLE_GROUP,
     LucideMusic,
     LucideSearch,
     LucideCheck,
@@ -60,9 +73,22 @@ import { SoundPreview } from './sound-preview';
         <header uiDialogHeader>
           <h2 uiDialogTitle>Elegir sonido</h2>
           <p uiDialogDescription>
-            Busca en MyInstants. El sonido se reproduce desde MyInstants: no se descarga.
+            Busca en MyInstants o en Freesound. El sonido se reproduce desde su sitio: no se
+            descarga.
           </p>
         </header>
+
+        <div uiToggleGroup aria-label="Dónde buscar">
+          @for (source of sources; track source) {
+            <button
+              uiToggleGroupItem
+              [pressed]="sounds.source() === source"
+              (click)="sounds.setSource(source)"
+            >
+              {{ sourceLabels[source] }}
+            </button>
+          }
+        </div>
 
         <form
           class="flex gap-2"
@@ -149,9 +175,24 @@ import { SoundPreview } from './sound-preview';
                   [class.border-primary]="selected"
                 >
                   <app-sound-preview [url]="s.audioUrl" [title]="s.title" />
-                  <span class="min-w-0 flex-1 truncate text-sm font-medium" [title]="s.title">{{
-                    s.title
-                  }}</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-medium" [title]="s.title">{{ s.title }}</p>
+                    @if (s.author) {
+                      <p class="truncate text-xs text-muted-foreground">
+                        por
+                        <a
+                          class="underline-offset-2 hover:underline"
+                          [href]="s.pageUrl"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          >{{ s.author }}</a
+                        >
+                        @if (s.license) {
+                          · {{ licenseLabels[s.license] }}
+                        }
+                      </p>
+                    }
+                  </div>
                   <button
                     uiButton
                     size="sm"
@@ -209,6 +250,9 @@ export class SoundSelector {
   protected readonly searchIcon = LucideSearch;
   protected readonly noResultsIcon = LucideSearchX;
   protected readonly skeletons = [0, 1, 2, 3];
+  protected readonly sources = SOUND_SOURCES;
+  protected readonly sourceLabels = SOUND_SOURCE_LABELS;
+  protected readonly licenseLabels = LICENSE_LABELS;
 
   protected open(): void {
     this.ref = this.dialogs.open(this.dialogTpl(), { size: 'lg' });

@@ -28,7 +28,7 @@ export function contentSecurityPolicy(hostHeader: string | undefined): string {
   return [
     "default-src 'self'",
     "img-src 'self' https: data:",
-    "media-src 'self' blob: https://*.myinstants.com",
+    "media-src 'self' blob: https://*.myinstants.com https://*.freesound.org",
     `connect-src 'self' ws: wss:${sameHostAnyPort}`,
     "style-src 'self' 'unsafe-inline'",
   ].join('; ');

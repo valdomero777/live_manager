@@ -97,10 +97,13 @@ tools/simulate.ts  CLI del simulador
 `GET /api/v1/leaderboards/:metric?scope=&limit=` · `POST /api/v1/leaderboards/reset` ·
 `GET|PUT /api/v1/settings/leaderboard` · `GET|POST /api/v1/goals` · `GET|PUT|DELETE /api/v1/goals/:id` ·
 `GET /api/v1/stats` · `GET|PUT /api/v1/rotators/:id`.
-Triggers de sonido: `GET /api/v1/sounds/search?q=&page=` · `GET|POST /api/v1/triggers` ·
-`GET|PUT|DELETE /api/v1/triggers/:id` · `POST /api/v1/triggers/:id/test`. Solo se guardan metadatos y la
-URL del MP3 de MyInstants; el navegador (pestaña de audio) lo reproduce directamente. La búsqueda usa
-la API comunitaria no oficial `MYINSTANTS_API_URL` (ver `.env.example`).
+Triggers de sonido: `GET /api/v1/sounds/search?q=&page=&source=myinstants|freesound` ·
+`GET|POST /api/v1/triggers` · `GET|PUT|DELETE /api/v1/triggers/:id` · `POST /api/v1/triggers/:id/test`.
+Solo se guardan metadatos y la URL del MP3; el navegador (pestaña de audio) lo reproduce directamente
+desde MyInstants o Freesound. MyInstants se busca con la API comunitaria no oficial
+`MYINSTANTS_API_URL` (ver `.env.example`). Freesound usa su API oficial y necesita una clave gratuita
+(<https://freesound.org/apiv2/apply>) en **Ajustes → Sonidos** o `FREESOUND_API_KEY`; solo se muestran
+sonidos CC0 y CC BY de hasta 30 s (los CC BY requieren mencionar al autor).
 WebSocket: `/ws/screen/:screenId?key=` (overlays) y `/ws/admin` (dashboard).
 
 Autenticación: `GET /api/v1/auth/status` · `POST /api/v1/auth/setup|login|logout|password`.

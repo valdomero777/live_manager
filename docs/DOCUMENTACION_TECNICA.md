@@ -332,7 +332,7 @@ Base: `/api/v1`. Errores: `application/problem+json` `{type,title,status,detail?
 | POST | `/settings/restart` | Reinicio en proceso (202, 300 ms de retardo) | S | idem |
 | GET | `/settings/addresses` | IPv4 de la LAN | S | idem |
 | GET/PUT | `/settings/moderation` | Moderación TTS | S | idem |
-| GET | `/sounds/search?q=&page=` | Búsqueda MyInstants (502 si falla) | S | `trigger-routes.ts` |
+| GET | `/sounds/search?q=&page=&source=` | Búsqueda MyInstants o Freesound (502 si falla, 503 si falta la clave de Freesound) | S | `trigger-routes.ts` |
 | GET/POST | `/triggers` | Listar / crear | S | idem |
 | GET/PUT/DELETE | `/triggers/:id` | CRUD | S | idem |
 | POST | `/triggers/:id/test` | Encola el sonido guardado | S | idem |
@@ -522,6 +522,7 @@ No hay SMTP, SMS, almacenamiento en nube, colas, cachés externas ni OAuth.
 | `TIKTOK_USERNAME` | No | Usuario a conectar | vacío | No | reconnect |
 | `SIMULATE` | No | `true`/`1` usa simulador | `false` | No | restart |
 | `TIKTOK_SIGN_API_KEY` | No | Clave de firma | vacío | **Sí** | restart |
+| `FREESOUND_API_KEY` | No | Clave de la API oficial de Freesound | vacío (solo MyInstants) | **Sí** | live |
 | `OVERLAY_KEY` | No | Token de overlays (≥16, `[\w-]`) | autogenerado y guardado | **Sí** | live |
 | `LOG_LEVEL` | No | Nivel Pino | `info` | No | live |
 | `ADMIN_PASSWORD_HASH` | No | Hash argon2id de la contraseña | — | **Sí** | solo env |
@@ -542,7 +543,7 @@ Reglas: precedencia **panel (`config.json`) > entorno > defecto**; valores invá
 - Cambiar `overlayKey` en vivo desconecta todas las pantallas (`screens.closeAll()`); las URLs viejas dejan de funcionar.
 - `ensureOverlayKey` **escribe** `config.json` durante la carga si no hay clave (efecto lateral en lectura de configuración).
 - **Reinicio en proceso** (`AppHost.restart`): `app.stop()` → `boot()`; si falla, restaura `lastGood.settings` y llama `boot()` otra vez (ver F-02).
-- CSP (solo respuestas `text/html`): `default-src 'self'; img-src 'self' https: data:; media-src 'self' blob: https://*.myinstants.com; connect-src 'self' ws: wss: <host:*>; style-src 'self' 'unsafe-inline'`. Además `X-Content-Type-Options: nosniff`.
+- CSP (solo respuestas `text/html`): `default-src 'self'; img-src 'self' https: data:; media-src 'self' blob: https://*.myinstants.com https://*.freesound.org; connect-src 'self' ws: wss: <host:*>; style-src 'self' 'unsafe-inline'`. Además `X-Content-Type-Options: nosniff`.
 - Caché estático: assets con hash → `immutable` 1 año; resto `no-cache`; `/media` 30 días inmutable.
 
 ---
@@ -573,7 +574,7 @@ Reglas: precedencia **panel (`config.json`) > entorno > defecto**; valores invá
 | Runtime | Node.js ≥22 (Angular 21 verificado en 22.20) |
 | BD | SQLite embebida (sin servicio) |
 | Navegador | Moderno en la PC de stream (Chromium/LIVE Studio/OBS); autoplay requiere pulsar «Iniciar audio» |
-| Servicios externos | Internet hacia TikTok, `myinstants-api.vercel.app`, `*.myinstants.com`, CDN de TikTok |
+| Servicios externos | Internet hacia TikTok, `myinstants-api.vercel.app`, `*.myinstants.com`, `freesound.org` (API y `cdn.freesound.org`), CDN de TikTok |
 
 | Servicio | Puerto | Protocolo | Uso |
 | --- | --- | --- | --- |

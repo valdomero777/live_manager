@@ -37,6 +37,7 @@ export const DEFAULT_SETTINGS: SettingsValues = {
   tiktokUsername: '',
   simulate: false,
   signApiKey: '',
+  freesoundApiKey: '',
   overlayKey: '',
   logLevel: 'info',
 };

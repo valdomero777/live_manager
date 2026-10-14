@@ -1,23 +1,33 @@
 import { z } from 'zod';
 import { LIVE_EVENT_TYPES } from './events.js';
 
-export const SOUND_SOURCES = ['myinstants'] as const;
+export const SOUND_SOURCES = ['myinstants', 'freesound'] as const;
 export const SoundSourceSchema = z.enum(SOUND_SOURCES);
 export type SoundSource = z.infer<typeof SoundSourceSchema>;
+
+/** Name shown in the dashboard for each source. */
+export const SOUND_SOURCE_LABELS: Readonly<Record<SoundSource, string>> = {
+  myinstants: 'MyInstants',
+  freesound: 'Freesound',
+};
 
 /** Hosts whose audio the browser may play directly. Anything else is rejected at the server. */
 const ALLOWED_SOUND_HOSTS: Readonly<Record<SoundSource, readonly string[]>> = {
   myinstants: ['myinstants.com'],
+  // Pages on freesound.org, MP3 previews on cdn.freesound.org.
+  freesound: ['freesound.org'],
 };
 
-/** True for an https URL on a known sound host (or a subdomain of it). */
-export function isAllowedSoundUrl(value: string, source: SoundSource = 'myinstants'): boolean {
+/**
+ * True for an https URL on the hosts of `source` (or a subdomain of them). Without a source, any
+ * known sound host is accepted.
+ */
+export function isAllowedSoundUrl(value: string, source?: SoundSource): boolean {
   try {
     const url = new URL(value);
     if (url.protocol !== 'https:') return false;
-    return ALLOWED_SOUND_HOSTS[source].some(
-      (host) => url.hostname === host || url.hostname.endsWith(`.${host}`),
-    );
+    const hosts = source ? ALLOWED_SOUND_HOSTS[source] : Object.values(ALLOWED_SOUND_HOSTS).flat();
+    return hosts.some((host) => url.hostname === host || url.hostname.endsWith(`.${host}`));
   } catch {
     return false;
   }
@@ -28,6 +38,10 @@ const soundUrl = z
   .max(2000)
   .refine((v) => isAllowedSoundUrl(v), 'La URL del sonido no es de una fuente permitida');
 
+/** Licences accepted from Freesound: free to use in a LIVE, CC BY with credit to the author. */
+export const SOUND_LICENSES = ['cc0', 'cc-by'] as const;
+export type SoundLicense = (typeof SOUND_LICENSES)[number];
+
 /** Provider-neutral sound, as the dashboard sees it. */
 export const SoundSchema = z.object({
   id: z.string().min(1),
@@ -36,6 +50,9 @@ export const SoundSchema = z.object({
   audioUrl: soundUrl,
   duration: z.number().nonnegative().optional(),
   source: SoundSourceSchema,
+  /** Uploader, when the source credits one (Freesound). */
+  author: z.string().min(1).max(200).optional(),
+  license: z.enum(SOUND_LICENSES).optional(),
 });
 export type Sound = z.infer<typeof SoundSchema>;
 
@@ -66,6 +83,14 @@ export const TriggerDefinitionSchema = z.object({
 });
 export type TriggerDefinition = z.infer<typeof TriggerDefinitionSchema>;
 export type TriggerDefinitionInput = z.input<typeof TriggerDefinitionSchema>;
+
+/** What the API accepts: both URLs must belong to the trigger's source, not just any source. */
+export const TriggerDefinitionRequestSchema = TriggerDefinitionSchema.superRefine((t, ctx) => {
+  for (const key of ['soundUrl', 'soundPageUrl'] as const) {
+    if (!isAllowedSoundUrl(t[key], t.source))
+      ctx.addIssue({ code: 'custom', path: [key], message: 'La URL no es de la fuente elegida' });
+  }
+});
 
 export const TriggerSchema = TriggerDefinitionSchema.extend({
   id: z.number().int().positive(),

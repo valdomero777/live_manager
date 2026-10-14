@@ -97,6 +97,7 @@ describe('settings from the UI', () => {
       [
         'assetsDir',
         'dbPath',
+        'freesoundApiKey',
         'host',
         'logLevel',
         'overlayKey',
