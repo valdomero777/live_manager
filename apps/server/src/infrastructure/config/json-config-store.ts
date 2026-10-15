@@ -25,23 +25,54 @@ function validSettings(
   return out;
 }
 
+/** Why the file could not be used and where it went (undefined when it could not be moved). */
+export interface CorruptConfig {
+  readonly reason: string;
+  readonly movedTo: string | undefined;
+}
+
 /**
  * Settings saved from the UI, as JSON next to the data directory. Writes are atomic (temp file +
  * rename) and the file is owner-only because it holds secrets (spec 4: permissions 600).
+ *
+ * A file that is not valid JSON (e.g. a power cut in the middle of a save) must not stop the
+ * server from starting: it is moved aside as `<file>.corrupt-<time>` and the app starts with the
+ * defaults, which brings back the first-run password setup.
  */
 export class JsonConfigStore implements ConfigStore {
   constructor(
     readonly location: string,
     private readonly onInvalid: (key: string) => void = () => undefined,
+    private readonly onCorrupt: (info: CorruptConfig) => void = () => undefined,
   ) {}
 
   read(): StoredConfig {
     if (!existsSync(this.location)) return { settings: {} };
-    const file = FileSchema.parse(JSON.parse(readFileSync(this.location, 'utf8')));
+    const file = this.parse();
+    if (!file) return { settings: {} };
     const settings = validSettings(file.settings, this.onInvalid);
     return file.adminPasswordHash
       ? { settings, adminPasswordHash: file.adminPasswordHash }
       : { settings };
+  }
+
+  private parse(): z.infer<typeof FileSchema> | undefined {
+    try {
+      return FileSchema.parse(JSON.parse(readFileSync(this.location, 'utf8')));
+    } catch (error) {
+      this.onCorrupt({ reason: String(error), movedTo: this.moveAside() });
+      return undefined;
+    }
+  }
+
+  private moveAside(): string | undefined {
+    const target = `${this.location}.corrupt-${new Date().toISOString().replace(/[:.]/g, '')}`;
+    try {
+      renameSync(this.location, target);
+      return target;
+    } catch {
+      return undefined;
+    }
   }
 
   write(config: StoredConfig): void {
