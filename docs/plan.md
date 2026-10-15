@@ -93,8 +93,10 @@ en el navegador):
 - Overlays `/overlay/topgifter` (líder de un ranking, reutiliza su canal), `/overlay/ticker` y
   `/overlay/social` (listas en el parámetro, separadas por `|`, sin WebSocket) y galería de plantillas
   predefinidas en la página Overlays (catálogo en el panel, editable y guardable como plantilla propia).
-  Pendientes de la especificación de overlays que necesitan proyecciones nuevas en el servidor: feed de
-  últimos eventos, racha más larga, desafíos de regalos con filtro por regalo y guía regalo→acción;
+  Overlay `/overlay/feed` (últimos eventos): canal `feed` del servidor (`FeedProjection`, últimos 30
+  regalos consolidados, seguidores, compartidos y entradas de la sesión, sin duplicados por id).
+  Pendientes de la especificación de overlays que necesitan proyecciones nuevas en el servidor: racha
+  más larga, desafíos de regalos con filtro por regalo y guía regalo→acción;
   y los que necesitan integración o motor propio: Spotify, subasta y ruleta.
 - API: `GET /leaderboards/:metric`, `POST /leaderboards/reset`, `GET|PUT /settings/leaderboard`,
   CRUD `/goals`, `GET /stats`, `GET|PUT /rotators/:id` y `GET /overlay-data/rotators/:id?key=`.

@@ -2,10 +2,10 @@ import type { ScreenServerMessage } from '@tiklive/contracts';
 
 export type SnapshotMessage = Extract<
   ScreenServerMessage,
-  { type: 'leaderboard.snapshot' | 'goal.progress' | 'stats.snapshot' }
+  { type: 'leaderboard.snapshot' | 'goal.progress' | 'stats.snapshot' | 'feed.snapshot' }
 >;
 
-/** Same naming as the server's channelOf(): "leaderboard:diamonds:session", "goal:3", "stats". */
+/** Same naming as the server's channelOf(): "leaderboard:diamonds:session", "goal:3", "stats", "feed". */
 export function channelOfMessage(message: ScreenServerMessage): string | undefined {
   switch (message.type) {
     case 'leaderboard.snapshot':
@@ -14,6 +14,8 @@ export function channelOfMessage(message: ScreenServerMessage): string | undefin
       return `goal:${message.payload.goalId}`;
     case 'stats.snapshot':
       return 'stats';
+    case 'feed.snapshot':
+      return 'feed';
     default:
       return undefined;
   }

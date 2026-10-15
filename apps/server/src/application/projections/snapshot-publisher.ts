@@ -9,6 +9,7 @@ import {
   type ScreenServerMessage,
 } from '@tiklive/contracts';
 import { metricDeltas } from '../../domain/projections/scopes.js';
+import type { FeedProjection } from '../../domain/projections/feed-projection.js';
 import type { StatsProjection } from '../../domain/projections/stats-projection.js';
 import type { Clock } from '../../domain/shared/time.js';
 import type { LiveEventConsumer } from '../ingest/ingest-live-event.js';
@@ -27,6 +28,7 @@ interface PublisherDeps {
   readonly leaderboards: LeaderboardService;
   readonly goals: GoalService;
   readonly stats: StatsProjection;
+  readonly feed: FeedProjection;
   readonly scheduler: Scheduler;
   readonly clock: Clock;
   readonly logger: Logger;
@@ -48,6 +50,7 @@ export class SnapshotPublisher implements LiveEventConsumer {
 
   async handle(event: LiveEvent): Promise<void> {
     if (this.deps.stats.apply(event)) this.markDirty('stats');
+    if (this.deps.feed.apply(event)) this.markDirty('feed');
     const metrics = metricDeltas(event).map((d) => d.metric);
     if (metrics.length === 0) return;
     this.deps.leaderboards.invalidate(metrics);
@@ -62,6 +65,7 @@ export class SnapshotPublisher implements LiveEventConsumer {
     METRICS.flatMap(leaderboardChannels).forEach((c) => this.markDirty(c));
     this.deps.goals.list().forEach((g) => this.markDirty(`goal:${g.id}`));
     this.markDirty('stats');
+    this.markDirty('feed');
   }
 
   markDirty(channel: string): void {
@@ -108,6 +112,10 @@ export class SnapshotPublisher implements LiveEventConsumer {
     if (kind === 'stats') {
       const payload = { ...this.deps.stats.snapshot(), seq: this.nextSeq(channel) };
       return makeEnvelope('stats.snapshot', payload, now);
+    }
+    if (kind === 'feed') {
+      const payload = { items: [...this.deps.feed.snapshot()], seq: this.nextSeq(channel) };
+      return makeEnvelope('feed.snapshot', payload, now);
     }
     if (kind === 'goal') {
       const progress = await this.deps.goals.progress(Number(a));

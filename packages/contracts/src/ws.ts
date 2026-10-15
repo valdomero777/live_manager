@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { LiveEventSchema } from './events.js';
 import {
+  FeedSnapshotSchema,
   GoalProgressSchema,
   LeaderboardSnapshotSchema,
   StatsSnapshotSchema,
@@ -77,6 +78,7 @@ export const LeaderboardSnapshotMessageSchema = envelope(
 );
 export const GoalProgressMessageSchema = envelope('goal.progress', GoalProgressSchema);
 export const StatsSnapshotMessageSchema = envelope('stats.snapshot', StatsSnapshotSchema);
+export const FeedSnapshotMessageSchema = envelope('feed.snapshot', FeedSnapshotSchema);
 
 export const ScreenServerMessageSchema = z.discriminatedUnion('type', [
   PlaySoundMessageSchema,
@@ -87,6 +89,7 @@ export const ScreenServerMessageSchema = z.discriminatedUnion('type', [
   LeaderboardSnapshotMessageSchema,
   GoalProgressMessageSchema,
   StatsSnapshotMessageSchema,
+  FeedSnapshotMessageSchema,
 ]);
 export type ScreenServerMessage = z.infer<typeof ScreenServerMessageSchema>;
 export type ScreenActionMessage = Extract<
@@ -102,7 +105,7 @@ export const ScreenClientMessageSchema = z.discriminatedUnion('type', [
     z.object({
       screenId: z.string().min(1),
       clientVersion: z.string(),
-      /** Data channels this overlay wants (leaderboards, goals, stats). */
+      /** Data channels this overlay wants (leaderboards, goals, stats, feed). */
       subscriptions: z.array(SubscriptionSchema).max(20).default([]),
     }),
   ),
