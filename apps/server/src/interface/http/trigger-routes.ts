@@ -14,7 +14,8 @@ import type { HttpServices } from './services.js';
 
 const IdParams = z.object({ id: z.coerce.number().int().positive() });
 const SearchQuery = z.object({
-  q: z.string().trim().min(1).max(SOUND_QUERY_MAX),
+  /** Empty = the source's popular sounds, so the picker has something to show before typing. */
+  q: z.string().trim().max(SOUND_QUERY_MAX).default(''),
   page: z.coerce.number().int().min(1).max(SOUND_PAGE_MAX).default(1),
   source: SoundSourceSchema.default('myinstants'),
 });

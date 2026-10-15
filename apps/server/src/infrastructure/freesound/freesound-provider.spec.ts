@@ -64,6 +64,15 @@ describe('FreesoundProvider', () => {
     });
   });
 
+  it('asks for the most downloaded sounds when the query is empty', async () => {
+    const { provider: p, requests } = provider(() => json({ next: null, results: [BOOM] }));
+    const out = await p.search('', 1);
+    const url = new URL(requests[0]!.url);
+    expect(url.searchParams.has('query')).toBe(false);
+    expect(url.searchParams.get('sort')).toBe('downloads_desc');
+    expect(out.results).toHaveLength(1);
+  });
+
   it('drops NonCommercial, Sampling+, off-host and malformed items', async () => {
     const nc = { ...BOOM, id: 2, license: 'http://creativecommons.org/licenses/by-nc/3.0/' };
     const sampling = {

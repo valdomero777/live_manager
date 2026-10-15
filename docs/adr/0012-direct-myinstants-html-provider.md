@@ -25,6 +25,10 @@ descartó leer `www.myinstants.com` porque estaba detrás de un desafío de Clou
 - Los mismos controles de URL de siempre: `isAllowedSoundUrl` descarta cualquier MP3 o página fuera
   de `https://*.myinstants.com`; el CSP no cambia.
 
+- Búsqueda vacía = lista de populares, para que el selector muestre sonidos antes de escribir:
+  `/en/index/us/` en MyInstants (36 sonidos, sin más páginas) y `sort=downloads_desc` en Freesound.
+  `GET /sounds/search` acepta `q` vacío o ausente.
+
 ## Consecuencias
 
 - El HTML no es un contrato: un cambio de maquetación deja la búsqueda sin resultados o rota hasta

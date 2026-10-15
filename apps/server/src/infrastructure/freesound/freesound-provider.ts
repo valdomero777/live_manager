@@ -65,7 +65,8 @@ export class FreesoundProvider implements SoundProvider {
       throw new SoundSourceError('Freesound API key is not set', { reason: 'not_configured' });
     }
     const url = new URL('/apiv2/search/', this.baseUrl);
-    url.searchParams.set('query', query);
+    if (query) url.searchParams.set('query', query);
+    else url.searchParams.set('sort', 'downloads_desc'); // empty search = most downloaded
     url.searchParams.set('page', String(page));
     url.searchParams.set('page_size', String(FREESOUND_PAGE_SIZE));
     url.searchParams.set('fields', 'id,name,url,previews,duration,license,username');

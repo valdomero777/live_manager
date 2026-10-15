@@ -355,7 +355,7 @@ Base: `/api/v1`. Errores: `application/problem+json` `{type,title,status,detail?
 | POST | `/settings/restart` | Reinicio en proceso (202, 300 ms de retardo) | S | idem |
 | GET | `/settings/addresses` | IPv4 de la LAN | S | idem |
 | GET/PUT | `/settings/moderation` | Moderación TTS | S | idem |
-| GET | `/sounds/search?q=&page=&source=` | Búsqueda MyInstants o Freesound (502 si falla, 503 si falta la clave de Freesound) | S | `trigger-routes.ts` |
+| GET | `/sounds/search?q=&page=&source=` | Búsqueda MyInstants o Freesound; `q` vacío = lista de populares (MyInstants: página de tendencias, 36 sonidos; Freesound: más descargados; la API comunitaria no tiene lista) (502 si falla, 503 si falta la clave de Freesound) | S | `trigger-routes.ts` |
 | GET/POST | `/triggers` | Listar / crear | S | idem |
 | GET/PUT/DELETE | `/triggers/:id` | CRUD | S | idem |
 | POST | `/triggers/:id/test` | Encola el sonido guardado | S | idem |
