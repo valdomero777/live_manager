@@ -1,5 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { LucideExternalLink } from '@lucide/angular';
+import { PublicUrlField } from '../../components/shared/public-url-field';
+import { PublicUrlStore } from '../../core/public-url.store';
 import { CopyButton } from '../../components/shared/copy-button';
 import { UiButton } from '../../components/ui/button';
 import { UiFormField } from '../../components/ui/form-field';
@@ -52,7 +54,7 @@ const OVERLAYS: readonly OverlayLink[] = [
 /** Ready-to-paste overlay URLs using a LAN address, so they work from the stream PC. */
 @Component({
   selector: 'app-overlay-urls',
-  imports: [CopyButton, UiButton, UiNativeSelect, UiFormField, LucideExternalLink],
+  imports: [PublicUrlField, CopyButton, UiButton, UiNativeSelect, UiFormField, LucideExternalLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'grid gap-4' },
   template: `
@@ -75,6 +77,7 @@ const OVERLAYS: readonly OverlayLink[] = [
         }
       </select>
     </ui-form-field>
+    <app-public-url-field class="max-w-sm" />
     <ul class="grid divide-y divide-border-subtle rounded-lg border">
       @for (o of links(); track o.name) {
         <li class="grid gap-2 p-3 sm:p-4">
@@ -108,6 +111,7 @@ const OVERLAYS: readonly OverlayLink[] = [
   `,
 })
 export class OverlayUrls {
+  private readonly publicUrl = inject(PublicUrlStore);
   readonly overlayKey = input.required<string>();
   readonly lanAddresses = input<readonly string[]>([]);
 
@@ -120,10 +124,11 @@ export class OverlayUrls {
 
   protected readonly links = computed(() => {
     const host = this.host() || this.hosts()[0] || location.host;
+    const origin = this.publicUrl.origin() ?? `${location.protocol}//${host}`;
     const key = encodeURIComponent(this.overlayKey());
     return OVERLAYS.map((o) => {
       const separator = o.path.includes('?') ? '&' : '?';
-      return { ...o, url: `${location.protocol}//${host}${o.path}${separator}key=${key}` };
+      return { ...o, url: `${origin}${o.path}${separator}key=${key}` };
     });
   });
 }
