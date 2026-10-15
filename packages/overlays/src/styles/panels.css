@@ -186,7 +186,90 @@
   opacity: 1;
 }
 
+/* ---- top gifter ---- */
+.topgifter__body {
+  display: grid;
+  grid-template-columns: 2.6em 1fr auto;
+  align-items: center;
+  gap: 0.6em;
+}
+.topgifter__body--new {
+  animation: row-in 400ms ease-out both;
+}
+.topgifter__avatar {
+  width: 2.6em;
+  height: 2.6em;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.topgifter__avatar--empty {
+  display: block;
+  background: var(--panel-accent-2);
+  opacity: 0.35;
+}
+.topgifter__name {
+  overflow: hidden;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.topgifter__value {
+  color: #ffd54a;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.topgifter__empty {
+  grid-column: 1 / -1;
+  color: var(--panel-muted);
+}
+
+/* ---- ticker: a full-width strip; the text slides with the Web Animations API (transform) ---- */
+.stage--ticker {
+  padding: 0;
+  place-items: end stretch;
+}
+.ticker {
+  overflow: hidden;
+  padding: 1vh 0;
+  background: var(--panel-bg);
+  font-size: calc(3.2vh * var(--scale));
+  font-weight: 700;
+  text-shadow: var(--panel-shadow);
+  white-space: nowrap;
+}
+.ticker__text {
+  display: inline-block;
+  will-change: transform;
+}
+
+/* ---- social rotator ---- */
+.social {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+}
+.social--in {
+  animation: row-in 450ms ease-out both;
+}
+.social__platform {
+  color: var(--panel-accent-2);
+  font-size: 0.8em;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.social__handle {
+  overflow: hidden;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .topgifter__body--new,
+  .social--in {
+    animation: none;
+  }
   .leaderboard__row,
   .goal__fill,
   .rotator__panel {

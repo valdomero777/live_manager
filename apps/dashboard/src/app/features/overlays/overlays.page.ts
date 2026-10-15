@@ -13,6 +13,7 @@ import {
   LucideBookmark,
   LucideExternalLink,
   LucideFolderOpen,
+  LucideLayoutTemplate,
   LucideRefreshCw,
   LucideSave,
   LucideSlidersHorizontal,
@@ -26,13 +27,17 @@ import { PageHeader } from '../../components/shared/page-header';
 import { UiButton } from '../../components/ui/button';
 import { UI_CARD } from '../../components/ui/card';
 import { UiFormField } from '../../components/ui/form-field';
-import { UiCheckbox, UiInput, UiNativeSelect } from '../../components/ui/input';
+import { UiCheckbox, UiInput, UiNativeSelect, UiTextarea } from '../../components/ui/input';
 import { UiSwitch } from '../../components/ui/switch';
 import { UI_TOGGLE_GROUP } from '../../components/ui/toggle-group';
 import {
+  OVERLAY_PRESETS,
   OVERLAY_TYPES,
   buildOverlayUrl,
+  linesToValue,
+  valueToLines,
   type OverlayParam,
+  type OverlayPreset,
   type OverlayType,
 } from './overlay-catalog';
 import { RotatorEditor } from './rotator-editor';
@@ -59,11 +64,13 @@ function isTemplateType(id: string): id is OverlayTemplateType {
     UiInput,
     UiNativeSelect,
     UiSwitch,
+    UiTextarea,
     ...UI_CARD,
     ...UI_TOGGLE_GROUP,
     LucideBookmark,
     LucideExternalLink,
     LucideFolderOpen,
+    LucideLayoutTemplate,
     LucideRefreshCw,
     LucideSave,
     LucideSlidersHorizontal,
@@ -82,6 +89,7 @@ export class OverlaysPage {
   private readonly toast = inject(ToastService);
   protected readonly store = inject(OverlayTemplatesStore);
   protected readonly types = OVERLAY_TYPES;
+  protected readonly presets = OVERLAY_PRESETS;
 
   /** Template being edited, if one was loaded or just saved. */
   protected readonly templateId = signal<string | undefined>(undefined);
@@ -135,6 +143,29 @@ export class OverlaysPage {
     this.typeId.set(id);
     this.values.set({});
     this.templateId.set(undefined);
+  }
+
+  /** Loads a ready-made configuration; it is saved as a new template, never over an existing one. */
+  protected usePreset(preset: OverlayPreset): void {
+    this.typeId.set(preset.type);
+    this.values.set({ ...preset.params });
+    this.templateId.set(undefined);
+    this.templateName.set(preset.label);
+    this.reloadToken.update((n) => n + 1);
+    // The presets sit below the configurator; bring it into view so the loaded values are seen.
+    document.getElementById('cfg-title')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+
+  protected useLabel(preset: OverlayPreset): string {
+    return $localize`Usar la plantilla ${preset.label}:label:`;
+  }
+
+  protected lines(p: OverlayParam): string {
+    return valueToLines(this.value(p));
+  }
+
+  protected setLines(p: OverlayParam, text: string): void {
+    this.set(p, linesToValue(text));
   }
 
   protected typeLabel(id: string): string {

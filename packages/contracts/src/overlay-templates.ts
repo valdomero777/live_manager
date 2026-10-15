@@ -7,19 +7,24 @@ export const OVERLAY_TEMPLATE_TYPES = [
   'stats',
   'rotator',
   'alerts',
+  'topgifter',
+  'ticker',
+  'social',
 ] as const;
 export const OverlayTemplateTypeSchema = z.enum(OVERLAY_TEMPLATE_TYPES);
 export type OverlayTemplateType = z.infer<typeof OverlayTemplateTypeSchema>;
 
 export const MAX_OVERLAY_TEMPLATES = 50;
 const MAX_TEMPLATE_PARAMS = 20;
+/** Ticker messages and social profiles travel as one parameter, so it needs room. */
+const MAX_TEMPLATE_PARAM_LENGTH = 600;
 
 /** What the panel sends: a named overlay URL configuration (type + query parameters). */
 export const OverlayTemplateInputSchema = z.object({
   name: z.string().trim().min(1).max(60),
   type: OverlayTemplateTypeSchema,
   params: z
-    .record(z.string().regex(/^[a-zA-Z]{1,32}$/), z.string().max(200))
+    .record(z.string().regex(/^[a-zA-Z]{1,32}$/), z.string().max(MAX_TEMPLATE_PARAM_LENGTH))
     .refine((p) => Object.keys(p).length <= MAX_TEMPLATE_PARAMS, 'too many parameters')
     .default({}),
   /** Shown live on the panel's dashboard. */
