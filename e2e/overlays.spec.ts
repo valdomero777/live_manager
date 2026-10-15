@@ -49,7 +49,7 @@ test('a ready-made template loads into the configurator, can be edited and saved
     .click();
 
   await expect(page.locator('code').filter({ hasText: '/overlay/ticker/' })).toBeVisible();
-  await page.getByLabel('Mensajes').fill('Hola\nAdiós');
+  await page.getByLabel('Mensajes', { exact: true }).fill('Hola\nAdiós');
   await expect(page.locator('code').filter({ hasText: '/overlay/ticker/' })).toContainText(
     'messages=Hola%7CAdi%C3%B3s',
   );
