@@ -1,6 +1,6 @@
 <app-page-header
   title="Triggers de sonido"
-  description="Un sonido de MyInstants para cada tipo de evento. Suena en la pantalla de audio (fuente de navegador de OBS) directamente desde MyInstants, sin descargarse. Para condiciones y varias acciones usa «Reglas»."
+  description="Un sonido de MyInstants o Freesound para cada tipo de evento. Suena en la pantalla de audio (fuente de navegador de OBS) directamente desde su sitio, sin descargarse. Para condiciones y varias acciones usa «Reglas»."
 >
   @if (!draft()) {
   <button uiButton type="button" (click)="startNew()"><svg lucidePlus /> Nuevo trigger</button>
@@ -79,6 +79,7 @@
         <app-sound-player
           [url]="s.audioUrl"
           [title]="s.title"
+          [source]="sourceLabels[s.source]"
           [volume]="d.volume"
           volumeId="t-volume"
           (volumeChange)="patch({ volume: $event })"
@@ -97,7 +98,7 @@
           [class.border-danger]="!!soundError()"
         >
           <p class="flex-1 type-secondary">
-            Aún no eliges un sonido. Busca en MyInstants y escúchalo antes de elegirlo.
+            Aún no eliges un sonido. Busca en MyInstants o Freesound y escúchalo antes de elegirlo.
           </p>
           <app-sound-selector variant="default" (picked)="pick($event)" />
         </div>
@@ -133,7 +134,7 @@
     [enabled]="t.enabled"
     [event]="t.event"
     [actions]="c.actions"
-    [badges]="['MyInstants']"
+    [badges]="[sourceLabels[t.source]]"
     [busy]="busy()"
     (toggle)="toggle(t, $event)"
   >

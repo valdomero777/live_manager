@@ -59,6 +59,19 @@ export const SETTING_SECTIONS: readonly FieldSection[] = [
     ],
   },
   {
+    id: 'sounds',
+    title: 'Sonidos',
+    description: 'Catálogos externos donde buscar sonidos para los triggers.',
+    fields: [
+      {
+        key: 'freesoundApiKey',
+        label: 'Clave de API de Freesound (opcional)',
+        help: 'Gratis en freesound.org/apiv2/apply. Sin ella solo se busca en MyInstants. Se aplica al guardar. Déjala vacía para no cambiarla.',
+        kind: 'secret',
+      },
+    ],
+  },
+  {
     id: 'overlays',
     title: 'Overlays',
     description: 'Clave de solo lectura que va en las URLs de los overlays (?key=).',

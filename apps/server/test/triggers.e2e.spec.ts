@@ -18,6 +18,16 @@ const VINE = {
   source: 'myinstants' as const,
 };
 
+const BOOM = {
+  id: '33637',
+  title: 'Boom',
+  pageUrl: 'https://freesound.org/people/HerbertBoland/sounds/33637/',
+  audioUrl: 'https://cdn.freesound.org/previews/33/33637_35187-hq.mp3',
+  source: 'freesound' as const,
+  author: 'HerbertBoland',
+  license: 'cc0' as const,
+};
+
 const DEFINITION = {
   name: 'Nuevo seguidor',
   event: 'follow',
@@ -62,18 +72,27 @@ describe('sound triggers (MyInstants, remote URL only)', () => {
   let t: TestApp;
   let searches: string[];
   let failing: boolean;
+  let freesoundFailure: SoundSourceError | undefined;
 
   beforeEach(async () => {
     searches = [];
     failing = false;
-    const soundProvider: SoundProvider = {
+    freesoundFailure = undefined;
+    const myinstants: SoundProvider = {
       search: (query, page): Promise<SoundSearchResult> => {
         searches.push(query);
         if (failing) return Promise.reject(new SoundSourceError('down'));
         return Promise.resolve({ query, page, hasNext: false, results: [VINE] });
       },
     };
-    t = await startTestApp({}, { soundProvider });
+    const freesound: SoundProvider = {
+      search: (query, page): Promise<SoundSearchResult> => {
+        searches.push(`freesound:${query}`);
+        if (freesoundFailure) return Promise.reject(freesoundFailure);
+        return Promise.resolve({ query, page, hasNext: false, results: [BOOM] });
+      },
+    };
+    t = await startTestApp({}, { soundProviders: { myinstants, freesound } });
   });
   afterEach(() => t.stop());
 
@@ -95,9 +114,27 @@ describe('sound triggers (MyInstants, remote URL only)', () => {
     const res = await t.api({ url: `${API_PREFIX}/sounds/search?q=boom` });
     expect(res.statusCode).toBe(502);
     expect(res.json()).toMatchObject({
-      title: 'No se pudieron cargar los sonidos. Intenta nuevamente.',
+      title: 'No se pudieron cargar los sonidos de MyInstants. Intenta nuevamente.',
     });
     expect(res.body).not.toContain('down');
+  });
+
+  it('searches Freesound when asked and rejects unknown sources', async () => {
+    const res = await t.api({ url: `${API_PREFIX}/sounds/search?q=boom&source=freesound` });
+    expect(res.statusCode).toBe(200);
+    expect(res.json<SoundSearchResult>().results).toEqual([BOOM]);
+    expect(searches).toEqual(['freesound:boom']);
+    const unknown = await t.api({ url: `${API_PREFIX}/sounds/search?q=boom&source=spotify` });
+    expect(unknown.statusCode).toBe(400);
+  });
+
+  it('tells the user to add the Freesound key when it is missing or rejected', async () => {
+    freesoundFailure = new SoundSourceError('no key', { reason: 'not_configured' });
+    const res = await t.api({ url: `${API_PREFIX}/sounds/search?q=boom&source=freesound` });
+    expect(res.statusCode).toBe(503);
+    expect(res.json()).toMatchObject({
+      title: 'Para buscar en Freesound agrega tu clave de API en Ajustes.',
+    });
   });
 
   it('requires the admin session', async () => {
@@ -148,6 +185,31 @@ describe('sound triggers (MyInstants, remote URL only)', () => {
     expect((await create({ ...DEFINITION, enabled: 'yes' })).statusCode).toBe(400);
     const foreign = await create({ ...DEFINITION, soundUrl: 'https://evil.example/a.mp3' });
     expect(foreign.statusCode).toBe(400);
+    // A known host is not enough: it must be the host of the trigger's own source.
+    const mixed = await create({ ...DEFINITION, soundUrl: BOOM.audioUrl });
+    expect(mixed.statusCode).toBe(400);
+  });
+
+  it('saves a Freesound trigger and plays its preview on the audio screen', async () => {
+    const ws = await t.app.http.injectWS(`/ws/screen/audio?key=${KEY}`);
+    const nextSound = connectAudio(ws);
+    const created = await create({
+      ...DEFINITION,
+      soundId: BOOM.id,
+      soundTitle: BOOM.title,
+      soundUrl: BOOM.audioUrl,
+      soundPageUrl: BOOM.pageUrl,
+      source: 'freesound',
+    });
+    expect(created.statusCode).toBe(201);
+
+    await t.api({
+      method: 'POST',
+      url: `${API_PREFIX}/simulator/emit`,
+      payload: { kind: 'follow', user: 'ana' },
+    });
+    expect((await nextSound()).payload).toMatchObject({ url: BOOM.audioUrl });
+    ws.terminate();
   });
 
   it('delivers the saved URL to the audio screen when the event happens', async () => {

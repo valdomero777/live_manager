@@ -1,4 +1,9 @@
-import { SOUND_PAGE_MAX, SOUND_QUERY_MAX, type SoundSearchResult } from '@tiklive/contracts';
+import {
+  SOUND_PAGE_MAX,
+  SOUND_QUERY_MAX,
+  type SoundSearchResult,
+  type SoundSource,
+} from '@tiklive/contracts';
 import type { Clock } from '../../domain/shared/time.js';
 import type { SoundProvider } from '../ports/sound-provider.js';
 
@@ -11,7 +16,7 @@ interface CacheEntry {
 }
 
 /**
- * Sits between the HTTP route and the provider: identical searches within the TTL are served from
+ * Sits between the HTTP route and the providers: identical searches within the TTL are served from
  * memory and concurrent identical searches share one upstream call. Failures are never cached.
  */
 export class SoundSearchService {
@@ -19,14 +24,14 @@ export class SoundSearchService {
   private readonly inFlight = new Map<string, Promise<SoundSearchResult>>();
 
   constructor(
-    private readonly provider: SoundProvider,
+    private readonly providers: Readonly<Record<SoundSource, SoundProvider>>,
     private readonly clock: Clock,
   ) {}
 
-  search(rawQuery: string, page = 1): Promise<SoundSearchResult> {
+  search(source: SoundSource, rawQuery: string, page = 1): Promise<SoundSearchResult> {
     const query = rawQuery.trim().replace(/\s+/g, ' ').slice(0, SOUND_QUERY_MAX);
     const safePage = Math.min(Math.max(1, Math.trunc(page)), SOUND_PAGE_MAX);
-    const key = `${query.toLowerCase()}|${safePage}`;
+    const key = `${source}|${query.toLowerCase()}|${safePage}`;
 
     const cached = this.cache.get(key);
     if (cached && cached.expiresAt > this.clock.now()) return Promise.resolve(cached.value);
@@ -34,7 +39,7 @@ export class SoundSearchService {
     const pending = this.inFlight.get(key);
     if (pending) return pending;
 
-    const request = this.provider
+    const request = this.providers[source]
       .search(query, safePage)
       .then((value) => {
         this.remember(key, value);
