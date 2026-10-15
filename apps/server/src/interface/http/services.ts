@@ -20,6 +20,7 @@ import type { AdminRegistry, ScreenRegistry } from '../../application/ports/sock
 import type { RuleService } from '../../application/rules/rule-service.js';
 import type { ModerationService } from '../../application/settings/moderation-service.js';
 import type { SettingsService } from '../../application/settings/settings-service.js';
+import type { TtsService } from '../../application/tts/tts-service.js';
 import type { SoundSearchService } from '../../application/sounds/sound-search-service.js';
 import type { TriggerService } from '../../application/triggers/trigger-service.js';
 import type { SimulatorService } from '../../application/simulator/simulator-service.js';
@@ -41,6 +42,7 @@ export interface HttpServices {
   readonly auth: AuthService;
   readonly settings: SettingsService;
   readonly moderation: ModerationService;
+  readonly tts: TtsService;
   readonly gifts: GiftCatalogService;
   readonly sounds: SoundSearchService;
   readonly triggers: TriggerService;

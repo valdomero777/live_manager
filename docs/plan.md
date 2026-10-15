@@ -187,3 +187,22 @@ De código, sin urgencia:
   (F-07), `Origin` en `/ws/admin` (SEC-05), intentos de `setup` sin límite (SEC-06),
   `frame-ancestors` (SEC-04), mensajes del servidor sin traducir.
 - Fase 5 (v2/v3): definir su alcance.
+
+## TTS: voces, audiencia e idioma — 2026-10-14
+
+Decisiones en [ADR 0013](adr/0013-tts-voices-audience-and-language.md).
+
+- Ajustes → **Voz (TTS)**: motor (navegador o voces neuronales de Microsoft Edge), idioma, género,
+  voz concreta, velocidad, tono y «Probar voz». Con Edge la pantalla de audio pide el MP3 a
+  `POST /overlay-data/tts` y, si falla, lee con la voz del navegador.
+- A quién se lee: todos, o seguidores, super fans, moderadores, fan club (nivel mínimo), global
+  gifters (nivel de gifter de TikTok) y top N del ranking de la sala; listas «leer siempre» y
+  «no leer nunca».
+- Formato: mayúsculas, repeticiones, signos y apodos decorados. Moderación: letras decoradas a
+  texto normal antes de la lista de bloqueo.
+- Otro alfabeto u otro idioma: omitir (por defecto), quitar letras, cambiar de voz o leer igual.
+- Simulador: el comentario permite elegir seguidor, super fan, moderador y niveles.
+- Probado en el navegador con un servidor aparte (simulador): lectura con Edge, filtros de
+  audiencia (seguidores, global gifters), ruso y inglés omitidos, «𝓺𝓾𝓮 𝓫𝓾𝓮𝓷 𝓵𝓲𝓿𝓮» leído normal y
+  respaldo al navegador cuando Edge responde error.
+- Pendiente: confirmar con un live real que TikTok envía nivel de gifter y de fan club.

@@ -18,6 +18,7 @@ import { problemErrorHandler } from './problem.js';
 import { registerApiRoutes } from './routes.js';
 import type { HttpOptions, HttpServices } from './services.js';
 import { registerSettingsRoutes } from './settings-routes.js';
+import { registerTtsRoutes } from './tts-routes.js';
 import { registerTriggerRoutes } from './trigger-routes.js';
 
 /**
@@ -99,6 +100,7 @@ export async function buildHttpServer(
       registerAuthRoutes(api, services.auth);
       registerApiRoutes(api, services);
       registerSettingsRoutes(api, services);
+      registerTtsRoutes(api, services);
       registerTriggerRoutes(api, services);
       await registerAssetRoutes(api, services);
     },
@@ -108,7 +110,7 @@ export async function buildHttpServer(
     overlayKey: options.overlayKey,
     preloadUrls: () => services.assets.audioUrls(),
   });
-  registerOverlayRoutes(app, services.projections, options.overlayKey);
+  registerOverlayRoutes(app, services.projections, options.overlayKey, services.tts);
   await registerStaticFiles(app, options, logger);
   return app;
 }

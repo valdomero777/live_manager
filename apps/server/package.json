@@ -15,7 +15,9 @@
     "@tiklive/contracts": "*",
     "better-sqlite3": "^13.0.3",
     "fastify": "^5.12.5",
+    "franc-min": "6.2.0",
     "kysely": "^0.29.6",
+    "msedge-tts": "2.1.0",
     "pino": "^10.4.0",
     "tiktok-live-connector": "2.5.0",
     "zod": "^4.6.5"

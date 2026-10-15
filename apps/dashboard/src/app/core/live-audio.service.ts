@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import {
   AudioActionRunner,
   BrowserSpeech,
+  ServerSpeech,
   ScreenSocket,
   WebAudioPlayer,
   describeError,
@@ -179,6 +180,7 @@ export class LiveAudioService {
         failed: (actionId, reason) => socket.send('action.failed', { actionId, reason }),
       },
       (text) => this.log(text),
+      new ServerSpeech(() => this.keys.key(), player, speech, (text) => this.log(text)),
     );
     this.socket = socket;
     socket.connect();

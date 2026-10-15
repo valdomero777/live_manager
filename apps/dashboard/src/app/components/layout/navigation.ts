@@ -3,6 +3,7 @@ import {
   LucideFlaskConical,
   LucideLayers,
   LucideLayoutDashboard,
+  LucideMic,
   LucideMusic,
   LucideRadio,
   LucideSettings,
@@ -49,6 +50,7 @@ export const NAVIGATION: readonly NavGroup[] = [
     items: [
       { path: '/reglas', label: $localize`Reglas`, icon: LucideWorkflow },
       { path: '/triggers', label: $localize`Triggers de sonido`, icon: LucideZap },
+      { path: '/voz', label: $localize`Voz (TTS)`, icon: LucideMic },
     ],
   },
   {

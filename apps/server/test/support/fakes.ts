@@ -3,6 +3,8 @@ import type { AdminNotifier } from '../../src/application/ports/admin-notifier.j
 import type { Unsubscribe } from '../../src/application/ports/live-event-source.js';
 import type { Cancel, IdGenerator, Scheduler } from '../../src/application/ports/scheduler.js';
 import type { ScreenGateway } from '../../src/application/ports/screen-gateway.js';
+import type { SettingsRepository } from '../../src/application/ports/settings-repository.js';
+import type { z } from 'zod';
 import { FakeClock } from '../../src/domain/shared/time.js';
 
 interface Timer {
@@ -122,5 +124,16 @@ export class FakeScreenGateway implements ScreenGateway {
     return this.sent
       .filter((s) => screen === undefined || s.screen === screen)
       .map((s) => ('actionId' in s.message.payload ? s.message.payload.actionId : ''));
+  }
+}
+
+/** app_setting in memory; values go through the caller's schema like the SQLite repository. */
+export class MemorySettings implements SettingsRepository {
+  readonly values = new Map<string, unknown>();
+  async get<S extends z.ZodType>(key: string, schema: S) {
+    return this.values.has(key) ? schema.parse(this.values.get(key)) : undefined;
+  }
+  async set(key: string, value: unknown) {
+    this.values.set(key, value);
   }
 }

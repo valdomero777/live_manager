@@ -74,6 +74,11 @@ export class SimulatorPage {
   protected readonly comment = new FormGroup({
     user: new FormControl('leo', { nonNullable: true }),
     text: new FormControl('!di hola a todos', { nonNullable: true }),
+    isFollower: new FormControl(true, { nonNullable: true }),
+    isSubscriber: new FormControl(false, { nonNullable: true }),
+    isModerator: new FormControl(false, { nonNullable: true }),
+    gifterLevel: new FormControl(0, { nonNullable: true }),
+    fanClubLevel: new FormControl(0, { nonNullable: true }),
   });
   protected readonly likes = new FormGroup({
     user: new FormControl('sofia', { nonNullable: true }),
@@ -90,7 +95,12 @@ export class SimulatorPage {
   }
 
   protected sendComment(): Promise<void> {
-    return this.emit([{ kind: 'comment', ...this.comment.getRawValue() }]);
+    const { user, text, gifterLevel, fanClubLevel, ...flags } = this.comment.getRawValue();
+    const levels = {
+      ...(gifterLevel > 0 ? { gifterLevel } : {}),
+      ...(fanClubLevel > 0 ? { fanClubLevel } : {}),
+    };
+    return this.emit([{ kind: 'comment', user, text, viewer: { ...flags, ...levels } }]);
   }
 
   protected sendLikes(): Promise<void> {

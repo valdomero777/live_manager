@@ -76,6 +76,11 @@ export const routes: Routes = [
           import('./features/simulator/simulator.page').then((m) => m.SimulatorPage),
       },
       {
+        path: 'voz',
+        title: 'Voz (TTS) · TikLive',
+        loadComponent: () => import('./features/settings/voice.page').then((m) => m.VoicePage),
+      },
+      {
         path: 'ajustes',
         title: $localize`Ajustes · TikLive`,
         loadComponent: () =>

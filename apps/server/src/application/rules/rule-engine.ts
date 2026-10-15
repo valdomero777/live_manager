@@ -1,11 +1,13 @@
-import type {
-  ActionConfig,
-  LiveEvent,
-  Rule,
-  RuleTestResult,
-  ServerActionConfig,
+import {
+  hasViewer,
+  type ActionConfig,
+  type LiveEvent,
+  type Rule,
+  type RuleTestResult,
+  type ScreenActionConfig,
+  type ServerActionConfig,
 } from '@tiklive/contracts';
-import type { ActionHandlerRegistry } from '../../domain/rules/actions.js';
+import type { ActionHandlerRegistry, SpeechVoice } from '../../domain/rules/actions.js';
 import { type AssetCatalog } from '../../domain/rules/actions.js';
 import { CompiledRule, byPriority } from '../../domain/rules/compiled-rule.js';
 import type { ConditionRegistry, EvaluationContext } from '../../domain/rules/condition.js';
@@ -25,9 +27,11 @@ import type { AdminNotifier } from '../ports/admin-notifier.js';
 import type { Logger } from '../ports/logger.js';
 import type { RuleReader } from '../ports/rule-repository.js';
 import type { IdGenerator } from '../ports/scheduler.js';
+import type { SpeechPolicy } from '../tts/tts-service.js';
 
 /** Placeholders that expose viewer-written text; they always go through moderation. */
-const VIEWER_TEXT_PLACEHOLDERS = ['{comment}', '{commandArgs}'];
+const VIEWER_TEXT_KEYS = ['comment', 'commandArgs'] as const;
+const VIEWER_TEXT_PLACEHOLDERS = VIEWER_TEXT_KEYS.map((key) => `{${key}}`);
 
 export interface RuleEngineDeps {
   readonly rules: RuleReader;
@@ -38,6 +42,8 @@ export interface RuleEngineDeps {
   readonly serverActions: ServerActionRunner;
   readonly assets: AssetCatalog;
   readonly moderation: () => TextFilterChain;
+  /** Voice, audience and language rules for speak actions (TTS settings). */
+  readonly speech: SpeechPolicy;
   readonly ids: IdGenerator;
   readonly random: Random;
   readonly notifier: AdminNotifier;
@@ -77,6 +83,21 @@ function viewerTemplate(action: ActionConfig): string {
 function usesViewerText(action: ActionConfig): boolean {
   const template = viewerTemplate(action);
   return VIEWER_TEXT_PLACEHOLDERS.some((p) => template.includes(p));
+}
+
+type SpeakConfig = Extract<ScreenActionConfig, { type: 'speak' }>;
+
+interface PreparedAction {
+  readonly vars: TemplateVariables;
+  readonly speech?: SpeechVoice;
+}
+
+/** A specific voice belongs to the configured language; another language picks its own. */
+function speechIn(voice: SpeechVoice, lang: string): SpeechVoice {
+  const { voiceName, ...rest } = voice;
+  return voiceName !== undefined && lang === voice.lang
+    ? { ...rest, lang, voiceName }
+    : { ...rest, lang };
 }
 
 const SERVER_ACTION_TYPES: readonly string[] = ['updateGoal', 'webhook'];
@@ -167,17 +188,19 @@ export class RuleEngine implements LiveEventConsumer {
     dryRun = false,
   ): boolean {
     try {
-      const actionVars = vars.for(action);
-      if (actionVars === null) return true; // moderated out: intentionally silent
+      const prepared = this.prepare(event, action, vars);
+      // Moderated out, or not for the voice (audience, language): intentionally silent.
+      if (prepared === null) return true;
       if (isServerAction(action))
-        return this.runServerAction(rule, event, action, actionVars, dryRun);
+        return this.runServerAction(rule, event, action, prepared.vars, dryRun);
       const planned = this.deps.actions.plan(action, {
         actionId: this.deps.ids.next(),
         origin: { kind: 'rule', id: rule.id },
         eventId: event.id,
         priority: rule.rule.priority,
-        vars: actionVars,
+        vars: prepared.vars,
         assets: this.deps.assets,
+        ...(prepared.speech ? { speech: prepared.speech } : {}),
       });
       if (!planned) {
         this.deps.logger.warn(
@@ -196,6 +219,64 @@ export class RuleEngine implements LiveEventConsumer {
       );
       return false;
     }
+  }
+
+  private prepare(
+    event: LiveEvent,
+    action: ActionConfig,
+    vars: CommentVariables,
+  ): PreparedAction | null {
+    if (action.type === 'speak') return this.prepareSpeech(event, action, vars);
+    const actionVars = vars.for(action);
+    return actionVars === null ? null : { vars: actionVars };
+  }
+
+  /**
+   * The audience is checked before moderation, so viewers the voice ignores do not use up the
+   * per-user rate limit. Viewer text is then formatted and checked for language and alphabet.
+   */
+  private prepareSpeech(
+    event: LiveEvent,
+    action: SpeakConfig,
+    vars: CommentVariables,
+  ): PreparedAction | null {
+    const viewer = hasViewer(event) ? event.viewer : undefined;
+    const readsViewerText = viewer !== undefined && usesViewerText(action);
+    if (readsViewerText && !this.deps.speech.allowsViewer(viewer)) return null;
+    const moderated = vars.for(action);
+    if (moderated === null) return null;
+    const voice = this.deps.speech.voice();
+    const spoken = readsViewerText
+      ? this.spokenViewerText(action, moderated, voice.lang)
+      : { vars: moderated, lang: voice.lang };
+    if (spoken === null) return null;
+    const withNickname = viewer ? this.spokenNickname(spoken.vars, viewer.uniqueId) : spoken.vars;
+    return { vars: withNickname, speech: speechIn(voice, spoken.lang) };
+  }
+
+  /** {comment}/{commandArgs} as the voice should read them, and the language to read them in. */
+  private spokenViewerText(
+    action: SpeakConfig,
+    vars: TemplateVariables,
+    lang: string,
+  ): { vars: TemplateVariables; lang: string } | null {
+    const out: Record<string, string> = { ...vars };
+    let readIn = lang;
+    for (const key of VIEWER_TEXT_KEYS) {
+      const text = vars[key];
+      if (text === undefined || !action.text.includes(`{${key}}`)) continue;
+      const prepared = this.deps.speech.prepareText(text);
+      if (prepared === null) return null;
+      out[key] = prepared.text;
+      readIn = prepared.lang;
+    }
+    return { vars: out, lang: readIn };
+  }
+
+  private spokenNickname(vars: TemplateVariables, uniqueId: string): TemplateVariables {
+    const nickname = vars['nickname'];
+    if (nickname === undefined) return vars;
+    return { ...vars, nickname: this.deps.speech.speakableNickname(nickname, uniqueId) };
   }
 
   private runServerAction(

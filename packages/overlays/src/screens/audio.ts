@@ -3,6 +3,7 @@ import { ScreenSocket } from '../core/ws-client.js';
 import {
   AudioActionRunner,
   BrowserSpeech,
+  ServerSpeech,
   WebAudioPlayer,
   describeError,
 } from '../audio/engine.js';
@@ -37,6 +38,7 @@ async function start(): Promise<void> {
   await player.unlock();
   masterInput?.addEventListener('input', () => player.setMaster(Number(masterInput.value)));
   const speech = new BrowserSpeech(() => Number(masterInput?.value ?? 1));
+  const serverSpeech = new ServerSpeech(() => params.key, player, speech, log);
   const runner = new AudioActionRunner(
     player,
     speech,
@@ -45,6 +47,7 @@ async function start(): Promise<void> {
       failed: (actionId, reason) => socket.send('action.failed', { actionId, reason }),
     },
     log,
+    serverSpeech,
   );
 
   // Connecting only after unlock means the server holds actions until audio can play.

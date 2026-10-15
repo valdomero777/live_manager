@@ -7,6 +7,7 @@ import {
   SubscriptionSchema,
 } from './projections.js';
 import { RawLiveEventSchema } from './raw-events.js';
+import { LanguageTagSchema, TtsEngineSchema, VoiceGenderSchema } from './tts.js';
 
 export const WS_VERSION = 1;
 
@@ -55,6 +56,11 @@ export const SpeakMessageSchema = envelope(
     rate: z.number().optional(),
     pitch: z.number().optional(),
     volume: z.number().min(0).max(1),
+    /** Absent: browser voice (older servers). edge: fetch the audio from POST /overlay-data/tts. */
+    engine: TtsEngineSchema.optional(),
+    /** Language to read in; may differ from the configured voice when switchVoice applied. */
+    lang: LanguageTagSchema.optional(),
+    gender: VoiceGenderSchema.optional(),
   }),
 );
 

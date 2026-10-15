@@ -1,7 +1,7 @@
-import type { Rule } from '@tiklive/contracts';
+import { TtsSettingsSchema, type Rule, type TtsSettings } from '@tiklive/contracts';
 import { describe, expect, it } from 'vitest';
-import { aCommentEvent, aGiftEvent, aRule } from '../../../test/support/builders.js';
-import { RecordingNotifier, SequentialIds } from '../../../test/support/fakes.js';
+import { aCommentEvent, aGiftEvent, aRule, aViewer } from '../../../test/support/builders.js';
+import { MemorySettings, RecordingNotifier, SequentialIds } from '../../../test/support/fakes.js';
 import { createDefaultActionRegistry, type PlannedAction } from '../../domain/rules/actions.js';
 import { createDefaultConditionRegistry } from '../../domain/rules/conditions.js';
 import { RuleRateLimiter } from '../../domain/rules/rate-limiter.js';
@@ -10,9 +10,36 @@ import { DEFAULT_MODERATION, buildModerationChain } from '../../domain/tts/text-
 import { silentLogger } from '../ports/logger.js';
 import type { ServerActionConfig } from '@tiklive/contracts';
 import type { ServerActionRunner } from '../actions/server-action-runner.js';
+import type { LanguageScorer } from '../../domain/tts/speech-language.js';
+import type { SpeechSynthesizer } from '../ports/speech-synthesizer.js';
+import { TtsService } from '../tts/tts-service.js';
 import { RuleEngine } from './rule-engine.js';
 
-function setup(rules: Rule[]) {
+/** Fake detector: English when the text contains "the", Spanish otherwise. */
+const fakeScorer: LanguageScorer = (text) =>
+  /\bthe\b/i.test(text)
+    ? [
+        ['en', 1],
+        ['es', 0.5],
+      ]
+    : [['es', 1]];
+
+function ttsService(clock: FakeClock, topGifters: readonly string[] = []) {
+  return new TtsService({
+    repo: new MemorySettings(),
+    synthesizer: {} as SpeechSynthesizer,
+    scoreLanguages: fakeScorer,
+    topGifters: async () => topGifters,
+    clock,
+    logger: silentLogger,
+  });
+}
+
+function ttsSettings(over: Record<string, unknown>): TtsSettings {
+  return TtsSettingsSchema.parse(over);
+}
+
+function setup(rules: Rule[], topGifters: readonly string[] = []) {
   const serverRuns: { action: ServerActionConfig; vars: Record<string, string> }[] = [];
   const clock = new FakeClock(0);
   const planned: PlannedAction[] = [];
@@ -25,6 +52,7 @@ function setup(rules: Rule[]) {
   const notifier = new RecordingNotifier();
   const disabled: number[] = [];
   const moderation = buildModerationChain({ ...DEFAULT_MODERATION, blockedTerms: ['feo'] }, clock);
+  const tts = ttsService(clock, topGifters);
   const engine = new RuleEngine({
     rules: { listAll: async () => rules, findById: async (id) => rules.find((r) => r.id === id) },
     conditions: createDefaultConditionRegistry(),
@@ -34,6 +62,7 @@ function setup(rules: Rule[]) {
     serverActions: fakeRunner as unknown as ServerActionRunner,
     assets: { urlFor: (id) => `/media/${id}.mp3` },
     moderation: () => moderation,
+    speech: tts,
     ids: new SequentialIds(),
     random: { next: () => 0 },
     notifier,
@@ -42,7 +71,7 @@ function setup(rules: Rule[]) {
       disabled.push(rule.id);
     },
   });
-  return { engine, planned, notifier, disabled, clock, serverRuns };
+  return { engine, planned, notifier, disabled, clock, serverRuns, tts };
 }
 
 describe('RuleEngine', () => {
@@ -218,6 +247,142 @@ describe('RuleEngine', () => {
 
       expect(serverRuns).toEqual([]);
       expect(result).toMatchObject({ matched: true, actionsQueued: 0, actionsSkipped: 2 });
+    });
+  });
+  describe('speech (TTS settings)', () => {
+    const readComments = (text = '{nickname} dice {comment}') =>
+      aRule({ id: 1, trigger: 'comment', actions: [{ type: 'speak', text }] });
+    const payloads = (planned: PlannedAction[]) => planned.map((p) => p.command.payload);
+
+    it('sends the configured voice with every speak action', async () => {
+      const { engine, planned, tts } = setup([readComments()]);
+      await tts.update(
+        ttsSettings({ voice: { engine: 'edge', language: 'es-ES', gender: 'male', rate: 1.2 } }),
+      );
+      await engine.reload();
+      engine.handle(aCommentEvent({ text: 'hola' }));
+      expect(payloads(planned)[0]).toMatchObject({
+        engine: 'edge',
+        lang: 'es-ES',
+        gender: 'male',
+        rate: 1.2,
+        pitch: 1,
+      });
+      // Edge needs a round trip to synthesise: the ack timeout is longer.
+      expect(planned[0]!.timeoutMs).toBeGreaterThan(7_000);
+    });
+
+    it("the action's own voice, rate and pitch win over the settings", async () => {
+      const rule = aRule({
+        id: 1,
+        trigger: 'comment',
+        actions: [
+          { type: 'speak', text: '{comment}', voice: 'Microsoft Raul', rate: 2, pitch: 0.5 },
+        ],
+      });
+      const { engine, planned } = setup([rule]);
+      await engine.reload();
+      engine.handle(aCommentEvent({ text: 'hola' }));
+      expect(payloads(planned)[0]).toMatchObject({ voice: 'Microsoft Raul', rate: 2, pitch: 0.5 });
+    });
+
+    it('reads only the audience: with followers only, a non-follower is silent', async () => {
+      const { engine, planned, tts } = setup([readComments()]);
+      await tts.update(ttsSettings({ audience: { everyone: false, followers: true } }));
+      await engine.reload();
+      engine.handle(aCommentEvent({ text: 'hola' }));
+      engine.handle(
+        aCommentEvent({ id: 'evt-2', text: 'hola', viewer: aViewer({ isFollower: true }) }),
+      );
+      expect(payloads(planned)).toEqual([expect.objectContaining({ text: 'Nick u1 dice hola' })]);
+      expect(planned[0]!.eventId).toBe('evt-2');
+    });
+
+    it('audience filters only apply when the voice reads viewer text', async () => {
+      const rule = aRule({ id: 1, actions: [{ type: 'speak', text: 'Gracias {nickname}' }] });
+      const { engine, planned, tts } = setup([rule]);
+      await tts.update(ttsSettings({ audience: { everyone: false } }));
+      await engine.reload();
+      engine.handle(aGiftEvent());
+      expect(planned).toHaveLength(1);
+    });
+
+    it('a viewer outside the audience does not use up the per-user rate limit', async () => {
+      const { engine, planned, tts } = setup([readComments()]);
+      await tts.update(ttsSettings({ audience: { everyone: false, moderators: true } }));
+      await engine.reload();
+      for (let i = 0; i < 5; i++) engine.handle(aCommentEvent({ id: `x${i}`, text: `hola ${i}` }));
+      await tts.update(ttsSettings({}));
+      engine.handle(aCommentEvent({ id: 'evt-9', text: 'ya me leen' }));
+      expect(payloads(planned)).toEqual([
+        expect.objectContaining({ text: 'Nick u1 dice ya me leen' }),
+      ]);
+    });
+
+    it('top gifters come from the room ranking (refreshed in the background)', async () => {
+      const { engine, planned, tts } = setup([readComments()], ['user_u1']);
+      await tts.update(
+        ttsSettings({ audience: { everyone: false, topGifters: { enabled: true, top: 1 } } }),
+      );
+      await new Promise((r) => setTimeout(r, 0));
+      await engine.reload();
+      engine.handle(aCommentEvent({ text: 'soy top' }));
+      engine.handle(
+        aCommentEvent({ id: 'evt-2', text: 'no soy', viewer: aViewer({ tiktokUserId: 'u2' }) }),
+      );
+      expect(payloads(planned)).toEqual([
+        expect.objectContaining({ text: 'Nick u1 dice soy top' }),
+      ]);
+    });
+
+    it('skips a comment in another language and can switch the voice instead', async () => {
+      const { engine, planned, tts } = setup([readComments()]);
+      await tts.update(ttsSettings({ language: { detectionMinLength: 10 } }));
+      await engine.reload();
+      engine.handle(aCommentEvent({ text: 'the stream is great today' }));
+      expect(planned).toEqual([]);
+
+      await tts.update(
+        ttsSettings({
+          voice: { voiceName: 'es-MX-DaliaNeural' },
+          language: { detectionMinLength: 10, otherLanguage: 'switchVoice' },
+        }),
+      );
+      engine.handle(aCommentEvent({ id: 'evt-2', text: 'the chat is great today' }));
+      expect(payloads(planned)[0]).toMatchObject({ lang: 'en', gender: 'female' });
+      // A specific voice belongs to the configured language, so it is not sent.
+      expect(payloads(planned)[0]).not.toHaveProperty('voice');
+    });
+
+    it('skips a comment in another alphabet by default', async () => {
+      const { engine, planned } = setup([readComments()]);
+      await engine.reload();
+      engine.handle(aCommentEvent({ text: 'привет всем' }));
+      expect(planned).toEqual([]);
+    });
+
+    it('formats the spoken text and cleans fancy nicknames', async () => {
+      const { engine, planned } = setup([readComments()]);
+      await engine.reload();
+      engine.handle(
+        aCommentEvent({
+          text: 'JAJAJAJA QUE BUENO!!!!',
+          viewer: aViewer({ nickname: '✨𝓜𝓪𝓻𝓲𝓪✨' }),
+        }),
+      );
+      expect(payloads(planned)[0]).toMatchObject({ text: 'Maria dice jaja que bueno!' });
+    });
+
+    it('alerts keep the original nickname and are not language-filtered', async () => {
+      const rule = aRule({
+        id: 1,
+        trigger: 'comment',
+        actions: [{ type: 'showAlert', text: '{nickname}: {comment}' }],
+      });
+      const { engine, planned } = setup([rule]);
+      await engine.reload();
+      engine.handle(aCommentEvent({ text: 'привет', viewer: aViewer({ nickname: '✨Ana✨' }) }));
+      expect(payloads(planned)[0]).toMatchObject({ text: '✨Ana✨: привет' });
     });
   });
 });

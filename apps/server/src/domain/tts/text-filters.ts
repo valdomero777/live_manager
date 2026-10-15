@@ -19,6 +19,7 @@ export interface ModerationSettings {
   readonly maxPerUserPerMinute: number;
   readonly duplicateWindowMs: number;
   readonly pronunciations: Readonly<Record<string, string>>;
+  readonly normalizeFancyText: boolean;
 }
 
 export const DEFAULT_MODERATION: ModerationSettings = {
@@ -30,13 +31,38 @@ export const DEFAULT_MODERATION: ModerationSettings = {
   maxPerUserPerMinute: 3,
   duplicateWindowMs: 30_000,
   pronunciations: {},
+  normalizeFancyText: true,
 };
 
 const REPEATED_CHARS = /(.)\1{2,}/gu;
 const URL_OR_EMAIL = /\b(?:https?:\/\/|www\.)\S+|\b[\w.+-]+@[\w-]+\.[\w.]+\b/giu;
 const MENTION = /@[\w.]+/gu;
 const EMOJI = /\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic})*/gu;
+/** Flags are pairs of regional indicators; engines read them as letters. */
+const FLAG_LETTERS = /\p{Regional_Indicator}+/gu;
 const MULTISPACE = /\s+/g;
+/** More than two combining marks on one letter: "zalgo" text. */
+const STACKED_MARKS = /(\p{M}{2})\p{M}+/gu;
+/** Squared and circled Latin capitals (🄰 🅐 🅰) that NFKC leaves alone; each block is A-Z. */
+const ENCLOSED_CAPITALS = /[\u{1F130}-\u{1F149}\u{1F150}-\u{1F169}\u{1F170}-\u{1F189}]/gu;
+const ENCLOSED_BLOCK_STARTS = [0x1f130, 0x1f150, 0x1f170];
+
+function plainCapital(char: string): string {
+  const code = char.codePointAt(0) ?? 0;
+  const start = ENCLOSED_BLOCK_STARTS.findLast((s) => code >= s) ?? code;
+  return String.fromCharCode(0x41 + code - start);
+}
+
+/**
+ * Turns decorative Unicode into plain letters: "𝓗𝓸𝓵𝓪", "ｈｏｌａ", "Ⓗⓞⓛⓐ" and "🅷🅾🅻🅰" become
+ * "Hola", and zalgo marks are trimmed. NFKC keeps accents ("canción" stays "canción").
+ */
+export function plainText(text: string): string {
+  return text
+    .replace(ENCLOSED_CAPITALS, plainCapital)
+    .normalize('NFKC')
+    .replace(STACKED_MARKS, '$1');
+}
 
 function nonEmpty(text: string): string | null {
   const trimmed = text.replace(MULTISPACE, ' ').trim();
@@ -45,6 +71,11 @@ function nonEmpty(text: string): string | null {
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Runs first, so the blocklist cannot be dodged by writing a word in a fancy font. */
+export function fancyTextFilter(enabled: boolean): TextFilter {
+  return { name: 'fancyText', apply: (text) => (enabled ? nonEmpty(plainText(text)) : text) };
 }
 
 export const normalizeFilter: TextFilter = {
@@ -63,7 +94,10 @@ export function linksFilter(readMentions: boolean): TextFilter {
 }
 
 export function emojiFilter(strip: boolean): TextFilter {
-  return { name: 'emoji', apply: (text) => (strip ? nonEmpty(text.replace(EMOJI, ' ')) : text) };
+  return {
+    name: 'emoji',
+    apply: (text) => (strip ? nonEmpty(text.replace(EMOJI, ' ').replace(FLAG_LETTERS, ' ')) : text),
+  };
 }
 
 export function blocklistFilter(terms: readonly string[], mode: 'drop' | 'mask'): TextFilter {
@@ -164,6 +198,7 @@ export class TextFilterChain {
 
 export function buildModerationChain(settings: ModerationSettings, clock: Clock): TextFilterChain {
   return new TextFilterChain([
+    fancyTextFilter(settings.normalizeFancyText),
     normalizeFilter,
     linksFilter(settings.readMentions),
     emojiFilter(settings.stripEmojis),

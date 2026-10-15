@@ -25,6 +25,7 @@ import { UiSwitch } from '../../components/ui/switch';
 import { UI_TABS } from '../../components/ui/tabs';
 import { ApiError } from '../../core/api-client';
 import { ModerationForm } from './moderation-form';
+import { TtsForm } from './tts-form';
 import { PasswordForm } from './password-form';
 import {
   APPLY_LABELS,
@@ -47,6 +48,7 @@ const LABELS = new Map(SETTING_SECTIONS.flatMap((s) => s.fields).map((f) => [f.k
   imports: [
     ReactiveFormsModule,
     ModerationForm,
+    TtsForm,
     PasswordForm,
     PageHeader,
     UiBadge,

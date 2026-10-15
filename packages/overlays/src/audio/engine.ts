@@ -1,4 +1,5 @@
 import type { ScreenServerMessage } from '@tiklive/contracts';
+import { pickBrowserVoice } from '../core/browser-voice.js';
 
 type PlaySound = Extract<ScreenServerMessage, { type: 'action.play_sound' }>['payload'];
 type Speak = Extract<ScreenServerMessage, { type: 'action.speak' }>['payload'];
@@ -63,7 +64,15 @@ export class WebAudioPlayer {
 
   async play(url: string, volume: number, maxMs?: number): Promise<number> {
     if (isRemoteUrl(url)) return this.playRemote(url, volume, maxMs);
-    const buffer = await this.load(url);
+    return this.playBuffer(await this.load(url), volume, maxMs);
+  }
+
+  /** Encoded audio (MP3 from the server's Edge voice), decoded and played once. */
+  async playData(data: ArrayBuffer, volume: number): Promise<number> {
+    return this.playBuffer(await this.ctx.decodeAudioData(data), volume);
+  }
+
+  private async playBuffer(buffer: AudioBuffer, volume: number, maxMs?: number): Promise<number> {
     const gain = this.ctx.createGain();
     gain.gain.value = volume;
     gain.connect(this.master);
@@ -144,9 +153,9 @@ export class BrowserSpeech {
   speak(p: Speak): Promise<number> {
     return new Promise((resolve, reject) => {
       const utterance = new SpeechSynthesisUtterance(p.text);
-      const voice = this.pickVoice(p.voice);
+      const voice = pickBrowserVoice(this.voices, p);
       if (voice) utterance.voice = voice;
-      utterance.lang = voice?.lang ?? p.voice ?? 'es-MX';
+      utterance.lang = voice?.lang ?? p.lang ?? 'es-MX';
       utterance.volume = p.volume * this.masterVolume();
       if (p.rate !== undefined) utterance.rate = p.rate;
       if (p.pitch !== undefined) utterance.pitch = p.pitch;
@@ -160,11 +169,40 @@ export class BrowserSpeech {
   cancel(): void {
     speechSynthesis.cancel();
   }
+}
 
-  /** Accepts a voice name or a language tag such as "es-MX". */
-  private pickVoice(wanted: string | undefined): SpeechSynthesisVoice | undefined {
-    if (!wanted) return this.voices.find((v) => v.lang.startsWith('es'));
-    return this.voices.find((v) => v.name === wanted) ?? this.voices.find((v) => v.lang === wanted);
+/**
+ * Edge neural voices: the server synthesises the text and returns MP3. Any failure (service
+ * down, no internet) falls back to the browser voice so the viewer is still read.
+ */
+export class ServerSpeech {
+  constructor(
+    private readonly key: () => string,
+    private readonly player: WebAudioPlayer,
+    private readonly fallback: BrowserSpeech,
+    private readonly log: (text: string) => void,
+  ) {}
+
+  async speak(p: Speak): Promise<number> {
+    try {
+      const response = await fetch(`/overlay-data/tts?key=${encodeURIComponent(this.key())}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: p.text,
+          lang: p.lang ?? 'es-MX',
+          gender: p.gender ?? 'any',
+          ...(p.voice === undefined ? {} : { voice: p.voice }),
+          ...(p.rate === undefined ? {} : { rate: p.rate }),
+          ...(p.pitch === undefined ? {} : { pitch: p.pitch }),
+        }),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await this.player.playData(await response.arrayBuffer(), p.volume);
+    } catch (error) {
+      this.log(`Voz de Edge no disponible (${describeError(error)}); uso la del navegador`);
+      return this.fallback.speak(p);
+    }
   }
 }
 
@@ -180,6 +218,7 @@ export class AudioActionRunner {
     private readonly speech: BrowserSpeech,
     private readonly ack: AudioActionAck,
     private readonly log: (text: string) => void,
+    private readonly serverSpeech?: ServerSpeech,
   ) {}
 
   async handle(message: ScreenServerMessage): Promise<void> {
@@ -196,7 +235,8 @@ export class AudioActionRunner {
       }
       case 'action.speak': {
         const p = message.payload;
-        await this.run(p.actionId, `Voz: ${p.text}`, () => this.speech.speak(p));
+        const engine = p.engine === 'edge' && this.serverSpeech ? this.serverSpeech : this.speech;
+        await this.run(p.actionId, `Voz: ${p.text}`, () => engine.speak(p));
         break;
       }
       default:

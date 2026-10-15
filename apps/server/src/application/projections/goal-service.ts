@@ -2,7 +2,11 @@ import type { Goal, GoalDefinition, GoalProgress, LiveEvent, Metric } from '@tik
 import { goalStatus, newlyReachedCycles } from '../../domain/projections/goal-progress.js';
 import { goalMetricToMetric } from '../../domain/projections/scopes.js';
 import type { GoalAdjuster } from '../actions/server-action-runner.js';
-import type { ActionHandlerRegistry, AssetCatalog } from '../../domain/rules/actions.js';
+import type {
+  ActionHandlerRegistry,
+  AssetCatalog,
+  SpeechVoice,
+} from '../../domain/rules/actions.js';
 import type { Clock } from '../../domain/shared/time.js';
 import type { ActionSink } from '../actions/action-scheduler.js';
 import type { GoalRepository } from '../ports/goal-repository.js';
@@ -22,6 +26,8 @@ interface GoalDeps {
   readonly actions: ActionHandlerRegistry;
   readonly assets: AssetCatalog;
   readonly sink: ActionSink;
+  /** The configured TTS voice for celebration speak actions. */
+  readonly speech?: () => SpeechVoice;
   readonly ids: IdGenerator;
   readonly clock: Clock;
   readonly logger: Logger;
@@ -134,6 +140,7 @@ export class GoalService implements GoalAdjuster {
           priority: GOAL_ACTION_PRIORITY,
           vars,
           assets: this.deps.assets,
+          ...(this.deps.speech ? { speech: this.deps.speech() } : {}),
         });
         if (planned) this.deps.sink.enqueue(planned);
       } catch (error) {
