@@ -23,6 +23,21 @@ describe('dashboard authentication (RNF-07)', () => {
     await expect(http.injectWS('/ws/admin')).rejects.toThrow();
   });
 
+  it('only opens the admin socket for the panel origin', async () => {
+    t = await startTestApp();
+    const { http } = t.app;
+    const open = (origin?: string) =>
+      http.injectWS('/ws/admin', {
+        headers: { cookie: t!.cookie, host: 'panel.test', ...(origin ? { origin } : {}) },
+      });
+
+    await expect(open('http://evil.example')).rejects.toThrow();
+    const own = await open('http://panel.test');
+    own.terminate();
+    const cli = await open();
+    cli.terminate();
+  });
+
   it('locks an IP out after 5 wrong passwords', async () => {
     t = await startTestApp();
     const attempt = (password: string) =>

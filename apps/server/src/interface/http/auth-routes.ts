@@ -52,10 +52,14 @@ function setSession(reply: FastifyReply, token: string): void {
   });
 }
 
-/** Same-origin check for state-changing requests (CSRF defence in depth with SameSite). */
-export function isCrossOrigin(req: FastifyRequest): boolean {
+/**
+ * Same-origin check (CSRF defence in depth with SameSite). Safe methods are exempt unless
+ * `strict`: a WebSocket upgrade is a GET, yet it carries the session cookie and gives full access,
+ * so it must come from the panel's own origin. Requests without `Origin` (the CLI tools) pass.
+ */
+export function isCrossOrigin(req: FastifyRequest, strict = false): boolean {
   const origin = req.headers.origin;
-  if (!origin || SAFE_METHODS.has(req.method)) return false;
+  if (!origin || (!strict && SAFE_METHODS.has(req.method))) return false;
   try {
     return new URL(origin).host !== req.headers.host;
   } catch {
@@ -69,7 +73,7 @@ export function registerAuthGuard(app: FastifyInstance, auth: AuthService): void
     const path = req.url.split('?')[0] ?? '';
     const isApi = path.startsWith('/api/');
     if (!isApi && path !== '/ws/admin') return;
-    if (isCrossOrigin(req)) {
+    if (isCrossOrigin(req, path === '/ws/admin')) {
       return sendProblem(reply, { type: 'about:blank', title: 'Origen no permitido', status: 403 });
     }
     if (PUBLIC_API_PATHS.has(path) || auth.validate(sessionToken(req))) return;
