@@ -167,6 +167,42 @@ describe('app end to end (simulator -> rules -> queue -> overlay)', () => {
     ws.terminate();
   });
 
+  it('streams the event feed, top streak and gift guide, and refreshes the guide when a rule changes', async () => {
+    const ws = await app.http.injectWS(`/ws/screen/rotator?key=${KEY}`);
+    const screen = collect(ws);
+    hello(ws, 'rotator', [{ kind: 'feed' }, { kind: 'streak' }, { kind: 'giftguide' }]);
+    expect((await screen.next('feed.snapshot')).payload.items).toEqual([]);
+    expect((await screen.next('streak.snapshot')).payload.leader).toBeNull();
+    expect((await screen.next('giftguide.snapshot')).payload.entries).toEqual([]);
+
+    const rule = await t.api({
+      method: 'POST',
+      url: `${API_PREFIX}/rules`,
+      payload: {
+        name: 'Gracias por la rosa',
+        trigger: 'gift',
+        conditions: [{ type: 'giftName', op: 'eq', value: 'Rose' }],
+        actions: [{ type: 'showAlert', text: 'Gracias {nickname}', durationMs: 1000 }],
+      },
+    });
+    expect(rule.statusCode).toBe(201);
+    const guide = await screen.next('giftguide.snapshot');
+    expect(guide.payload.entries).toMatchObject([
+      { giftName: 'Rose', conditional: false, actions: [{ kind: 'alert', text: 'Gracias …' }] },
+    ]);
+
+    await t.api({
+      method: 'POST',
+      url: `${API_PREFIX}/simulator/emit`,
+      payload: { kind: 'gift', user: 'ana', quantity: 10, streak: true },
+    });
+    const feed = await screen.next('feed.snapshot');
+    expect(feed.payload.items).toMatchObject([{ type: 'gift', uniqueId: 'ana', quantity: 10 }]);
+    const streak = await screen.next('streak.snapshot');
+    expect(streak.payload.leader).toMatchObject({ uniqueId: 'ana', count: 10 });
+    ws.terminate();
+  });
+
   it('resets the session ranking but keeps totals, and requires confirm for total (RF-14)', async () => {
     await t.api({
       method: 'POST',

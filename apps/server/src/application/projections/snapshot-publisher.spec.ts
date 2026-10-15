@@ -1,4 +1,4 @@
-import type { LeaderboardRow, ScreenServerMessage } from '@tiklive/contracts';
+import type { GuideEntry, LeaderboardRow, ScreenServerMessage } from '@tiklive/contracts';
 import { describe, expect, it } from 'vitest';
 import { aCommentEvent, aGiftEvent } from '../../../test/support/builders.js';
 import { FakeScheduler } from '../../../test/support/fakes.js';
@@ -45,6 +45,7 @@ function setup(subscribed: string[]) {
       reached: false,
     }),
   } as unknown as GoalService;
+  const guideEntries: GuideEntry[] = [];
   const publisher = new SnapshotPublisher({
     gateway,
     leaderboards,
@@ -52,11 +53,12 @@ function setup(subscribed: string[]) {
     stats: new StatsProjection(),
     feed: new FeedProjection(),
     streak: new StreakProjection(),
+    guide: { entries: async () => guideEntries },
     scheduler,
     clock: scheduler.clock,
     logger: silentLogger,
   });
-  return { scheduler, published, publisher, invalidated, topCalls: () => topCalls };
+  return { scheduler, published, publisher, invalidated, guideEntries, topCalls: () => topCalls };
 }
 
 const settle = () => new Promise((resolve) => setImmediate(resolve));
@@ -140,6 +142,22 @@ describe('SnapshotPublisher', () => {
     const message = t.published.find((p) => p.channel === 'streak')?.message;
     expect(message?.type).toBe('streak.snapshot');
     expect((message?.payload as { leader: { count: number } }).leader.count).toBe(6);
+  });
+
+  it('publishes the gift guide as it is, without inventing entries', async () => {
+    const t = setup([]);
+    const sent: string[] = [];
+    const connection = { send: (d: string) => sent.push(d), close: () => undefined };
+    await t.publisher.sendInitial(connection, ['giftguide']);
+    expect(JSON.parse(sent[0] ?? '{}')).toMatchObject({
+      type: 'giftguide.snapshot',
+      payload: { entries: [], seq: 1 },
+    });
+    t.guideEntries.push({ giftName: 'Rose', conditional: false, actions: [{ kind: 'sound' }] });
+    await t.publisher.sendInitial(connection, ['giftguide']);
+    expect(
+      (JSON.parse(sent[1] ?? '{}') as { payload: { entries: unknown[] } }).payload.entries,
+    ).toHaveLength(1);
   });
 
   it('sends a full snapshot for each requested channel on hello', async () => {

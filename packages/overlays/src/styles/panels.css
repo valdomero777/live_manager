@@ -258,6 +258,64 @@
   color: var(--panel-muted);
 }
 
+/* ---- gift -> action guide: a viewport clips a track that scrolls along the chosen axis ---- */
+.guide__viewport {
+  overflow: hidden;
+}
+.guide--column .guide__viewport {
+  max-height: 80vh;
+}
+.guide__track {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  will-change: transform;
+}
+.guide--row .guide__track {
+  flex-direction: row;
+  width: max-content;
+}
+.guide__item {
+  display: grid;
+  gap: 0.25em;
+}
+.guide--row .guide__item {
+  min-width: 14em;
+}
+.guide__gift {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-weight: 800;
+}
+.guide__image {
+  width: 2em;
+  height: 2em;
+  object-fit: contain;
+}
+.guide__cost {
+  color: #ffd54a;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.guide__actions {
+  display: grid;
+  gap: 0.1em;
+  margin: 0 0 0 2.5em;
+  padding: 0;
+  list-style: none;
+}
+.guide__action {
+  overflow-wrap: anywhere;
+}
+.guide__note,
+.guide__empty {
+  color: var(--panel-muted);
+}
+
 /* ---- ticker: a full-width strip; the text slides with the Web Animations API (transform) ---- */
 .stage--ticker {
   padding: 0;

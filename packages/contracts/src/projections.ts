@@ -170,6 +170,38 @@ export const StreakSnapshotSchema = z.object({
 });
 export type StreakSnapshot = z.infer<typeof StreakSnapshotSchema>;
 
+// ---------- Gift -> action guide ----------
+
+export const GUIDE_ACTION_KINDS = ['sound', 'speech', 'alert'] as const;
+export const GuideActionKindSchema = z.enum(GUIDE_ACTION_KINDS);
+export type GuideActionKind = z.infer<typeof GuideActionKindSchema>;
+
+export const MAX_GUIDE_ENTRIES = 100;
+
+export const GuideActionSchema = z.object({
+  kind: GuideActionKindSchema,
+  /** What is said or shown; absent for a sound. Viewer placeholders are already removed. */
+  text: z.string().max(200).optional(),
+});
+export type GuideAction = z.infer<typeof GuideActionSchema>;
+
+export const GuideEntrySchema = z.object({
+  giftId: z.number().int().optional(),
+  giftName: z.string(),
+  imageUrl: z.string().optional(),
+  diamonds: z.number().int().nonnegative().optional(),
+  /** True when every rule behind this gift also has other conditions (quantity, role, ...). */
+  conditional: z.boolean(),
+  actions: z.array(GuideActionSchema).min(1),
+});
+export type GuideEntry = z.infer<typeof GuideEntrySchema>;
+
+export const GiftGuideSnapshotSchema = z.object({
+  seq: z.number().int().nonnegative(),
+  entries: z.array(GuideEntrySchema).max(MAX_GUIDE_ENTRIES),
+});
+export type GiftGuideSnapshot = z.infer<typeof GiftGuideSnapshotSchema>;
+
 // ---------- Subscriptions (overlay -> server, inside client.hello) ----------
 
 export const SubscriptionSchema = z.discriminatedUnion('kind', [
@@ -178,6 +210,7 @@ export const SubscriptionSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('stats') }),
   z.object({ kind: z.literal('feed') }),
   z.object({ kind: z.literal('streak') }),
+  z.object({ kind: z.literal('giftguide') }),
 ]);
 export type Subscription = z.infer<typeof SubscriptionSchema>;
 
@@ -187,6 +220,7 @@ export function channelOf(s: Subscription): string {
   if (s.kind === 'goal') return `goal:${s.goalId}`;
   if (s.kind === 'feed') return 'feed';
   if (s.kind === 'streak') return 'streak';
+  if (s.kind === 'giftguide') return 'giftguide';
   return 'stats';
 }
 

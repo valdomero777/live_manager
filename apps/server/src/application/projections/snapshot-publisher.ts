@@ -18,6 +18,7 @@ import type { ChannelGateway } from '../ports/channel-gateway.js';
 import type { Logger } from '../ports/logger.js';
 import type { Cancel, Scheduler } from '../ports/scheduler.js';
 import type { SocketConnection } from '../ports/socket-connection.js';
+import type { GiftGuideSource } from './gift-guide-service.js';
 import type { GoalService } from './goal-service.js';
 import type { LeaderboardService } from './leaderboard-service.js';
 
@@ -31,6 +32,7 @@ interface PublisherDeps {
   readonly stats: StatsProjection;
   readonly feed: FeedProjection;
   readonly streak: StreakProjection;
+  readonly guide: GiftGuideSource;
   readonly scheduler: Scheduler;
   readonly clock: Clock;
   readonly logger: Logger;
@@ -70,6 +72,7 @@ export class SnapshotPublisher implements LiveEventConsumer {
     this.markDirty('stats');
     this.markDirty('feed');
     this.markDirty('streak');
+    this.markDirty('giftguide');
   }
 
   markDirty(channel: string): void {
@@ -120,6 +123,10 @@ export class SnapshotPublisher implements LiveEventConsumer {
     if (kind === 'feed') {
       const payload = { items: [...this.deps.feed.snapshot()], seq: this.nextSeq(channel) };
       return makeEnvelope('feed.snapshot', payload, now);
+    }
+    if (kind === 'giftguide') {
+      const entries = await this.deps.guide.entries();
+      return makeEnvelope('giftguide.snapshot', { entries, seq: this.nextSeq(channel) }, now);
     }
     if (kind === 'streak') {
       const payload = { leader: this.deps.streak.leader(), seq: this.nextSeq(channel) };
