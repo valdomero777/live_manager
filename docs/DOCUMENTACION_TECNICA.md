@@ -1,6 +1,7 @@
 # DOCUMENTACIÓN TÉCNICA DEL PROYECTO — TikLive
 
 > Generada el 2026-10-07 a partir del código fuente, la configuración y las ejecuciones de `vitest`, `eslint`, `tsc`, `depcruise` y `npm audit` hechas durante el análisis.
+> **Revisada el 2026-10-15** contra `main` (tras los PR #1–#9): se actualizaron los estados, las rutas, las tablas, las variables, las pruebas, el CI y la operación, y se verificó cada hallazgo abierto contra el código. Las secciones que no cambiaron se conservan como estaban.
 > Convención de estados: `IMPLEMENTADO` · `PARCIALMENTE IMPLEMENTADO` · `DETECTADO PERO NO UTILIZADO` · `CONFIGURADO PERO NO IMPLEMENTADO` · `REFERENCIADO PERO AUSENTE` · `NO DETERMINABLE` · `RECOMENDACIÓN`.
 > Cada bloque separa **Evidencia encontrada**, **Interpretación** y **Recomendación**. Lo que no se pudo demostrar se marca: *"No fue posible determinarlo a partir del código analizado."*
 > Alcance de la revisión: todo el repositorio salvo `node_modules/`, `dist/` y `data/`. No se leyó línea por línea cada componente Angular ni cada overlay; en esos casos se indica.
@@ -11,18 +12,18 @@
 
 **Qué es.** Plataforma local, de un solo proceso Node.js, que convierte los eventos de un TikTok LIVE propio (comentarios, regalos, likes, follows, entradas, shares, espectadores) en sonidos, voz (TTS), alertas visuales, rankings, metas y estadísticas, mostrados en pestañas/overlays que se cargan en la PC de stream (LIVE Studio / OBS). Se administra desde un panel Angular en `/admin/`.
 
-**Estado.** Funcional y bien probado en simulador (208 pruebas en verde, lint, tipos y regla de capas sin errores). **No validado con un live real** (fase 0 manual pendiente, `docs/plan.md`).
+**Estado.** Funcional, probado en simulador y **probado en un live real** (2026-10-14; ver ADR 0011). 310 pruebas unitarias y de integración y 30 pruebas de navegador (Playwright) en verde; lint, tipos y regla de capas sin errores; `npm audit` sin vulnerabilidades. Siguen pendientes el ensayo del despliegue en Windows, el ensayo de 4 h y una prueba de carga con la máquina libre (`docs/plan.md`).
 
 | Aspecto | Estado |
 | --- | --- |
 | Arquitectura | Monolito modular en capas (domain / application / infrastructure / interface) con puertos y adaptadores; regla de capas verificada con dependency-cruiser |
 | Stack | Node ≥22, TypeScript ~6.0, Fastify 5, SQLite (better-sqlite3 + Kysely), Zod 4, Pino, tiktok-live-connector 2.5.0, Angular 21, Vite 8 (overlays) |
 | Fortalezas | Dominio puro y testeable; contratos Zod compartidos; transacción atómica evento+rankings; reconexión con backoff; CSP y `textContent` en overlays; contraseña argon2id; configuración editable desde la UI |
-| Debilidades | Sin Docker/despliegue/backup/retención/métricas; sin HTTPS; dependencia con vulnerabilidad **alta** (`@fastify/static` 8.3.0); riesgo de que un reinicio fallido deje el proceso vivo sin aplicación; repositorio sin ningún commit |
-| Críticos | R-01 conector no oficial de TikTok; SEC-01 `@fastify/static`; F-02 reinicio en proceso que puede dejar la app caída |
-| Testing | 26 archivos / 208 pruebas (servidor); 1 spec en el dashboard; 0 en overlays; sin E2E de navegador |
-| Infraestructura | Solo CI de GitHub Actions; sin Dockerfile, sin unidad systemd (aunque se menciona), sin proxy inverso |
-| Prioridades | P0: actualizar `@fastify/static`; blindar `AppHost.restart()`. P1: primer commit + retención + backup + HTTPS/proxy + `frame-ancestors` |
+| Debilidades | Sin HTTPS (solo LAN); scripts de despliegue de Windows sin ensayar; sin Docker; un reinicio fallido desde Ajustes puede dejar el proceso vivo sin servidor HTTP (F-02); `config.json` corrupto impide arrancar (F-07); mensajes del servidor solo en español |
+| Críticos | R-01 conector no oficial de TikTok (probado en un live real, sigue siendo el mayor riesgo); F-02 reinicio en proceso que puede dejar la app caída |
+| Testing | 40 archivos / 310 pruebas (vitest); 30 pruebas de navegador (Playwright, `e2e/`); 0 pruebas unitarias en overlays |
+| Infraestructura | CI de GitHub Actions (verificación + e2e); despliegue en Windows con tarea programada, paquete `.tgz`, despliegue y rollback (`deploy/windows`, sin ensayar); sin Dockerfile ni proxy inverso |
+| Prioridades | P0: blindar `AppHost.restart()` (F-02) y `JsonConfigStore.read` (F-07). P1: ensayar el despliegue y las 4 h; `frame-ancestors`, `Origin` en `/ws/admin` y límite de intentos de `setup` (SEC-04/05/06). Ver §37 |
 
 ---
 
@@ -33,7 +34,7 @@
 - Corre en una laptop de la LAN; la PC de stream solo abre una pestaña de audio y URLs de overlay.
 - Flujo: `TikTok LIVE → tiktok-live-connector → RawLiveEvent → normalizador → persistencia + proyecciones → motor de reglas / triggers → cola por pantalla → WebSocket → overlay/audio → action.done`.
 - Un **simulador** emite el mismo `RawLiveEvent` que el adaptador real, por el mismo camino (ADR 0008).
-- Idioma de la UI y mensajes: español (textos embebidos; i18n **pendiente**).
+- Idioma del panel: español (fuente) e inglés, con selector en la barra superior (`docs/i18n.md`). Los mensajes que escribe el servidor siguen en español.
 
 **Roles/actores**
 
@@ -50,7 +51,7 @@ No existen roles múltiples, RBAC ni ABAC: **hay un único rol administrador** (
 
 | Dentro | Fuera / pendiente |
 | --- | --- |
-| Conector TikTok (lectura), simulador, reglas (8 condiciones, 3 acciones), triggers de sonido MyInstants, assets, rankings, metas, stats, rotator, ajustes, auth | Acciones `webhook` y `updateGoal`; modo `record`; retención de datos; `/metrics`; backups; despliegue systemd; i18n; E2E Playwright; fase 5 (v2/v3) |
+| Conector TikTok (lectura), simulador, reglas (8 condiciones, 5 acciones: `playSound`, `showAlert`, `speak`, `updateGoal`, `webhook`), triggers de sonido (MyInstants y Freesound), assets, rankings, metas, stats, rotator, plantillas de overlay, ajustes, auth, grabación y repetición de eventos (`record`/`replay`), respaldos, retención, `/metrics`, despliegue en Windows, panel en español e inglés, pruebas de navegador | Fase 5 (v2/v3); acciones de control de OBS/LIVE Studio («Cambiar escena o fuente» aparece en el panel como «Próximamente»); HTTPS; Docker |
 
 ---
 
@@ -61,9 +62,9 @@ No existen roles múltiples, RBAC ni ABAC: **hay un único rol administrador** (
 | Patrón | ¿Presente? | Evidencia |
 | --- | --- | --- |
 | Monolito modular, un proceso | Sí | `apps/server/src/main/index.ts` (`AppHost`), un único `Fastify` |
-| Capas + Puertos/Adaptadores (hexagonal) | Sí, **verificado por herramienta** | `.dependency-cruiser.cjs`: `domain` no importa nada externo salvo contracts/zod; `application` solo depende de puertos (`application/ports/*`); `tiktok-live-connector` solo en `infrastructure/tiktok`; `no-circular`. `npm run depcheck` → 0 violaciones (122 módulos) |
+| Capas + Puertos/Adaptadores (hexagonal) | Sí, **verificado por herramienta** | `.dependency-cruiser.cjs`: `domain` no importa nada externo salvo contracts/zod; `application` solo depende de puertos (`application/ports/*`); `tiktok-live-connector` solo en `infrastructure/tiktok`; `no-circular`. `npm run depcheck` → 0 violaciones (147 módulos, 2026-10-15) |
 | Inyección manual (composition root) | Sí | `main/composition-root.ts` es el único lugar que instancia dependencias concretas |
-| Event-driven interno | Parcial | `IngestLiveEvent` hace fan-out a consumidores (`SnapshotPublisher`, `RuleEngine`, `TriggerExecutor`); no hay bus ni cola externa |
+| Event-driven interno | Parcial | `IngestLiveEvent` hace fan-out a consumidores (`SnapshotPublisher`, `RuleEngine`, `TriggerExecutor`); no hay bus ni cola externa. Un notificador medido (`metered-notifier.ts`) cuenta los eventos para `/metrics` |
 | Read models / proyecciones | Sí | `leaderboard_total`, `metric_total`, `goal_cycle`, `StatsProjection` (memoria); ADR 0009 |
 | CQRS completo / Event sourcing | No | `live_event` es log, pero el estado no se reconstruye desde él |
 | Microservicios / serverless | No | — |
@@ -100,6 +101,9 @@ flowchart LR
   end
   ADM[Panel Angular /admin]
   MI[API comunitaria MyInstants]
+  FS[API de Freesound]
+  WH[Webhooks del usuario]
+  BK[(data/backups)]
 
   TT --> ADP --> SUP
   SIM --> SUP
@@ -111,7 +115,9 @@ flowchart LR
   ADM <-->|REST + /ws/admin| HTTP
   HTTP --> CFG
   HTTP --> ASSETS
-  HTTP --> MI
+  HTTP --> MI & FS
+  RE --> WH
+  HTTP --> BK
 ```
 
 ### 4.3 Capas
@@ -131,7 +137,7 @@ flowchart LR
 
 - Frontend ↔ Backend: REST JSON con errores `application/problem+json` (RFC 9457) y WebSocket `/ws/admin` (eventos en vivo, estado del conector).
 - Overlays ↔ Backend: WebSocket `/ws/screen/:screenId?key=`; sobres `{v, type, ts, payload}` versión 1; snapshot inicial + deltas con `seq`.
-- Backend ↔ externos: TikTok (librería), API comunitaria MyInstants (HTTPS, timeout 8 s), catálogo de regalos de TikTok (`TikTokGiftCatalog`).
+- Backend ↔ externos: TikTok (librería), API comunitaria MyInstants (HTTPS, timeout 8 s), API oficial de Freesound (necesita clave), catálogo de regalos de TikTok (`TikTokGiftCatalog`) y los webhooks que el usuario permita (`WEBHOOK_ALLOWED_HOSTS`; timeout 3 s, sin redirecciones, protección SSRF y *circuit breaker*).
 
 ---
 
@@ -150,12 +156,14 @@ flowchart LR
 | Conector | `tiktok-live-connector` | `2.5.0` (fijada) | No oficial |
 | Frontend | Angular | `^21.2.0` | Standalone, signals, lazy routes; RxJS `~7.8` |
 | Overlays | Vite | `^8.3.3` | Sin framework |
-| Test | Vitest + v8 | `^5.0.3` | Sin Jest/Playwright |
+| Test | Vitest + v8 | `^5.0.3` | Unitarias, integración y e2e de API/WS en proceso |
+| Test de navegador | Playwright (`@playwright/test`) | `1.56.1` (fija) | Suite `e2e/` contra el servidor compilado; ver `docs/e2e.md` |
+| i18n | `@angular/localize` | `~21.2.0` | Español (fuente) e inglés; ver `docs/i18n.md` |
 | Lint/format | ESLint 10, typescript-eslint, Prettier 3.6 | — | — |
 | Arquitectura | dependency-cruiser | `^17.0.0` | — |
-| CI | GitHub Actions | — | `ubuntu-latest` |
+| CI | GitHub Actions | — | `ubuntu-latest`; jobs `verify` y `e2e` |
 
-No existen: ORM pesado, Redis/colas externas/caché externa, Docker, Kubernetes, Nginx/Apache, CDN, SMTP, SMS, OAuth. **CONFIGURADO PERO NO IMPLEMENTADO**: systemd (mencionado en `.env.example`, `main/index.ts`, `plan.md`; no hay unidad).
+No existen: ORM pesado, Redis/colas externas/caché externa, Docker, Kubernetes, Nginx/Apache, CDN, SMTP, SMS, OAuth. El despliegue elegido es **Windows** (tarea programada de arranque que reinicia el servidor tras ~3 s; `deploy/windows`, `docs/despliegue-windows.md`). Un comentario de `main/index.ts` aún habla de systemd: no hay unidad para Linux.
 
 ---
 
@@ -165,12 +173,14 @@ No existen: ORM pesado, Redis/colas externas/caché externa, Docker, Kubernetes,
 .
 ├─ apps/
 │  ├─ server/        (Fastify, dominio, SQLite) src/{domain,application,infrastructure,interface,main}, migrations/, test/
-│  └─ dashboard/     (Angular 21) src/app/{core,features,layout,shared}
+│  └─ dashboard/     (Angular 21) src/app/{core,features,components,lib}, src/locale (traducciones)
 ├─ packages/
 │  ├─ contracts/     (Zod: eventos, WS, reglas, settings, proyecciones, sonidos, assets, simulador)
 │  └─ overlays/      (Vite) screen/{audio,alerts}, overlay/{leaderboard,goal,stats,rotator}, src/{core,panels,screens,styles}
-├─ tools/            simulate.ts · watch-events.ts · load-test.ts · admin-session.ts
-├─ docs/             plan.md · adr/0008 · adr/0009 · (este documento)
+├─ e2e/              Playwright: servidor de prueba, sesión, specs del panel y overlays
+├─ deploy/windows/   install · deploy · rollback · run-tiklive (PowerShell)
+├─ tools/            simulate · watch-events · load-test · admin-session · package · phase0-check
+├─ docs/             plan · operacion · runbook · despliegue-windows · fase-0 · i18n · e2e · adr/0008–0011 · (este documento)
 ├─ .github/workflows/ci.yml
 ├─ .claude/launch.json   (config de preview del entorno de desarrollo)
 ├─ .dependency-cruiser.cjs · eslint.config.js · vitest.config.ts · tsconfig.base.json · .prettierrc.json
@@ -182,35 +192,36 @@ No existen: ORM pesado, Redis/colas externas/caché externa, Docker, Kubernetes,
 | Componente | Ubicación | Propósito | Estado | Dependencias | Observaciones |
 | --- | --- | --- | --- | --- | --- |
 | Composition root | `apps/server/src/main/composition-root.ts` | Cableado manual | IMPLEMENTADO | todos | Único sitio con `new` de adaptadores |
-| AppHost / reinicio | `main/index.ts` | Ciclo de vida, reinicio en proceso con rollback | IMPLEMENTADO | config | Ver F-02 |
+| AppHost / reinicio | `main/index.ts` | Ciclo de vida, reinicio en proceso con rollback | PARCIALMENTE IMPLEMENTADO | config | Falla abierta F-02 (verificada 2026-10-15) |
 | Config | `main/config.ts`, `infrastructure/config/json-config-store.ts` | Precedencia UI > env > defecto | IMPLEMENTADO | contracts | — |
 | Seed | `main/seed.ts` | Datos de ejemplo | IMPLEMENTADO | SQLite | `npm run seed` |
 | Conector | `application/connector`, `infrastructure/tiktok` | Conexión + backoff | IMPLEMENTADO (sin validar en live real) | tiktok-live-connector | R-01 |
 | Simulador | `application/simulator`, `infrastructure/simulator` | Eventos sintéticos | IMPLEMENTADO | — | — |
 | Ingesta | `application/ingest` | Normalizar, deduplicar, persistir | IMPLEMENTADO | SQLite | FIFO único |
 | Reglas | `application/rules`, `domain/rules` | Motor evento→condiciones→acciones | IMPLEMENTADO | — | 8 condiciones, 3 acciones |
-| Triggers de sonido | `application/triggers`, `sounds` | Sonido MyInstants por tipo de evento | IMPLEMENTADO | API comunitaria | Fuente no oficial |
+| Triggers de sonido | `application/triggers`, `sounds`, `infrastructure/{myinstants,freesound}` | Sonido de MyInstants o Freesound por tipo de evento | IMPLEMENTADO | API comunitaria + API de Freesound | MyInstants es no oficial; ADR 0011 |
 | Cola de acciones | `application/actions`, `domain/queue` | Cola por pantalla con acuse | IMPLEMENTADO | WS | — |
 | Proyecciones | `application/projections`, `domain/projections` | Rankings, metas, stats, rotator | IMPLEMENTADO | SQLite | Stats en memoria |
 | Assets | `application/assets`, `infrastructure/storage` | Subida/borrado | IMPLEMENTADO | disco | Detección por contenido |
 | Auth | `application/auth`, `infrastructure/auth` | Login/sesión | IMPLEMENTADO | argon2 | Sesiones en memoria |
 | Ajustes | `application/settings` | Variables editables | IMPLEMENTADO | config | — |
-| Health | `application/health` | `/health` | PARCIALMENTE IMPLEMENTADO | — | Sin métricas ni `/metrics` |
-| Dashboard | `apps/dashboard` | Panel admin | IMPLEMENTADO (i18n y E2E pendientes) | contracts | 11 rutas |
+| Health y alertas | `application/health` | `/health` con memoria, retraso del bucle, disco, último respaldo y alertas (`connector_down`, `audio_offline`, `queue_full`, `disk_low`, `backup_stale`) | IMPLEMENTADO | — | `docs/operacion.md` |
+| Métricas | `application/metrics` | `/metrics` en formato Prometheus, detrás de la sesión | IMPLEMENTADO | — | 11 métricas registradas en `composition-root.ts` (lista en `docs/operacion.md`) |
+| Mantenimiento | `application/maintenance`, `infrastructure/backup`, `sqlite/{restore,sqlite-event-retention}` | Respaldo diario de SQLite (14 días), copia semanal de assets (4), retención de `live_event` a 90 días, `npm run restore` | IMPLEMENTADO | SQLite | Probado respaldo → restauración |
+| Grabación de eventos | `infrastructure/recording` | `RECORD_PATH` graba el live real en JSONL; `npm run simulate -- replay` lo repite | IMPLEMENTADO | — | Falta convertir una grabación real en prueba de regresión |
+| Webhooks | `infrastructure/http/http-webhook-client.ts` | Acción `webhook` con lista de hosts, bloqueo de direcciones privadas, sin redirecciones, *circuit breaker* | IMPLEMENTADO | — | `docs/plan.md` («Acciones de servidor») |
+| Despliegue Windows | `deploy/windows`, `tools/package.ts` | Paquete, tarea de arranque, despliegue con copia previa y rollback | IMPLEMENTADO (**sin ensayar en Windows**) | PowerShell 5.1 | `docs/despliegue-windows.md` |
+| Dashboard | `apps/dashboard` | Panel admin en español e inglés | IMPLEMENTADO | contracts | 11 secciones; 3 specs unitarias y la suite e2e |
 | Overlays | `packages/overlays` | Pantallas | IMPLEMENTADO | contracts | Sin tests |
-| `tools/*` | `tools/` | CLI | IMPLEMENTADO | API | — |
-| Acciones `webhook`/`updateGoal` | — | — | REFERENCIADO PERO AUSENTE | — | `plan.md` |
-| Modo `record` | — | — | REFERENCIADO PERO AUSENTE | — | `replay` sí existe |
-| Retención 90 días | — | — | REFERENCIADO PERO AUSENTE | — | `plan.md`; sin código de limpieza |
-| `/metrics` | — | — | REFERENCIADO PERO AUSENTE | — | `plan.md` |
-| ADR 0002 | — | — | REFERENCIADO PERO AUSENTE | — | citado en `tiktok-live-connector.adapter.ts`; solo existen 0008 y 0009 |
+| `tools/*` | `tools/` | CLI (`simulate`, `watch-events`, `load-test`, `admin-session`, `package`, `phase0-check`) | IMPLEMENTADO | API | — |
+| ADR 0002 | — | — | REFERENCIADO PERO AUSENTE | — | citado en `tiktok-live-connector.adapter.ts` y `live-event-source.ts`; solo existen 0008–0011 |
 
 **Obsoletos/duplicados/sin referencias detectados**
 
-- `.env.example` contiene el bloque `MYINSTANTS_API_URL` **duplicado**.
-- `docs/plan.md`: la tabla de fases dice «Fase 4 Pendiente» y «falta subida de assets», pero secciones posteriores del mismo documento indican que ya están hechas → documento **desactualizado internamente**.
+- `.env.example` tenía el bloque `MYINSTANTS_API_URL` duplicado y no listaba `OVERLAYS_DIR` ni `DASHBOARD_DIR`: corregido el 2026-10-15.
+- `docs/plan.md` se reconcilió el 2026-10-15 (tabla de fases, pendientes y estado de la fase 4).
 - `apps/server/dist/` y `apps/dashboard/dist/` existen localmente (ignorados por git); `.claude/launch.json` es de entorno de desarrollo.
-- Endpoints sin consumidor en el dashboard (búsqueda por `get/post(...)` en `apps/dashboard/src`): `POST /queue/clear` (solo vía mensaje WS `queue.clear`, no verificado en el dashboard), `GET /stats`, `GET /overlay-data/rotators/:id` (consumido por el overlay, no por el panel). **NO DETERMINABLE** si alguien los usa externamente.
+- Endpoints sin consumidor en el dashboard (revisado el 2026-10-15): `POST /queue/clear`, `GET /stats`, `GET /overlay-data/rotators/:id` (lo consume el overlay, no el panel) y `GET /metrics` (pensado para Prometheus). **NO DETERMINABLE** si alguien los usa externamente.
 
 ---
 
@@ -226,9 +237,12 @@ No existen: ORM pesado, Redis/colas externas/caché externa, Docker, Kubernetes,
 | Proyecciones | Rankings (diamonds, gift_count, likes × session/week/total), metas con ciclos, stats | `projections/*` |
 | Publicación | Snapshots por canal, debounce 250 ms, `seq` | `snapshot-publisher.ts` |
 | Auth | Contraseña, sesiones, bloqueo | `auth/auth-service.ts`, `interface/http/auth-routes.ts` |
-| Ajustes | PATCH de 10 ajustes + moderación; reinicio | `settings/*`, `settings-routes.ts` |
+| Ajustes | PATCH de 11 ajustes + moderación; reinicio | `settings/*`, `settings-routes.ts` |
 | Assets | Biblioteca de audio/imagen/video | `assets/*`, `asset-routes.ts` |
-| Triggers | CRUD + búsqueda MyInstants | `triggers/*`, `sounds/*`, `trigger-routes.ts` |
+| Triggers | CRUD + búsqueda en MyInstants y Freesound | `triggers/*`, `sounds/*`, `trigger-routes.ts` |
+| Mantenimiento | Respaldos, retención de eventos, último respaldo para `/health` | `maintenance/maintenance-service.ts`, `backup/file-backup-store.ts`, `sqlite-event-retention.ts` |
+| Métricas | Registro de contadores, *gauges* e histogramas; `/metrics` | `metrics/metrics-registry.ts`, `metered-notifier.ts` |
+| Plantillas de overlay | Configuraciones guardadas de overlays (lista JSON en `app_setting`) | `projections/overlay-template-service.ts` |
 
 ---
 
@@ -242,19 +256,23 @@ Formato abreviado; todas con estado **IMPLEMENTADO** salvo indicación. Todas la
 | F2 | Simulador de eventos | `features/simulator` | `simulator-service.ts` | `POST /simulator/emit`, WS `simulator.emit` | todas las de ingesta | `app.e2e.spec.ts` |
 | F3 | Registro de eventos y vista en vivo | `features/events` | `ingest-live-event.ts` | `GET /events/recent`, WS `event.received` | `live_event`, `viewer` | `sqlite.integration.spec.ts` |
 | F4 | Reglas (CRUD, probar, duplicar) | `features/rules` | `rule-service.ts`, `rule-engine.ts` | `/rules`, `/rules/:id`, `/rules/:id/test` | `rule` | `rule-engine.spec.ts`, `conditions.spec.ts`, `rules-core.spec.ts`, `assets-rules.e2e.spec.ts` |
-| F5 | Triggers de sonido (MyInstants) | `features/triggers` | `trigger-service.ts`, `trigger-executor.ts`, `myinstants-provider.ts` | `/sounds/search`, `/triggers…` | `sound_trigger` | `trigger-executor.spec.ts`, `sound-search-service.spec.ts`, `myinstants-provider.spec.ts`, `triggers.e2e.spec.ts` |
+| F5 | Triggers de sonido (MyInstants y Freesound) | `features/triggers` | `trigger-service.ts`, `trigger-executor.ts`, `myinstants-provider.ts` | `/sounds/search`, `/triggers…` | `sound_trigger` | `trigger-executor.spec.ts`, `sound-search-service.spec.ts`, `myinstants-provider.spec.ts`, `freesound-provider.spec.ts`, `triggers.e2e.spec.ts` |
 | F6 | Assets (subir/borrar) | `features/assets` | `asset-service.ts` | `/assets` | `asset` | `assets-rules.e2e.spec.ts` |
 | F7 | Rankings | `features/rankings` | `leaderboard-service.ts` | `/leaderboards/:metric`, `/leaderboards/reset`, `/settings/leaderboard` | `leaderboard_total`, `metric_total`, `app_setting` | `projections.*.spec.ts` |
 | F8 | Metas con ciclos | `features/rankings` | `goal-service.ts` | `/goals…` | `goal`, `goal_cycle` | `projections.integration.spec.ts` |
 | F9 | Stats de sesión | `overlay/stats` | `stats-projection.ts` | `GET /stats`, WS `stats` | memoria | `projections.spec.ts` |
 | F10 | Rotator de paneles | `features/overlays` | `rotator-service.ts` | `/rotators/:id`, `/overlay-data/rotators/:id` | `app_setting` (interpretación) | parcial |
-| F11 | Overlays y pantalla de audio/alertas | `packages/overlays` | WS hubs | `/ws/screen/:id`, estáticos | — | **sin tests** |
+| F11 | Overlays y pantalla de audio/alertas | `packages/overlays` | WS hubs | `/ws/screen/:id`, estáticos | — | sin pruebas unitarias; la alerta en el overlay se cubre en `e2e/rules.spec.ts` |
 | F12 | Ajustes (env editables), rotación de clave, reinicio | `features/settings` | `settings-service.ts`, `main/index.ts` | `/settings…` | — (`config.json`) | `settings.integration.spec.ts`, `settings-auth.e2e.spec.ts` |
 | F13 | Moderación TTS | `features/settings` | `moderation-service.ts` | `/settings/moderation` | `app_setting` | `text-filters.spec.ts` |
 | F14 | Autenticación | `features/login` | `auth-service.ts` | `/auth/*` | `config.json` | `settings-auth.e2e.spec.ts` |
 | F15 | Catálogo de regalos | `shared/gift-grid` | `gift-catalog-service.ts` | `GET /gifts` | `app_setting` (interpretación) | `gift-catalog-service.spec.ts`, `tiktok-gift-catalog.spec.ts` |
 | F16 | Prueba de carga | `tools/load-test.ts` | app de test | — | — | gate manual |
-| F17 | Acciones `webhook`, `updateGoal` | — | — | — | — | **REFERENCIADO PERO AUSENTE** |
+| F17 | Acciones `webhook` y `updateGoal` | `features/rules` (catálogo de acciones) | `http-webhook-client.ts`, `goal-service.ts` | `POST /goals/:id/progress` | `goal_adjustment` | `http-webhook-client.spec.ts`, `server-action-runner.spec.ts`, `projections.integration.spec.ts` |
+| F18 | Respaldos y retención | `features/status` (alertas) | `maintenance-service.ts` | `GET\|POST /backups` | todas | `maintenance-service.spec.ts`, `maintenance.integration.spec.ts`, `observability.e2e.spec.ts` |
+| F19 | Métricas | — | `metrics-registry.ts` | `GET /metrics` | — | `metrics-registry.spec.ts`, `observability.e2e.spec.ts` |
+| F20 | Plantillas de overlay | `features/overlays` | `overlay-template-service.ts` | `/overlay-templates…` | `app_setting` | `overlays.spec.ts` (e2e) |
+| F21 | Idioma del panel | barra superior | — | — | — | `messages.spec.ts`, `language.spec.ts` (e2e) |
 
 ### 8.1 Detalle de la funcionalidad principal (F1→F4: de evento a reacción)
 
@@ -303,7 +321,9 @@ Base: `/api/v1`. Errores: `application/problem+json` `{type,title,status,detail?
 
 | Método | Ruta | Descripción | Auth | Archivo |
 | --- | --- | --- | --- | --- |
-| GET | `/health` | Salud (200/503) | Pública | `routes.ts` |
+| GET | `/health` | Salud y alertas (200/503) | Pública | `routes.ts` |
+| GET | `/metrics` | Métricas en formato Prometheus | S | idem |
+| GET/POST | `/backups` | Estado y lista de respaldos / respaldar ahora `{kind: db\|assets}` | S | idem |
 | GET | `/auth/status` | Estado de sesión/primer uso | Pública | `auth-routes.ts` |
 | POST | `/auth/setup` | Crear contraseña con código de consola | Pública | idem |
 | POST | `/auth/login` | Login | Pública | idem |
@@ -324,6 +344,9 @@ Base: `/api/v1`. Errores: `application/problem+json` `{type,title,status,detail?
 | GET/PUT | `/settings/leaderboard` | Usuarios excluidos | S | idem |
 | GET/POST | `/goals` | Listar / crear | S | idem |
 | GET/PUT/DELETE | `/goals/:id` | GET incluye `progress` | S | idem |
+| POST | `/goals/:id/progress` | Suma progreso manual (`amount` entero, negativo resta) | S | idem |
+| GET/POST | `/overlay-templates` | Plantillas de overlay guardadas | S | idem |
+| PUT/DELETE | `/overlay-templates/:id` | Actualizar / borrar | S | idem |
 | GET | `/stats` | Snapshot de stats | S | idem |
 | GET/PUT | `/rotators/:id` | Config del rotator (`ROTATOR_ID` regex) | S | idem |
 | GET | `/settings` | Valores (secretos solo `isSet`) | S | `settings-routes.ts` |
@@ -353,10 +376,10 @@ Base: `/api/v1`. Errores: `application/problem+json` `{type,title,status,detail?
 
 `POST /api/v1/rules`
 - Body (`RuleDefinitionSchema`): `{name, trigger: comment|gift|like|follow|join|share|viewerCount|streamEnd, conditions[], mode: all|random, cooldownMs, userCooldownMs, probability 0..1, priority 0..100, enabled, actions[≥1]}`.
-- Condiciones: `giftName`, `giftId`, `diamondsTotal`, `quantity`, `likesCumulative`, `userRole`, `keyword` (incl. `regex`), `firstTime`. Acciones: `playSound{assetId}`, `showAlert{text,durationMs 500–60000}`, `speak{text…}`.
+- Condiciones: `giftName`, `giftId`, `diamondsTotal`, `quantity`, `likesCumulative`, `userRole`, `keyword` (incl. `regex`), `firstTime`. Acciones: `playSound{assetId}`, `showAlert{text,durationMs 500–60000}`, `speak{text…}`, `updateGoal{goalId,amount}` y `webhook{url,method,body}` (estas dos las ejecuta el servidor; «Probar» una regla las cuenta como omitidas).
 - 201 con la regla; 400 validación.
 
-`PATCH /api/v1/settings` — claves estrictas: `port, host, dbPath, assetsDir, overlaysDir, tiktokUsername, simulate, signApiKey, overlayKey, logLevel`. `apply`: `live` (logLevel, overlayKey), `reconnect` (tiktokUsername), `restart` (resto). Respuesta: vista + `applied[]` + `restartRequired[]`.
+`PATCH /api/v1/settings` — claves estrictas: `port, host, dbPath, assetsDir, overlaysDir, tiktokUsername, simulate, signApiKey, freesoundApiKey, overlayKey, logLevel`. `apply`: `live` (logLevel, overlayKey, freesoundApiKey), `reconnect` (tiktokUsername), `restart` (resto). Respuesta: vista + `applied[]` + `restartRequired[]`.
 
 `POST /api/v1/assets` — límites: audio 2 MB, imagen 5 MB, video 5 MB; formatos WAV, MP3, OGG, M4A, PNG, JPG, GIF, WebP, WebM por *magic bytes*; deduplicado por SHA-256.
 
@@ -364,7 +387,9 @@ Base: `/api/v1`. Errores: `application/problem+json` `{type,title,status,detail?
 ```json
 { "status":"ok", "uptimeS":123, "version":"0.1.0",
   "connector":{"state":"connected","attempt":0,"target":"usuario"},
-  "db":"ok", "screens":{"audio":1}, "queueDepth":{} }
+  "db":"ok", "screens":{"audio":1}, "queueDepth":{},
+  "process":{"rssBytes":146251776,"eventLoopLagMs":0.2},
+  "diskFreePercent":11.6, "lastBackupAt":1792000000000, "alerts":[] }
 ```
 
 ### 10.3 Códigos de error comunes
@@ -378,16 +403,15 @@ Base: `/api/v1`. Errores: `application/problem+json` `{type,title,status,detail?
 | 409 | Asset en uso; contraseña ya creada / aún no creada |
 | 413 / 415 | Asset grande / formato no admitido |
 | 429 | Bloqueo de login |
-| 502 | MyInstants no disponible |
+| 502 | MyInstants o Freesound no disponible |
 | 503 | `/health` con BD caída |
 | 500 | No controlado (mensaje genérico, detalle en log) |
 
 ### 10.4 Inconsistencias API / documentación / consumidores
 
-- `README.md` no lista `GET /gifts`, `GET /settings/addresses` ni `/overlay-data/rotators/:id`.
-- `GET /api/v1/gifts` no figura en el README pero sí lo consume el dashboard.
-- `.env.example` indica que «todo es opcional» y «cada valor se edita desde el panel», pero `ADMIN_PASSWORD_HASH`, `MYINSTANTS_API_URL`, `DASHBOARD_DIR` y `CONFIG_PATH` **no** son ajustes del panel (la contraseña sí se cambia vía `/auth/password`).
-- `OVERLAYS_DIR` es variable válida (`SETTING_FIELDS`) pero falta en `.env.example`; `DASHBOARD_DIR` está en código y no está documentada.
+- `README.md` lista `GET /settings/addresses`; las rutas `GET /backups`, `POST /backups`, `GET /metrics`, `POST /goals/:id/progress` y `/overlay-templates` están documentadas en `docs/operacion.md` y `docs/plan.md`, y conviene revisar que el README las mencione (no verificado en esta revisión).
+- `.env.example` indica que «todo es opcional» y «cada valor se edita desde el panel», pero `ADMIN_PASSWORD_HASH`, `MYINSTANTS_API_URL`, `DASHBOARD_DIR`, `BACKUP_DIR`, `RECORD_PATH`, `WEBHOOK_ALLOWED_HOSTS`, `WEBHOOK_PRIVATE_HOSTS` y `CONFIG_PATH` **no** son ajustes del panel (la contraseña sí se cambia vía `/auth/password`).
+- `OVERLAYS_DIR` y `DASHBOARD_DIR` se añadieron a `.env.example` el 2026-10-15.
 - Respuestas de listas sin paginación ni filtros (aceptable a esta escala; NO hay límite en `GET /rules`, `/triggers`, `/assets`).
 
 ---
@@ -446,7 +470,7 @@ sequenceDiagram
 
 ## 13. Base de datos
 
-SQLite (archivo `data/app.db`), WAL. Migraciones SQL numeradas `0001`–`0004` en `apps/server/migrations/`, aplicadas al arrancar por `runMigrations` (cada archivo en su transacción; registro en `schema_migration`). Sin triggers, vistas ni procedimientos. Sin *down migrations*.
+SQLite (archivo `data/app.db`), WAL. Migraciones SQL numeradas `0001`–`0005` en `apps/server/migrations/`, aplicadas al arrancar por `runMigrations` (cada archivo en su transacción; registro en `schema_migration`). Sin triggers, vistas ni procedimientos. Sin *down migrations*.
 
 ### 13.1 Tablas
 
@@ -456,12 +480,13 @@ SQLite (archivo `data/app.db`), WAL. Migraciones SQL numeradas `0001`–`0004` e
 | `viewer` | Espectador | `id` | — | `tiktok_user_id` UNIQUE |
 | `live_event` | Log de eventos (JSON validado) | `id` | `session_id`→`live_session`, `viewer_id`→`viewer` | `event_uid` UNIQUE; `ix_event_session_type(session_id,type,occurred_at)`; `ux_event_dedupe(session_id,dedupe_key)` parcial |
 | `rule` | Reglas | `id` | — | — (`conditions`/`actions` en JSON texto) |
-| `asset` | Biblioteca | `id` | — | `sha256` UNIQUE |
+| `asset` | Biblioteca (0003 añade `original_name` y `size_bytes`) | `id` | — | `sha256` UNIQUE |
 | `goal` | Metas | `id` | — | `active` (0002) |
 | `goal_cycle` | Ciclos alcanzados | `(goal_id,scope_key,cycle)` | `goal_id`→`goal` ON DELETE CASCADE | — |
+| `goal_adjustment` | Progreso manual de una meta (acción `updateGoal`, 0005) | `(goal_id,scope_key)` | `goal_id`→`goal` ON DELETE CASCADE | — |
 | `leaderboard_total` | Totales por espectador/alcance/métrica | `(viewer_id,scope,metric)` | `viewer_id`→`viewer` | `ix_lb_rank(scope,metric,value DESC)` |
 | `metric_total` | Totales de sala | `(scope,metric)` | — | — |
-| `app_setting` | Clave/valor (moderación, ajustes de ranking, rotators, caché de regalos — **interpretación** por los servicios que reciben `SettingsRepository`) | `key` | — | — |
+| `app_setting` | Clave/valor (moderación, ajustes de ranking, rotators, plantillas de overlay, caché de regalos — **interpretación** por los servicios que reciben `SettingsRepository`) | `key` | — | — |
 | `sound_trigger` | Sonidos remotos por evento | `id` AUTOINCREMENT | — | `sound_trigger_event(event,enabled)` |
 | `schema_migration` | Control de migraciones | `name` | — | — |
 
@@ -488,7 +513,7 @@ erDiagram
 
 ### 13.2 Observaciones
 
-- `live_event` crece sin límite; **no hay retención** (`plan.md` la prevé a 90 días).
+- `live_event` más viejo de 90 días se borra una vez al día, en bloques (`sqlite-event-retention.ts`); los rankings y los espectadores no se tocan. La base se respalda a diario (`docs/operacion.md`).
 - `rule.trigger`, `goal.metric/scope`, `*.kind`, etc. no tienen `CHECK`; la integridad depende de Zod (filas corruptas se saltan con log `stored rule is corrupt`).
 - `leaderboard_total` sin ON DELETE sobre `viewer` (no se borran espectadores en el código).
 - `goal.on_reach`/`rule.actions` pueden referenciar `assetId` sin FK; el borrado de asset está protegido por lógica de aplicación (`AssetService.references`), no por la BD.
@@ -502,7 +527,9 @@ erDiagram
 | --- | --- | --- | --- |
 | TikTok LIVE (protocolo no oficial vía `tiktok-live-connector` 2.5.0) | Eventos del live | `infrastructure/tiktok/*` | Alto: puede romperse sin aviso (R-01); firma opcional `TIKTOK_SIGN_API_KEY` (Euler Stream) |
 | Catálogo de regalos de TikTok | Lista de regalos para el editor | `tiktok-gift-catalog.ts` | Medio: con caché `stale` |
-| API comunitaria MyInstants (`https://myinstants-api.vercel.app`) | Buscar sonidos | `myinstants-provider.ts` | Medio-alto: tercero no oficial; el audio lo reproduce el navegador directamente desde `*.myinstants.com` |
+| API comunitaria MyInstants (`https://myinstants-api.vercel.app`) | Buscar sonidos | `myinstants-provider.ts` | Medio-alto: tercero no oficial; el audio lo reproduce el navegador directamente desde `*.myinstants.com`. El 2026-10-14 respondió `503` durante un live real (ADR 0011) |
+| API de Freesound (oficial, con clave) | Segunda fuente de sonidos (solo CC0 y CC BY de hasta 30 s) | `freesound-provider.ts` | Bajo: API oficial; sin clave la búsqueda devuelve 503 |
+| Webhooks configurados por el usuario | Acción `webhook` | `http-webhook-client.ts` | Medio: solo hosts de `WEBHOOK_ALLOWED_HOSTS`; direcciones privadas bloqueadas salvo `WEBHOOK_PRIVATE_HOSTS` |
 | CDN de TikTok | Avatares/imagenes de regalos | overlays | Bajo (`referrerPolicy=no-referrer`, CSP `img-src https:`) |
 
 No hay SMTP, SMS, almacenamiento en nube, colas, cachés externas ni OAuth.
@@ -524,12 +551,17 @@ No hay SMTP, SMS, almacenamiento en nube, colas, cachés externas ni OAuth.
 | `TIKTOK_SIGN_API_KEY` | No | Clave de firma | vacío | **Sí** | restart |
 | `FREESOUND_API_KEY` | No | Clave de la API oficial de Freesound | vacío (solo MyInstants) | **Sí** | live |
 | `OVERLAY_KEY` | No | Token de overlays (≥16, `[\w-]`) | autogenerado y guardado | **Sí** | live |
+| `BACKUP_DIR` | No | Carpeta de respaldos | `./data/backups` | No | solo env |
+| `RECORD_PATH` | No | Graba cada evento crudo del conector real en este JSONL (contiene usuarios y comentarios reales) | vacío | No | solo env |
+| `WEBHOOK_ALLOWED_HOSTS` | No | Hosts a los que puede llamar la acción `webhook` (coma); vacío = webhooks desactivados | vacío | No | solo env |
+| `WEBHOOK_PRIVATE_HOSTS` | No | Subconjunto de los anteriores que puede resolver a direcciones privadas | vacío | No | solo env |
 | `LOG_LEVEL` | No | Nivel Pino | `info` | No | live |
 | `ADMIN_PASSWORD_HASH` | No | Hash argon2id de la contraseña | — | **Sí** | solo env |
 | `MYINSTANTS_API_URL` | No | Base de la API de sonidos | `https://myinstants-api.vercel.app` | No | solo env |
-| `DASHBOARD_DIR` | No | Build del panel | `apps/dashboard/dist/dashboard/browser` | No | solo env (no documentada) |
+| `DASHBOARD_DIR` | No | Build del panel | `apps/dashboard/dist/dashboard/browser` | No | solo env |
 | `TIKLIVE_URL` / `TIKLIVE_PASSWORD` | CLI | `tools/*` | `http://localhost:3000` / — | **Sí** | solo herramientas |
 | `TIKLIVE_BACKEND` | No | Proxy de Vite en dev | `http://localhost:3000` | No | dev |
+| `E2E_PORT` | No | Puerto del servidor de las pruebas de navegador | `3217` | No | solo `e2e/` |
 
 Reglas: precedencia **panel (`config.json`) > entorno > defecto**; valores inválidos se ignoran con advertencia en el log.
 
@@ -551,13 +583,13 @@ Reglas: precedencia **panel (`config.json`) > entorno > defecto**; valores invá
 ## 17. Dependencias
 
 **Producción servidor:** `fastify` (crítica), `@fastify/cookie` (crítica), `@fastify/websocket` (crítica), `@fastify/multipart` (importante), `@fastify/static` (importante; **vulnerable**), `better-sqlite3` (crítica; binario nativo), `kysely` (importante), `zod` (crítica), `pino` (importante), `@node-rs/argon2` (crítica; nativo), `tiktok-live-connector` 2.5.0 (crítica, no oficial), `@tiklive/contracts` (crítica).
-**Dashboard:** Angular 21 (common/compiler/core/forms/platform-browser/router), `rxjs ~7.8`, `zod`, `tslib`; dev: `@angular/build`, `cli`, `compiler-cli`, TS 5.9.
+**Dashboard:** Angular 21 (common/compiler/core/forms/platform-browser/router/localize/cdk), `@lucide/angular`, Tailwind 4, `class-variance-authority`, `rxjs ~7.8`, `zod`, `tslib`; dev: `@angular/build`, `cli`, `compiler-cli`, TS 5.9.
 **Overlays:** solo `vite` (dev) + contracts.
-**Desarrollo raíz:** `eslint`, `@eslint/js`, `typescript-eslint`, `prettier`, `vitest`, `@vitest/coverage-v8`, `dependency-cruiser`, `tsx`, `globals`, `@types/node`.
+**Desarrollo raíz:** `eslint`, `@eslint/js`, `typescript-eslint`, `prettier`, `vitest`, `@vitest/coverage-v8`, `dependency-cruiser`, `tsx`, `globals`, `@types/node`, `@playwright/test` (1.56.1, fija).
 
 | Hallazgo | Detalle |
 | --- | --- |
-| Vulnerabilidad alta | `npm audit --omit=dev`: `@fastify/static ≤10.1.1` (instalada 8.3.0) — 4 avisos (traversal en listado de directorios y bypass de guardas por rutas no canónicas/separadores codificados). Arreglo: `@fastify/static@10.1.5` (cambio mayor; verificar compatibilidad con Fastify 5) |
+| Vulnerabilidades | `npm audit --omit=dev` → 0 (2026-10-15). `@fastify/static` se actualizó a 10.1.5 (commit `4f9da06`); el análisis original había encontrado 4 avisos en 8.3.0 |
 | `@types/ws` | En `devDependencies` del servidor; `ws` llega transitivamente por `@fastify/websocket` |
 | Dos TypeScript | Raíz 6.0 / dashboard 5.9: deliberado (typescript-eslint), pero duplica mantenimiento |
 | `zod` duplicado | Declarado en contracts, server y dashboard; hoisting npm lo resuelve (no se verificó una única instancia) |
@@ -570,10 +602,10 @@ Reglas: precedencia **panel (`config.json`) > entorno > defecto**; valores invá
 | Recurso | Requerimiento |
 | --- | --- |
 | Hardware mínimo | **NO DETERMINABLE** a partir del código. La especificación apunta a «laptop vieja»; el `load-test` objetivo es 1000 eventos/s con desfase <500 ms (no ejecutado con la máquina libre) |
-| SO | Windows o Linux (README); binarios precompilados de `better-sqlite3` y argon2 |
+| SO | Windows (elegido para la laptop; PowerShell 5.1) o Linux; binarios precompilados de `better-sqlite3` y argon2 (en Windows se instalan en la laptop con `npm ci --omit=dev`) |
 | Runtime | Node.js ≥22 (Angular 21 verificado en 22.20) |
 | BD | SQLite embebida (sin servicio) |
-| Navegador | Moderno en la PC de stream (Chromium/LIVE Studio/OBS); autoplay requiere pulsar «Iniciar audio» |
+| Navegador | Moderno en la PC de stream (Chromium/LIVE Studio/OBS); autoplay requiere pulsar «Iniciar audio». Para las pruebas e2e, Chromium de Playwright |
 | Servicios externos | Internet hacia TikTok, `myinstants-api.vercel.app`, `*.myinstants.com`, `freesound.org` (API y `cdn.freesound.org`), CDN de TikTok |
 
 | Servicio | Puerto | Protocolo | Uso |
@@ -581,12 +613,13 @@ Reglas: precedencia **panel (`config.json`) > entorno > defecto**; valores invá
 | Servidor TikLive | 3000 (`PORT`) | HTTP + WS | API, panel, overlays, WS |
 | `ng serve` | 4200 | HTTP | Dashboard en desarrollo (proxy a 3000) |
 | Vite (overlays) | NO DETERMINABLE (puerto por defecto de Vite) | HTTP | `npm run dev:overlays` |
+| Servidor de las pruebas e2e | 3217 (`E2E_PORT`) | HTTP + WS | `npm run test:e2e` |
 
 ---
 
 ## 19. Instalación
 
-Prerrequisitos: Node ≥22, npm, Git (el repo **no tiene commits todavía**).
+Prerrequisitos: Node ≥22, npm, Git. Para llevarlo a la laptop de Windows ver `docs/despliegue-windows.md` (`npm run package` y `deploy.ps1`).
 
 ```bash
 npm ci                                  # o npm install
@@ -608,7 +641,7 @@ npm run simulate -- full                # requiere TIKLIVE_PASSWORD
 
 Pantalla de audio: `http://<ip>:3000/screen/audio/?key=<OVERLAY_KEY>` → «Iniciar audio». Alertas: `/screen/alerts/?key=…` (`position`, `scale`, `debug=1`). Overlays de datos: `/overlay/{leaderboard,goal,stats,rotator}/` (`theme=card|clear|light`, `scale`, `font`, `debug=1`).
 
-**Comandos**: `npm test` · `npm run lint` · `npm run typecheck` · `npm run depcheck` · `npm run build` · `npm run load-test -- --rate 1000` · `npm run watch-events`.
+**Comandos**: `npm test` · `npm run lint` · `npm run typecheck` · `npm run depcheck` · `npm run build` · `npm run test:e2e` (tras `npm run build` y `npx playwright install chromium`) · `npm run i18n:extract` · `npm run package` · `npm run restore` · `npm run phase0` · `npm run load-test -- --rate 1000` · `npm run watch-events`.
 
 **Depurar:** `LOG_LEVEL=debug` (también desde Ajustes, aplicado en vivo); `?debug=1` en overlays; `npm run watch-events`; vista Eventos del panel.
 
@@ -624,11 +657,14 @@ Pantalla de audio: `http://<ip>:3000/screen/audio/?key=<OVERLAY_KEY>` → «Inic
 flowchart LR
   A[checkout] --> B[npm ci] --> C[npm audit --omit=dev --audit-level=high]
   C --> D[lint] --> E[typecheck] --> F[depcheck] --> G[vitest --coverage] --> H[build]
+  H --> I[i18n:extract + git diff messages.json]
+  I --> J[job e2e: playwright install, build, test:e2e]
 ```
 
-- **Evidencia/Interpretación:** con la dependencia actual, el paso `npm audit` **fallaría hoy** (1 vulnerabilidad alta). Nunca se ha ejecutado en remoto (el repo no tiene commits).
-- Sin CD, sin entornos (staging/producción), sin secretos de CI, sin escaneo SAST, sin Dependabot/Renovate, sin artefactos, sin rollback.
-- **Despliegue previsto (no implementado):** servicio systemd con `/etc/tiklive/env` (permisos 600) — mencionado, sin archivo de unidad ni script. Pasos que se pueden deducir: `npm ci && npm run build && npm run start` (`node --env-file-if-exists=.env apps/server/dist/main/index.js`). Staging, SSL, proxy inverso, monitoreo, backup y rollback: *No fue posible determinarlos a partir del código analizado.*
+- **Evidencia/Interpretación:** el paso `npm audit` pasa hoy (0 vulnerabilidades). El job `verify` falla si el catálogo de traducciones (`messages.json`) no está al día; el job `e2e` (necesita `verify`) instala Chromium, compila y corre las 30 pruebas de navegador, y sube `playwright-report/` y `test-results/` si fallan. El repo tiene historial y PR con CI en GitHub; el job `e2e` se añadió el 2026-10-15 y el workflow del merge del PR #9 en `main` terminó con éxito (run 46).
+- Sin CD automático, sin entornos de staging, sin escaneo SAST, sin Dependabot/Renovate.
+- **Despliegue (Windows, implementado y sin ensayar):** `npm run package` genera `release/tiklive-<versión>-<fecha>-<commit>.tgz`; `install.ps1` crea carpetas, `tiklive.env`, la tarea «TikLive» (al arrancar, como SYSTEM, reinicio en ~3 s), la regla de firewall solo LAN y desactiva la suspensión; `deploy.ps1` extrae, instala dependencias, copia la base a `data/backups/pre-deploy/`, activa el release y espera a `/health` (vuelve solo atrás a los 40 s); `rollback.ps1` vuelve a un release anterior (se conservan 3). Las migraciones solo avanzan: tras un cambio de esquema hay que restaurar también la base. Detalle en `docs/despliegue-windows.md`.
+- Linux: sin unidad systemd; arranque manual con `npm ci && npm run build && npm run start`. SSL y proxy inverso: no existen (solo LAN).
 
 ---
 
@@ -636,15 +672,15 @@ flowchart LR
 
 | Tipo | Ubicación | Estado |
 | --- | --- | --- |
-| Unitarias dominio/aplicación | `*.spec.ts` junto al código (≈19 archivos) | 208 pruebas totales en verde (26 archivos, 5 s) |
-| Integración SQLite | `apps/server/test/sqlite.integration.spec.ts`, `projections.integration.spec.ts`, `settings.integration.spec.ts` | Sí |
-| E2E de API/WS (en proceso, `injectWS`) | `app.e2e.spec.ts`, `assets-rules.e2e.spec.ts`, `settings-auth.e2e.spec.ts`, `triggers.e2e.spec.ts` | Sí |
-| Dashboard | `audio.service.spec.ts` (1 archivo) | Mínimo |
+| Unitarias dominio/aplicación | `*.spec.ts` junto al código | 310 pruebas totales en verde (40 archivos, ~7 s; 2026-10-15) |
+| Integración SQLite | `apps/server/test/sqlite.integration.spec.ts`, `projections.integration.spec.ts`, `settings.integration.spec.ts`, `maintenance.integration.spec.ts` | Sí |
+| E2E de API/WS (en proceso, `injectWS`) | `app.e2e.spec.ts`, `assets-rules.e2e.spec.ts`, `settings-auth.e2e.spec.ts`, `triggers.e2e.spec.ts`, `observability.e2e.spec.ts` | Sí |
+| Dashboard (unitarias) | `audio.service.spec.ts`, `live-state.spec.ts`, `locale/messages.spec.ts` (valida el inglés contra el catálogo extraído) | Mínimo |
 | Overlays | — | **Ninguna** |
-| E2E navegador (Playwright) | — | **Pendiente** |
-| Carga | `tools/load-test.ts` (gate manual: lag <500 ms) | No ejecutado con máquina libre (234 ms con 200 eventos, tasa real 99/s) |
+| E2E navegador (Playwright) | `e2e/*.spec.ts` (11 archivos, 30 pruebas): login, navegación, simulador, reglas (crear, probar, alerta en el overlay, pausar, duplicar, borrar), assets, rankings y metas, overlays y plantillas, ajustes, triggers, estado, idioma | Sí; ver `docs/e2e.md` |
+| Carga | `tools/load-test.ts` (gate manual: lag <500 ms) | Sigue sin ejecutarse con la máquina libre (234 ms con 200 eventos, tasa real 99/s) |
 
-- Cobertura: umbral 80 % líneas/funciones/ramas **solo** para `domain/**`. `application/**` se mide sin umbral. No se midió cobertura numérica en esta revisión.
+- Cobertura: umbral 80 % líneas/funciones/ramas **solo** para `domain/**`. `application/**` se mide sin umbral. No se midió cobertura numérica en esta revisión. Vitest no incluye `e2e/`.
 - Nota operativa (memoria del proyecto): con CPU saturada las pruebas basadas en tiempo pueden ser inestables; relanzar aisladas.
 
 | Funcionalidad | Unit | Integr. | E2E | Riesgo sin cobertura |
@@ -654,10 +690,10 @@ flowchart LR
 | Cola/Scheduler | ✔ | — | ✔ | Bajo |
 | Conector / supervisor | ✔ (falsos) | — | simulador | **Alto**: adaptador real y `tiktok-message-mapper` solo con fixtures; sin live real |
 | Auth | parcial | — | ✔ | Medio (sin pruebas de expiración real/CSRF dedicadas visibles) |
-| Reinicio en proceso (`AppHost`) | ✖ | ✖ | ✖ | **Alto** (F-02) |
+| Reinicio en proceso (`AppHost`) | ✖ | ✖ | ✖ | **Alto** (F-02); el panel solo prueba que los ajustes se guardan, no el reinicio |
 | Migraciones (fallo/rollback) | parcial | ✔ | — | Medio |
-| Overlays/Audio | ✖ | ✖ | ✖ | Medio |
-| Dashboard | casi ✖ | ✖ | ✖ | Medio |
+| Overlays/Audio | ✖ | ✖ | parcial (alerta y conexión de la pantalla de audio) | Medio |
+| Dashboard | casi ✖ | ✖ | ✔ (30 pruebas) | Bajo-Medio |
 | Seguridad (CSP, traversal de `/media`, ReDoS) | parcial | — | — | Medio |
 
 ---
@@ -670,13 +706,13 @@ Pino (JSON a stdout; `pino-pretty` en dev), niveles `fatal…trace` modificables
 
 | Capacidad | Estado |
 | --- | --- |
-| `GET /api/v1/health` | IMPLEMENTADO (200/503; uptime, versión, conector, BD, pantallas, profundidad de colas) |
-| `/metrics` (Prometheus) | REFERENCIADO PERO AUSENTE |
+| `GET /api/v1/health` | IMPLEMENTADO (200/503; uptime, versión, conector, BD, pantallas, profundidad de colas, memoria, retraso del bucle, disco libre, último respaldo, alertas) |
+| `/metrics` (Prometheus) | IMPLEMENTADO, detrás de la sesión: `events_received_total`, `events_dropped_total`, `connector_state`, `connector_reconnects_total`, `rule_executions_total`, `actions_total`, `action_queue_depth`, `action_latency_ms`, `ws_clients`, `process_rss_bytes`, `event_loop_lag_ms` (`docs/operacion.md`) |
 | Trazas | No existen |
-| Alertas | No existen |
+| Alertas | Sí, visibles en el panel (Estado): `connector_down`, `audio_offline`, `queue_full`, `disk_low`, `backup_stale`. No se envían fuera del panel |
 | Eventos operativos al panel | Sí: `connector.status`, `queue.stats`, `error.reported`, `rule.executed` (WS admin) |
 
-*Recomendación — métricas críticas:* eventos/s ingeridos y descartados, lag del pipeline, profundidad y resultados (`done/failed/timeout/dropped`) por pantalla, estado del conector y reintentos, tamaño de BD/WAL y disco libre, latencia de `save`, memoria RSS.
+*Recomendación — métricas aún no cubiertas:* resultados (`done/failed/timeout/dropped`) por pantalla, tamaño de BD/WAL y latencia de `save`.
 
 ## 26. Seguridad
 
@@ -684,12 +720,12 @@ Alcance: revisión estática del código y `npm audit`; no se hizo prueba dinám
 
 | ID | Vulnerabilidad / hallazgo | Sev. | Estado | Evidencia | Riesgo | Recomendación |
 | --- | --- | --- | --- | --- | --- | --- |
-| SEC-01 | Dependencia `@fastify/static` 8.3.0 con 4 avisos (traversal / bypass de guardas) | **Alta** | **Confirmada** (npm audit) | `apps/server/package.json`, registro en `build-http-server.ts` sirve `/admin`, `/media`, `/` | Lectura de archivos fuera de la raíz, según el aviso | Actualizar a ≥10.1.5 y repetir `npm audit`; revisar que el servidor solo exponga los directorios necesarios |
+| SEC-01 | Dependencia `@fastify/static` 8.3.0 con 4 avisos (traversal / bypass de guardas) | ~~Alta~~ | **RESUELTA** (2026-10-08, commit `4f9da06`; `@fastify/static` 10.1.5, `npm audit` → 0) | `apps/server/package.json` | — | Mantener `npm audit` en CI (ya está) |
 | SEC-02 | Sin TLS; cookie sin `Secure`; `?key=` en URL | Media | Confirmada (diseño, documentado) | `auth-routes.ts` `setSession`; README «se sirve por http» | Intercepción en LAN de cookie/clave | Mantener solo LAN; si se expone, proxy con TLS y `Secure` |
 | SEC-03 | Escucha por defecto en `0.0.0.0` | Media | Confirmada | `DEFAULT_SETTINGS.host` | Superficie accesible a toda la LAN | Documentar cortafuegos; opción `HOST=127.0.0.1` cuando no haya PC de stream remota |
-| SEC-04 | Falta `frame-ancestors`/`X-Frame-Options` | Media-Baja | Confirmada | `onSend` solo añade `nosniff` y CSP sin `frame-ancestors` | Clickjacking del panel | Añadir `frame-ancestors 'none'` al CSP del panel (los overlays no necesitan ser enmarcados por terceros; **LIVE Studio/OBS** cargan la URL directa) |
-| SEC-05 | `Origin` no se valida en el *upgrade* de `/ws/admin` | Media-Baja | Potencial | `isCrossOrigin` ignora métodos seguros (el upgrade es GET) | Un sitio del mismo *site* (otro puerto local) con cookie válida podría abrir el socket de admin. `SameSite=Strict` mitiga el cross-site | Verificar `Origin` también en `/ws/admin` |
-| SEC-06 | Contraseña de un solo usuario; bloqueo solo por IP; intentos de `setup` sin límite; código en logs | Media-Baja | Probable | `auth-service.ts` | Fuerza bruta del código de 8 caracteres (≈39,6 bits) por LAN antes de que exista contraseña | Limitar intentos de `setup`; invalidar el código tras N fallos |
+| SEC-04 | Falta `frame-ancestors`/`X-Frame-Options` | Media-Baja | Confirmada (sigue abierta el 2026-10-15) | `onSend` solo añade `nosniff` y CSP sin `frame-ancestors` | Clickjacking del panel | Añadir `frame-ancestors 'none'` al CSP del panel (los overlays no necesitan ser enmarcados por terceros; **LIVE Studio/OBS** cargan la URL directa) |
+| SEC-05 | `Origin` no se valida en el *upgrade* de `/ws/admin` | Media-Baja | Potencial (sigue abierta: `socket-routes.ts` no revisa `Origin`) | `isCrossOrigin` ignora métodos seguros (el upgrade es GET) | Un sitio del mismo *site* (otro puerto local) con cookie válida podría abrir el socket de admin. `SameSite=Strict` mitiga el cross-site | Verificar `Origin` también en `/ws/admin` |
+| SEC-06 | Contraseña de un solo usuario; bloqueo solo por IP; intentos de `setup` sin límite; código en logs | Media-Baja | Confirmada (`AuthService.setup` no cuenta fallos) | `auth-service.ts` | Fuerza bruta del código de 8 caracteres (≈39,6 bits) por LAN antes de que exista contraseña | Limitar intentos de `setup`; invalidar el código tras N fallos |
 | SEC-07 | `config.json` guarda secretos en claro; el modo 0600 no se aplica en Windows | Media | Probable | `json-config-store.ts` (`chmodSync`) | Lectura local por otros usuarios del equipo | Documentar; en Windows restringir ACL; no versionar |
 | SEC-08 | Sin límite de tasa global en la API | Baja | Confirmada | No hay `@fastify/rate-limit` | DoS autenticado/LAN | Opcional |
 | SEC-09 | `/media/*` sin autenticación | Baja | Confirmada | `build-http-server.ts` | Nombre = hash de 16 hex; cualquiera en la LAN que conozca el nombre puede leerlo. Necesario porque las pantallas no tienen cookie | Aceptable |
@@ -706,13 +742,13 @@ Alcance: revisión estática del código y `npm audit`; no se hizo prueba dinám
 | NoSQL | N/A |
 | XSS | Overlays con `textContent`; Angular escapa por defecto; **no hay** `innerHTML`/`eval` en `apps/dashboard/src` ni `packages` (grep). CSP presente |
 | CSRF | Mitigado (SameSite Strict + Origin) |
-| SSRF | No hay acciones `webhook` (la protección SSRF prevista no aplica aún); `MYINSTANTS_API_URL` solo desde entorno; `GET /gifts` y MyInstants usan URLs fijas |
+| SSRF | La acción `webhook` solo llama a hosts de `WEBHOOK_ALLOWED_HOSTS`, bloquea direcciones privadas/loopback/metadata al conectar (salvo `WEBHOOK_PRIVATE_HOSTS`), no sigue redirecciones y corta a 3 s y 64 KB (`http-webhook-client.ts`, con pruebas); `MYINSTANTS_API_URL` solo desde entorno; `GET /gifts`, MyInstants y Freesound usan URLs fijas |
 | IDOR/BOLA | N/A (un solo operador) |
 | File upload | Tipo por contenido, tamaño por tipo, nombre = hash del servidor, `basename()`; el nombre original se guarda recortado a 120 caracteres y se muestra en el panel |
 | Path traversal | Mitigado en almacenamiento propio; ver SEC-01 para la librería estática |
 | Command injection | No hay ejecución de procesos en `src` |
 | Secretos/logs | `setupCode` en el log; request logging desactivado; `signApiKey` nunca se devuelve a la UI |
-| Dependencias | SEC-01 |
+| Dependencias | `npm audit --omit=dev` → 0 (2026-10-15) |
 
 ---
 
@@ -724,7 +760,7 @@ Alcance: revisión estática del código y `npm audit`; no se hizo prueba dinám
 - Consumidores: aislados (`runConsumer`).
 - WS: mensajes inválidos se descartan con `warn`; `maxPayload` 64 KB.
 - Proceso: `uncaughtException` → `stop(…,1)` (cierre ordenado) esperando reinicio externo; `unhandledRejection` solo se registra.
-- Reintentos: conector (backoff), cola de acciones (3). Timeouts: MyInstants 8 s, acciones (`timeoutMs`), drenaje en apagado 5 s. **Sin circuit breaker.**
+- Reintentos: conector (backoff), cola de acciones (3). Timeouts: MyInstants 8 s, webhooks 3 s, acciones (`timeoutMs`), drenaje en apagado 5 s. *Circuit breaker* solo en webhooks (5 fallos por host, 1 min).
 - Dashboard: `ApiClient` traduce a `ApiError`; el interceptor `sessionExpiredInterceptor` redirige a `/login` ante 401 fuera de `/auth/`.
 
 ---
@@ -733,16 +769,16 @@ Alcance: revisión estática del código y `npm audit`; no se hizo prueba dinám
 
 | ID | Problema | Prob. | Impacto | Sev. | Evidencia | Mitigación |
 | --- | --- | --- | --- | --- | --- | --- |
-| F-01 | El conector no oficial deja de funcionar (cambio de TikTok, límites de firma) | Alta | Alto (sin eventos) | **Crítica** operativa | `tiktok-live-connector` 2.5.0 fija; `PROTOCOL_ERROR_NAMES` | Supervisor ya detiene tras 5 fallos de protocolo; añadir alerta visible, ya hay `lastError`; modo `record` pendiente para regresión |
-| F-02 | Reinicio desde Ajustes: si falla `boot()` tras el rollback, `restart()` rechaza y el rechazo es `unhandledRejection` (solo se registra) → proceso vivo **sin servidor HTTP** | Baja | Alto | `main/index.ts` `restart()`: la llamada `await this.boot()` del `catch` no tiene protección; `requestRestart: () => void this.restart()` | Probable | Capturar el error, `process.exit(1)` para que el supervisor reinicie; añadir prueba |
-| F-03 | Sin retención: `live_event` y WAL crecen sin límite | Media | Medio (disco) | No hay `DELETE` de retención | Alta | Tarea de purga + `VACUUM`/`wal_checkpoint`; monitorear disco |
+| F-01 | El conector no oficial deja de funcionar (cambio de TikTok, límites de firma) | Alta | Alto (sin eventos) | **Crítica** operativa | `tiktok-live-connector` 2.5.0 fija; `PROTOCOL_ERROR_NAMES` | Supervisor detiene tras 5 fallos de protocolo; `lastError` y la alerta `connector_down` se ven en el panel; modo `record`/`replay` disponible. Probado en un live real el 2026-10-14. Pendiente: convertir una grabación real en prueba de regresión |
+| F-02 | **Abierta (verificada 2026-10-15).** Reinicio desde Ajustes: si falla `boot()` tras el rollback, `restart()` rechaza y el rechazo es `unhandledRejection` (solo se registra) → proceso vivo **sin servidor HTTP** | Baja | Alto | `main/index.ts` `restart()`: la llamada `await this.boot()` del `catch` no tiene protección; `requestRestart: () => void this.restart()` | Probable | Capturar el error, `process.exit(1)` para que el supervisor reinicie; añadir prueba |
+| F-03 | ~~Sin retención~~ **Resuelta**: limpieza diaria de `live_event` > 90 días, alerta `disk_low` y `/metrics` | Media | Medio (disco) | `sqlite-event-retention.ts`, `maintenance-service.ts` | — | Pendiente solo `VACUUM` si la base crece |
 | F-04 | Cadena de promesas del pipeline sin contrapresión | Baja-Media | Medio (memoria) bajo ráfagas | `LiveEventPipeline.enqueue` | Media | Límite de cola y descarte de `viewerCount`/likes intermedios |
 | F-05 | SQLite síncrono bloquea el *event loop* | Media | Bajo-Medio | `SqliteEventStore` sin hilo aparte (ADR 0009 lo asume) | Media | Medir con `load-test` en la máquina real |
 | F-06 | Sesiones y bloqueos en memoria: se pierden si el proceso muere | Alta | Bajo (re-login) | `AuthService` | Baja | Aceptable; documentar |
-| F-07 | `config.json` corrupto → `JSON.parse` sin `try/catch` en `JsonConfigStore.read` | Baja | Alto (no arranca) | `json-config-store.ts` | Media | Capturar, renombrar archivo dañado y avisar |
-| F-08 | Migración fallida aborta el arranque; sin copia previa ni *down* | Baja | Alto | `migrator.ts` | Media | Copia de BD antes de migrar |
-| F-09 | Pérdida de datos por borrado de disco/laptop: sin backups | Media | Alto | No hay mecanismo | Alta | Ver §30 |
-| F-10 | Doble instancia contra el mismo `app.db` | Baja | Medio | No hay *lock* de proceso | Baja | `busy_timeout` ayuda; añadir *lock file* |
+| F-07 | **Abierta (verificada 2026-10-15).** `config.json` corrupto → `JSON.parse` sin `try/catch` en `JsonConfigStore.read` | Baja | Alto (no arranca) | `json-config-store.ts` | Media | Capturar, renombrar archivo dañado y avisar; mientras tanto el runbook (§3.1) explica cómo recuperarse |
+| F-08 | Migración fallida aborta el arranque; sin *down*. `deploy.ps1` copia la base antes de desplegar, pero el servidor no lo hace al migrar por su cuenta | Baja | Alto | `migrator.ts` | Media | Copia de BD antes de migrar; `npm run restore` |
+| F-09 | Pérdida del equipo: los respaldos automáticos están en la misma laptop | Media | Alto | `maintenance-service.ts` | Media | Copiar `BACKUP_DIR` a un disco externo a mano (§30) |
+| F-10 | Doble instancia contra el mismo `app.db` | Baja | Medio | No hay *lock* de proceso (verificado 2026-10-15) | Baja | `busy_timeout` ayuda; añadir *lock file*. La tarea programada de Windows solo lanza una instancia |
 | F-11 | Dos pestañas de audio con el mismo `screenId` reproducen duplicado | Media | Bajo | `ScreenSocketHub` permite varias conexiones por pantalla y `send` las difunde a todas | Media | Documentar o limitar a una conexión |
 | F-12 | Acciones >60 s en cola se descartan silenciosamente | Media | Bajo | `MAX_ACTION_AGE_MS` | Baja | Visible en logs `warn`; exponer contador |
 | F-13 | API MyInstants caída o cambia formato | Media | Bajo (solo buscar; los triggers guardados siguen sonando) | `SoundSourceError` → 502 | Baja | Ya manejado |
@@ -753,6 +789,8 @@ Alcance: revisión estática del código y `npm audit`; no se hizo prueba dinám
 ---
 
 ## 29. Troubleshooting
+
+Guía de incidentes durante un live (triage, pasos y recuperación): [`docs/runbook.md`](runbook.md). La tabla de abajo es la referencia corta.
 
 | Problema | Síntomas | Causas posibles | Diagnóstico / solución |
 | --- | --- | --- | --- |
@@ -770,7 +808,7 @@ Alcance: revisión estática del código y `npm audit`; no se hizo prueba dinám
 | Conector `reconnecting`/`stopped` | `lastError` | Red; fallo de firma; límites | Ver `Estado`; revisar `TIKTOK_SIGN_API_KEY`; actualizar la librería |
 | Reinicio desde Ajustes no vuelve | Panel sin respuesta | F-02 | Reiniciar el proceso manualmente |
 | Docker no inicia | — | **No existe Docker** | — |
-| Servicio externo no responde | `/sounds/search` 502 | MyInstants | Reintentar; revisar `MYINSTANTS_API_URL` |
+| Servicio externo no responde | `/sounds/search` 502 | MyInstants (ya falló en un live real, ADR 0011) o Freesound | Probar la otra fuente; revisar `MYINSTANTS_API_URL` y la clave de Freesound (503 si falta) |
 | Pruebas inestables | Fallos por tiempo | CPU saturada | Ejecutar aislada: `npx vitest run <archivo>` |
 
 Comandos útiles: `curl http://localhost:3000/api/v1/health`, `npm run watch-events`, `npm test`.
@@ -779,17 +817,29 @@ Comandos útiles: `curl http://localhost:3000/api/v1/health`, `npm run watch-eve
 
 ## 30. Backups
 
-**No existen.** El estado vive en `data/app.db` (+ `-wal`/`-shm`), `data/config.json` y `data/assets/`. Para copia consistente con el servidor encendido se puede usar la API de backup de SQLite o `sqlite3 data/app.db ".backup 'copia.db'"` (**RECOMENDACIÓN**, no implementado), más copia de `config.json` y `assets/`. RPO/RTO: **NO DETERMINABLE** (no definidos).
+**Automáticos** (`maintenance-service.ts`, sin cron, igual en Linux y Windows; detalle en [`docs/operacion.md`](operacion.md)):
+
+- Base de datos: copia consistente con la API de respaldo de SQLite (segura con el live en marcha) a `BACKUP_DIR/app-<fecha UTC>.db`, una al día; se conservan 14 días y siempre la más reciente.
+- Assets: copia de `ASSETS_DIR` cada 7 días; 4 semanas.
+- `deploy.ps1` añade una copia previa a cada despliegue en `data/backups/pre-deploy/`.
+- Se revisa un minuto después de arrancar y cada hora; la alerta `backup_stale` salta tras 36 h sin respaldo. `GET|POST /api/v1/backups` lista y dispara uno a mano.
+- **No se respalda** `data/config.json` (hash de contraseña, clave de overlays, ajustes del panel): cópialo a mano junto con `BACKUP_DIR`. Los respaldos viven en la misma laptop; copiarlos a un disco externo es manual.
+- RPO ≈ 24 h (respaldo diario); RTO: **NO DETERMINABLE** (restauración no ensayada con el despliegue de Windows).
 
 ## 31. Disaster Recovery
 
-No hay procedimientos. Restauración manual deducida: detener servicio → restaurar `app.db`, `config.json`, `assets/` → arrancar (las migraciones se reaplican si faltan). Los rankings de sesión se pierden si se reinicia la sesión; las **stats** son en memoria y se reconstruyen por sesión nueva («tras un corte la sesión se…», ADR 0009).
+1. Detén el servidor (`Stop-ScheduledTask TikLive` en Windows).
+2. `npm run restore -- <respaldo>.db [--db ./data/app.db]` (en Windows: `node ...\dist\main\restore.js`): verifica la integridad y que sea una base de TikLive, y deja la actual como `app.db.before-restore`.
+3. Arranca: las migraciones pendientes se aplican solas. Copia de vuelta la carpeta `assets-<fecha>` a `ASSETS_DIR`.
+4. Un despliegue con cambio de esquema se deshace con `rollback.ps1` **y** restaurando la base (las migraciones solo avanzan).
+
+Probado en Linux: respaldo con la base en uso → restauración → mismas filas. Los rankings de sesión se pierden si se reinicia la sesión; las **stats** son en memoria y se reconstruyen por sesión nueva (ADR 0009). Pasos completos y pérdida del equipo: `docs/runbook.md` §4.
 
 ## 32. Escalabilidad
 
 - **Modelo:** vertical y de una sola instancia; no se prevé escalado horizontal (estado en memoria: colas, sesiones, stats, WS hubs).
 - **Cuellos de botella actuales:** FIFO único y SQLite síncrono (F-04/F-05), JSON.stringify por evento, generación de snapshots por canal (debounce 250 ms mitiga).
-- **Objetivo declarado:** 1000 eventos/s con lag <500 ms; resultado verificable pendiente.
+- **Objetivo declarado:** 1000 eventos/s con lag <500 ms; resultado verificable pendiente (la máquina estaba ocupada en la única medición).
 - **Riesgos futuros:** varios lives simultáneos (no soportado: una sesión activa por destino y una sola conexión de conector), retención de datos, múltiples operadores.
 
 ---
@@ -798,17 +848,17 @@ No hay procedimientos. Restauración manual deducida: detener servicio → resta
 
 | ID | Deuda | Impacto | Esfuerzo | Prioridad |
 | --- | --- | --- | --- | --- |
-| D-01 | Sin commits en el repositorio (todo sin seguimiento) | Alto | Bajo | P0 |
-| D-02 | `plan.md` desactualizado e inconsistente consigo mismo | Medio | Bajo | P2 |
-| D-03 | `.env.example` duplicado/incompleto (`OVERLAYS_DIR`, `DASHBOARD_DIR`) | Bajo | Bajo | P3 |
+| D-01 | ~~Sin commits en el repositorio~~ **Resuelta** (31 commits, PR con CI) | — | — | — |
+| D-02 | ~~`plan.md` desactualizado~~ **Resuelta** el 2026-10-15 | — | — | — |
+| D-03 | ~~`.env.example` duplicado/incompleto~~ **Resuelta** el 2026-10-15 | — | — | — |
 | D-04 | ADR 0002 citado y ausente | Bajo | Bajo | P3 |
 | D-05 | `schema.ts` espejo manual de las migraciones, sin test de sincronía | Medio | Medio | P2 |
-| D-06 | Sin tests para `AppHost` / reinicio | Alto | Medio | P1 |
-| D-07 | Overlays y dashboard casi sin tests; sin Playwright | Medio | Alto | P2 |
-| D-08 | Textos en español embebidos (i18n pendiente) | Bajo | Medio | P3 |
+| D-06 | Sin tests para `AppHost` / reinicio (F-02) | Alto | Medio | P1 |
+| D-07 | Overlays sin pruebas unitarias; el dashboard solo tiene 3 specs unitarias (cubierto en parte por Playwright) | Medio | Medio | P2 |
+| D-08 | ~~Textos en español embebidos~~ **Resuelta** (español e inglés); quedan los mensajes del servidor | Bajo | Medio | P3 |
 | D-09 | Dos versiones de TypeScript | Bajo | Bajo | P3 |
 | D-10 | Cobertura con umbral solo en `domain/` | Medio | Bajo | P2 |
-| D-11 | `composition-root.ts` grande (490 líneas) con tipos `ServiceParts`/`LifecycleParts` repetidos | Bajo | Medio | P3 |
+| D-11 | `composition-root.ts` grande (656 líneas) con tipos `ServiceParts`/`LifecycleParts` repetidos | Bajo | Medio | P3 |
 | D-12 | Configuración repartida (`env`, `config.json`, `app_setting`) con reglas distintas | Medio | Medio | P2 |
 
 No se encontraron `TODO/FIXME/HACK` en el código fuente (`grep` sobre `apps`, `packages`, `tools`; únicas coincidencias eran palabras en `build-http-server.ts`, sin marcador real).
@@ -818,30 +868,29 @@ No se encontraron `TODO/FIXME/HACK` en el código fuente (`grep` sobre `apps`, `
 | Riesgo | Prob. | Impacto | Sev. | Mitigación |
 | --- | --- | --- | --- | --- |
 | R-01 Dependencia de un conector/protocolo no oficial de TikTok | Alta | Alto | Crítica | Aislamiento por puerto; modo `record`; versión fija; vigilancia |
-| R-02 Pérdida de datos sin backup | Media | Alto | Alta | Backups periódicos |
-| R-03 Vulnerabilidad de dependencia (SEC-01) | Alta | Alto | Alta | Actualizar |
+| R-02 Pérdida de datos | Baja | Alto | Media | Respaldos automáticos; falta la copia fuera del equipo |
+| R-03 Vulnerabilidad de dependencia | Baja | Alto | Media | SEC-01 resuelta; `npm audit` en CI |
 | R-04 Exposición del panel por HTTP en red no confiable | Media | Alto | Alta | Solo LAN/VPN, TLS si se expone |
-| R-05 Falta de despliegue repetible | Media | Medio | Media | systemd/Docker |
-| R-06 Bus factor / sin historial git | Media | Medio | Media | Primer commit y ramas |
-| R-07 Servicio comunitario MyInstants | Media | Bajo | Baja | Triggers guardados siguen funcionando |
-| R-08 Rendimiento no validado en la máquina real | Media | Medio | Media | Ejecutar `load-test` |
+| R-05 Despliegue de Windows sin ensayar | Media | Medio | Media | Ensayo de aceptación de `despliegue-windows.md` |
+| R-06 Bus factor | Media | Medio | Media | Historial git, ADR, runbook y documentación |
+| R-07 Servicio comunitario MyInstants | Alta | Bajo | Baja | Ya cayó en un live real; Freesound como segunda fuente (ADR 0011); los triggers guardados siguen sonando |
+| R-08 Rendimiento no validado en la máquina real | Media | Medio | Media | Ejecutar `load-test` y `phase0 -- cpu` con la máquina libre |
 
 ## 35. Funcionalidades faltantes
 
 | Elemento | Clasificación | Evidencia |
 | --- | --- | --- |
-| Acción `webhook` (con protección SSRF) | Confirmado faltante | `plan.md`; `ActionConfigSchema` solo tiene 3 tipos |
-| Acción `updateGoal` | Confirmado faltante | idem |
-| Modo `record` (JSONL) | Confirmado faltante | `plan.md` (el `replay` sí existe) |
-| Retención de 90 días | Confirmado faltante | Sin código |
-| `/metrics`, respaldos, systemd, runbook | Confirmado faltante | `plan.md` fase 4 |
-| i18n y Playwright del dashboard | Confirmado faltante | `plan.md` |
+| Acciones `webhook` y `updateGoal`, modo `record`, retención de 90 días, `/metrics`, respaldos, despliegue (Windows), runbook, i18n y Playwright | **Implementado** (2026-10-08 a 2026-10-15) | `docs/plan.md` |
+| Despliegue de Windows ensayado; ensayo de 4 h; `load-test` con la máquina libre | Confirmado pendiente | `docs/plan.md` |
+| Control de OBS/LIVE Studio desde las reglas | Confirmado faltante (el panel lo muestra como «Próximamente») | `action-builder.ts` |
 | Métrica `top_gift` como ranking | Confirmado faltante | `plan.md`; solo existe «mejor regalo» en stats |
-| Recuperación de contraseña por UI | Probablemente faltante | No existe |
-| Validación contra live real (fase 0) | Confirmado pendiente | `plan.md` |
+| Recuperación de contraseña por UI | Probablemente faltante | No existe; el procedimiento manual está en el runbook |
+| Mensajes del servidor en inglés | Confirmado faltante | `docs/i18n.md` |
+| Copia de los respaldos fuera de la laptop; respaldo de `config.json` | Confirmado faltante (manual) | §30 |
+| Validación contra live real (fase 0) | Hecha en parte (2026-10-14); falta anotar el resultado de cada casilla | `docs/fase-0.md` |
 | Fase 5 (v2/v3) | Indeterminado | Sin contenido; ver especificación |
 | Tablas sin uso | Ninguna detectada |
-| Endpoints sin consumidor | `POST /queue/clear`, `GET /stats` (posible uso por herramientas externas) — Indeterminado |
+| Endpoints sin consumidor | `POST /queue/clear`, `GET /stats`, `GET /metrics` (posible uso por herramientas externas) — Indeterminado |
 
 ---
 
@@ -858,62 +907,65 @@ No se encontraron `TODO/FIXME/HACK` en el código fuente (`grep` sobre `apps`, `
 | Meta | `goal-form.ts` | `/goals*` | `goal-service.ts` | `goal`, `goal_cycle` | `projections.integration.spec.ts` |
 | Ajustes | `settings.page.ts` | `/settings*` | `settings-service.ts` | `config.json` | `settings*.spec.ts` |
 | Login | `login.page.ts`, `auth.guard.ts` | `/auth/*` | `auth-service.ts` | `config.json` | `settings-auth.e2e.spec.ts` |
-| Overlays | `overlays.page.ts` | WS `/ws/screen` | `socket-routes.ts`, `snapshot-publisher.ts` | proyecciones | `snapshot-publisher.spec.ts` |
+| Overlays | `overlays.page.ts` | WS `/ws/screen` | `socket-routes.ts`, `snapshot-publisher.ts` | proyecciones | `snapshot-publisher.spec.ts`, `e2e/overlays.spec.ts` |
+| Respaldos | `status.page.ts` (alertas) | `/backups` | `maintenance-service.ts` | todas | `observability.e2e.spec.ts` |
+| Idioma | `topbar.ts` | — | — | — | `e2e/language.spec.ts`, `messages.spec.ts` |
 
 ---
 
 ## 37. Recomendaciones
 
+Estado al 2026-10-15. Hechas: SEC-01 (`@fastify/static`), primer commit y ramas (D-01), retención (F-03), respaldos, despliegue en Windows, `/metrics`, runbook, i18n y Playwright.
+
 **P0**
-1. *Problema:* SEC-01. *Evidencia:* `npm audit`. *Solución:* actualizar `@fastify/static` a ≥10.1.5, correr tests y CI. *Esfuerzo:* 1–2 h.
-2. *Problema:* F-02. *Evidencia:* `main/index.ts`. *Solución:* proteger `restart()` (capturar el segundo `boot()`; salir con código 1) y añadir una prueba de `AppHost`. *Esfuerzo:* 2–4 h.
-3. *Problema:* D-01. *Solución:* primer commit, rama y remoto; verificar que `data/`, `.env` y `dist/` siguen ignorados. *Esfuerzo:* 0,5 h.
+1. *Problema:* F-02. *Evidencia:* `main/index.ts` (`restart()`: el segundo `boot()` del `catch` no está protegido). *Solución:* capturar el error, registrar y `process.exit(1)` para que la tarea programada reinicie; añadir una prueba de `AppHost`. *Esfuerzo:* 2–4 h.
+2. *Problema:* F-07. *Evidencia:* `JsonConfigStore.read` sin `try/catch`. *Solución:* renombrar el archivo dañado a `config.json.bad`, arrancar con valores por defecto y avisar en el log. *Esfuerzo:* 1–2 h.
 
 **P1**
-4. Retención de `live_event` + checkpoint WAL (F-03). 0,5–1 día.
-5. Backups automáticos de `app.db`, `config.json`, `assets/` y guía de restauración. 0,5 día.
-6. Unidad systemd (o Docker) con reinicio automático, logs y runbook. 0,5–1 día.
-7. `frame-ancestors 'none'`, validación de `Origin` en `/ws/admin`, límite de intentos en `setup` (SEC-04/05/06). 0,5 día.
-8. Ejecutar `load-test` y la fase 0 con un live real; arreglar `JsonConfigStore.read` (F-07).
+3. Ensayar `deploy/windows` y el ensayo de 4 h en la laptop; ejecutar `load-test` y `phase0 -- cpu` con la máquina libre (R-05, R-08).
+4. `frame-ancestors 'none'` en el CSP del panel, validar `Origin` en `/ws/admin` y limitar los intentos de `setup` (SEC-04/05/06). 0,5 día.
+5. Respaldar también `config.json` y copiar `BACKUP_DIR` fuera de la laptop (F-09).
+6. Convertir una grabación de un live real en prueba de regresión de `tiktok-message-mapper`; probar la reconexión tras cortar la red 60 s.
 
 **P2**
-9. Test de sincronía `schema.ts` ↔ migraciones; tests de overlays y E2E Playwright.
-10. `/metrics` y contadores de acciones/eventos.
-11. Reconciliar `plan.md`, `README` (endpoints omitidos) y `.env.example`.
-12. Umbral de cobertura para `application/**`.
+7. Test de sincronía `schema.ts` ↔ migraciones; pruebas unitarias de overlays.
+8. Umbral de cobertura para `application/**`.
+9. Mensajes del servidor en inglés (hoy solo se traducen las alertas de salud).
+10. Revisar que el `README` mencione `/backups`, `/metrics`, `/goals/:id/progress` y `/overlay-templates`.
 
 **P3**
-13. i18n; unificar TS; refactor ligero del composition root; escribir ADR 0002; documentar límites de `screenId` duplicado.
+11. Unificar TypeScript; refactor ligero del composition root; escribir el ADR 0002 (citado en el código); documentar o limitar el `screenId` duplicado (F-11); fijar el comentario de `main/index.ts` que habla de systemd.
 
 ---
 
 ## 38. Guía para nuevos desarrolladores
 
 1. **Requisitos:** Node ≥22, npm, Windows/Linux.
-2. **Instalar:** `npm ci`; compilar overlays y dashboard (ver §19).
+2. **Instalar:** `npm ci`; `npm run build` compila contracts, overlays, dashboard y servidor (ver §19). Para las pruebas de navegador, `npx playwright install chromium`.
 3. **Configurar:** `.env` opcional; `SIMULATE=true` para trabajar sin live.
 4. **Arrancar:** `npm run dev` → `/admin/`; copiar el `setupCode` de la consola; crear contraseña.
-5. **Probar:** `npm test`, `npm run lint`, `npm run typecheck`, `npm run depcheck` (el CI las exige todas más `npm audit`).
-6. **Leer primero:** `docs/plan.md`, `docs/adr/0008`, `0009`, la especificación (1437 líneas) y `composition-root.ts`.
+5. **Probar:** `npm test`, `npm run lint`, `npm run typecheck`, `npm run depcheck`, `npm run test:e2e` (tras `npm run build`). El CI las exige todas, más `npm audit` y que el catálogo de traducciones esté al día.
+6. **Leer primero:** `docs/plan.md`, `docs/operacion.md`, `docs/runbook.md`, `docs/adr/0008`–`0011`, la especificación (1437 líneas) y `composition-root.ts`.
 7. **Nueva funcionalidad:** (a) esquema en `packages/contracts`; (b) lógica pura en `domain`; (c) caso de uso y puerto en `application`; (d) adaptador en `infrastructure`; (e) ruta en `interface/http` y registro en `build-http-server.ts`; (f) cableado en `composition-root.ts`; (g) pantalla en `apps/dashboard/src/app/features/<x>` con ruta lazy en `app.routes.ts`. `depcheck` fallará si violas capas.
 8. **Nuevo endpoint:** función `register…Routes(app, services)`; validar con Zod; errores con `sendProblem`/`notFound`; añadir el servicio a `HttpServices` (`interface/http/services.ts`); pruebas e2e con `test/support/test-app.ts`.
-9. **Cambiar la BD:** crear `migrations/000N_nombre.sql` (nombre `^\d{4}_[\w-]+\.sql$`, sin *down*), actualizar `infrastructure/sqlite/schema.ts` a mano y agregar prueba en `sqlite.integration.spec.ts`. Migraciones se aplican al iniciar.
+9. **Cambiar la BD:** crear `migrations/000N_nombre.sql` (la siguiente es `0006`) (nombre `^\d{4}_[\w-]+\.sql$`, sin *down*), actualizar `infrastructure/sqlite/schema.ts` a mano y agregar prueba en `sqlite.integration.spec.ts`. Migraciones se aplican al iniciar.
 10. **Nueva condición/acción de regla:** añadir al esquema discriminado en `contracts/rules.ts` y al registro en `domain/rules/conditions.ts` / `actions.ts`; reflejar en `rule-catalog.ts` del dashboard.
-11. **Convenciones:** TypeScript estricto, ESM (`.js` en imports), Prettier, Angular standalone con signals, textos de UI en español, errores RFC 9457, reloj/aleatoriedad inyectados (nunca `Date.now()` en dominio).
-12. **Errores comunes:** olvidar compilar overlays/dashboard (solo advertencia); `[value]` en `<select>` con `@for` (usar `[selected]`); inline handlers prohibidos por CSP; probar tiempos con CPU saturada; mezclar TS 5.9 del dashboard con 6.0 de la raíz; dependencias de la librería TikTok fuera de `infrastructure/tiktok`.
+11. **Convenciones:** TypeScript estricto, ESM (`.js` en imports), Prettier, Angular standalone con signals, textos de UI en español marcados con `i18n` / `$localize` y traducidos al inglés (`docs/i18n.md`), errores RFC 9457, reloj/aleatoriedad inyectados (nunca `Date.now()` en dominio). Ramas, commits y versiones: `Claude.md`.
+12. **Errores comunes:** olvidar compilar overlays/dashboard (solo advertencia); `[value]` en `<select>` con `@for` (usar `[selected]`); inline handlers prohibidos por CSP; probar tiempos con CPU saturada; mezclar TS 5.9 del dashboard con 6.0 de la raíz; dependencias de la librería TikTok fuera de `infrastructure/tiktok`; poner `aria-label="… {{ x }}"` traducido en un elemento nativo (no se aplica: usa `[attr.aria-label]` con `lib/accessible-labels.ts`); olvidar `npm run i18n:extract` y la traducción al inglés tras tocar textos.
 
 ## 39. Guía de operación
 
 | Tarea | Procedimiento actual |
 | --- | --- |
-| Arranque | `npm run build && npm run start` (o `npm run dev`) |
+| Arranque | Windows: tarea programada «TikLive» (arranca sola y reinicia tras ~3 s). Linux/desarrollo: `npm run build && npm run start` (o `npm run dev`) |
 | Detención | `SIGTERM`/`SIGINT`: detiene conector, drena pipeline (5 s), cierra sesión, sockets y BD |
 | Reinicio | Botón «Reiniciar ahora» (en proceso) o reinicio del proceso |
-| Logs | stdout (JSON) |
+| Logs | stdout (JSON); en Windows, un archivo por arranque en `C:\TikLive\logs` (se conservan 20) |
 | Health | `GET /api/v1/health` |
-| Backup / Restore | No implementado (§30–31) |
-| Migraciones | Automáticas al arranque |
-| Deploy / Rollback | No implementado |
+| Backup / Restore | Automático; `npm run restore` (§30–31, `docs/operacion.md`) |
+| Migraciones | Automáticas al arranque; solo avanzan |
+| Deploy / Rollback | `npm run package`, `deploy.ps1`, `rollback.ps1` (Windows, sin ensayar; `docs/despliegue-windows.md`) |
+| Incidentes | `docs/runbook.md` |
 | Rotar clave de overlays | Ajustes → «Rotar clave» (desconecta y exige nuevas URLs) |
 | Cambiar contraseña | Ajustes (`POST /auth/password`) |
 | Reset de rankings | Panel (total exige confirmación) |
@@ -933,20 +985,22 @@ No se encontraron `TODO/FIXME/HACK` en el código fuente (`grep` sobre `apps`, `
 
 ## 41. Anexos
 
-**A. Comprobaciones ejecutadas durante el análisis (2026-10-07)**
+**A. Comprobaciones ejecutadas durante el análisis (2026-10-07) y su repetición el 2026-10-15**
 
-| Comando | Resultado |
-| --- | --- |
-| `npx vitest run` | 26 archivos, 208 pruebas, todas en verde |
-| `npm run lint` | Sin errores |
-| `npm run typecheck` | Sin errores |
-| `npm run depcheck` | 0 violaciones (122 módulos, 432 dependencias) |
-| `npm audit --omit=dev` | 1 vulnerabilidad **alta** (`@fastify/static`) |
-| `git log` | La rama `main` no tiene commits |
+| Comando | 2026-10-07 | 2026-10-15 |
+| --- | --- | --- |
+| `npx vitest run` | 26 archivos, 208 pruebas, en verde | 40 archivos, 310 pruebas, en verde |
+| `npm run test:e2e` | — | 30 pruebas en verde (servidor limpio, sin red) |
+| `npm run lint` | Sin errores | Sin errores |
+| `npm run typecheck` | Sin errores | Sin errores |
+| `npm run depcheck` | 0 violaciones (122 módulos, 432 dependencias) | 0 violaciones (147 módulos, 505 dependencias) |
+| `npm audit --omit=dev` | 1 vulnerabilidad **alta** (`@fastify/static`) | 0 vulnerabilidades |
+| Historial git | La rama `main` no tenía commits | 31 commits; CI en verde en `main` (run 46) |
 
 **B. Límites de este análisis (segunda revisión contra el código)**
 
 - No se leyó en detalle: `event-normalizer.ts`, `text-filters.ts`, `condition*.ts`, `leaderboard/goal-service.ts`, `snapshot-publisher.ts`, `tiktok-message-mapper.ts`, `tiktok-gift-catalog.ts`, `seed.ts`, componentes/plantillas Angular, ni los HTML/CSS/TS de overlays más allá de `params.ts`, `ws-client.ts`, `dom.ts`, `alerts.ts`. Lo dicho sobre ellos proviene de `docs/plan.md`, ADR, contratos y nombres de pruebas, y se marcó como tal.
 - Los puntos marcados «Probable», «Potencial» o «deducido» no fueron reproducidos dinámicamente.
-- No se ejecutó el servidor contra TikTok ni se midió rendimiento real.
-- Afirmaciones corregidas durante la revisión: se descartó asumir roles/RBAC, Docker, systemd y `/metrics` (no existen); se descartó una vulnerabilidad de inyección SQL (no hay evidencia).
+- Esta revisión no ejecutó el servidor contra TikTok ni midió rendimiento real. El live real del 2026-10-14 lo hizo el propietario; qué supuestos de la fase 0 se comprobaron no está anotado en `docs/fase-0.md`.
+- La revisión del 2026-10-15 verificó contra el código y las pruebas: rutas, migraciones, variables, acciones, alertas, CI y los hallazgos F-02, F-07, F-10, SEC-04/05/06; **no** reejecutó las secciones de seguridad que no cambiaron (SEC-02, 03, 07–13), ni verificó el contenido de `README.md` más allá de lo indicado en §10.4.
+- Afirmaciones corregidas durante la revisión: se descartó asumir roles/RBAC, Docker y systemd (no existen; `/metrics` y el despliegue de Windows se añadieron después); se descartó una vulnerabilidad de inyección SQL (no hay evidencia).
