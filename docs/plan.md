@@ -163,4 +163,5 @@ Pendiente o diferido:
   copia previa de la base y rollback automático. El paquete se probó en Linux (extraer, `npm ci
   --omit=dev`, arrancar, `/health`, panel y overlays); **los scripts de PowerShell no se han
   podido ejecutar** y hay que ensayarlos (lista al final de `despliegue-windows.md`).
-- Pendiente: runbook de incidentes completo, textos i18n, e2e con Playwright y el ensayo de 4 h.
+- Runbook de incidentes completo en [runbook.md](runbook.md) (2026-10-15).
+- Pendiente: textos i18n, e2e con Playwright y el ensayo de 4 h.
