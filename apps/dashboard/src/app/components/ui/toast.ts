@@ -72,7 +72,7 @@ const TONES: Readonly<Record<ToastVariant, string>> = {
       'pointer-events-none fixed inset-x-4 bottom-4 z-[1100] flex flex-col items-end gap-2 sm:inset-x-auto sm:right-6 sm:bottom-6',
   },
   template: `
-    <section aria-label="Notificaciones" class="contents">
+    <section i18n-aria-label aria-label="Notificaciones" class="contents">
       @for (t of service.toasts(); track t.id) {
         <div
           class="pointer-events-auto flex w-full items-start gap-3 rounded-lg border bg-popover p-4 text-popover-foreground shadow-overlay animate-toast-in sm:w-[22rem]"
@@ -101,6 +101,7 @@ const TONES: Readonly<Record<ToastVariant, string>> = {
             }
           </div>
           <button
+            i18n-aria-label
             type="button"
             class="-m-1 grid size-6 shrink-0 cursor-pointer place-items-center rounded-md text-muted-foreground hover:bg-surface-hover hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/40 focus-visible:outline-none"
             aria-label="Cerrar notificación"

@@ -8,6 +8,7 @@ import { OVERLAY_TYPES, buildOverlayUrl } from '../../features/overlays/overlay-
 import { EmptyState } from '../shared/empty-state';
 import { UiBadge } from '../ui/badge';
 import { UiSwitch } from '../ui/switch';
+import { liveOverlayTitle } from '../../lib/accessible-labels';
 
 const ALERTS_KEY = 'tiklive.dashboard.alerts';
 
@@ -42,11 +43,11 @@ function readAlertsPreference(): boolean {
         [checked]="showAlerts()"
         (checkedChange)="setShowAlerts($event)"
       />
-      <label class="type-label" for="live-alerts">Mostrar alertas aquí</label>
+      <label i18n class="type-label" for="live-alerts">Mostrar alertas aquí</label>
     </div>
 
     @if (!keys.key()) {
-      <p class="type-secondary">Cargando overlays…</p>
+      <p i18n class="type-secondary">Cargando overlays…</p>
     } @else if (tiles().length) {
       <div class="grid gap-4 sm:grid-cols-2">
         @for (tile of tiles(); track tile.id) {
@@ -59,7 +60,7 @@ function readAlertsPreference(): boolean {
             <div class="aspect-video overflow-hidden rounded-lg border bg-checker">
               <iframe
                 [src]="tile.url"
-                [title]="'Overlay en vivo: ' + tile.name"
+                [title]="liveOverlayTitle(tile.name)"
                 class="size-full border-0 bg-transparent scheme-light"
               ></iframe>
             </div>
@@ -68,6 +69,8 @@ function readAlertsPreference(): boolean {
       </div>
     } @else {
       <app-empty-state
+        i18n-description
+        i18n-title
         [icon]="icons.layers"
         title="Ningún overlay en el dashboard"
         description="En Overlays guarda una plantilla y activa «Mostrar en el dashboard» para verla aquí en vivo."
@@ -76,6 +79,7 @@ function readAlertsPreference(): boolean {
   `,
 })
 export class LiveOverlays {
+  protected readonly liveOverlayTitle = liveOverlayTitle;
   protected readonly keys = inject(OverlayKeyStore);
   private readonly templates = inject(OverlayTemplatesStore);
   private readonly sanitizer = inject(DomSanitizer);
@@ -94,7 +98,7 @@ export class LiveOverlays {
         ? [
             {
               id: 'alerts',
-              name: 'Alertas',
+              name: $localize`Alertas`,
               type: 'alerts',
               params: {},
               pinned: true,

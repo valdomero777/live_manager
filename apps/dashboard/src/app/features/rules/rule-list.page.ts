@@ -32,6 +32,7 @@ import { ToastService } from '../../components/ui/toast';
 import { AssetsStore } from '../../core/assets.store';
 import { RulesStore } from '../../core/rules.store';
 import { errorMessage } from '../../lib/labels';
+import { moreActionsLabel } from '../../lib/accessible-labels';
 
 function actionView(
   action: ActionConfig,
@@ -46,9 +47,9 @@ function actionView(
 }
 
 function badgesOf(rule: Rule): string[] {
-  const badges = [`Prioridad ${rule.priority}`];
-  if (rule.cooldownMs) badges.push(`Espera ${rule.cooldownMs / 1000} s`);
-  if (rule.mode === 'random') badges.push('Una acción al azar');
+  const badges = [$localize`Prioridad ${rule.priority}`];
+  if (rule.cooldownMs) badges.push($localize`Espera ${rule.cooldownMs / 1000} s`);
+  if (rule.mode === 'random') badges.push($localize`Una acción al azar`);
   return badges;
 }
 
@@ -76,22 +77,24 @@ function badgesOf(rule: Rule): string[] {
   host: { class: 'page' },
   template: `
     <app-page-header
+      i18n-description
+      i18n-title
       title="Reglas"
       description="Cada regla reacciona a un evento del LIVE. Se evalúan de mayor a menor prioridad y los cambios se aplican al instante, sin reiniciar."
     >
-      <a uiButton routerLink="/reglas/nueva"><svg lucidePlus /> Nueva regla</a>
+      <a i18n uiButton routerLink="/reglas/nueva"><svg lucidePlus /> Nueva regla</a>
     </app-page-header>
 
     @if (error()) {
       <div uiAlert variant="destructive" role="alert">
         <svg lucideCircleAlert />
-        <p uiAlertTitle>No se pudo completar la acción</p>
+        <p i18n uiAlertTitle>No se pudo completar la acción</p>
         <p uiAlertDescription>{{ error() }}</p>
       </div>
     }
 
     @if (loading()) {
-      <div class="grid gap-4" aria-busy="true" aria-label="Cargando reglas">
+      <div i18n-aria-label class="grid gap-4" aria-busy="true" aria-label="Cargando reglas">
         @for (i of [0, 1]; track i) {
           <div uiSkeleton class="h-44 rounded-xl"></div>
         }
@@ -112,6 +115,7 @@ function badgesOf(rule: Rule): string[] {
             (toggle)="toggle(item.rule, $event)"
           >
             <a
+              i18n
               automationCardActions
               uiButton
               variant="outline"
@@ -121,6 +125,7 @@ function badgesOf(rule: Rule): string[] {
               <svg lucidePencil /> Editar
             </a>
             <a
+              i18n
               automationCardActions
               uiButton
               variant="ghost"
@@ -137,7 +142,7 @@ function badgesOf(rule: Rule): string[] {
               variant="ghost"
               size="icon-sm"
               type="button"
-              [attr.aria-label]="'Más acciones para ' + item.rule.name"
+              [attr.aria-label]="moreActionsLabel(item.rule.name)"
               [cdkMenuTriggerFor]="more"
               [cdkMenuTriggerData]="{ $implicit: item.rule }"
             >
@@ -146,11 +151,13 @@ function badgesOf(rule: Rule): string[] {
           </app-automation-card>
         } @empty {
           <app-empty-state
+            i18n-description
+            i18n-title
             [icon]="emptyIcon"
             title="Aún no hay reglas"
             description="Crea tu primera automatización: por ejemplo, un sonido cuando alguien envía un regalo de 100 monedas o más."
           >
-            <a uiButton routerLink="/reglas/nueva"><svg lucidePlus /> Nueva regla</a>
+            <a i18n uiButton routerLink="/reglas/nueva"><svg lucidePlus /> Nueva regla</a>
           </app-empty-state>
         }
       </div>
@@ -159,6 +166,7 @@ function badgesOf(rule: Rule): string[] {
     <ng-template #more let-rule>
       <div cdkMenu uiDropdownMenu>
         <button
+          i18n
           cdkMenuItem
           uiDropdownMenuItem
           [cdkMenuItemDisabled]="busy()"
@@ -168,6 +176,7 @@ function badgesOf(rule: Rule): string[] {
         </button>
         <div uiDropdownMenuSeparator></div>
         <button
+          i18n
           cdkMenuItem
           uiDropdownMenuItem
           variant="destructive"
@@ -181,6 +190,7 @@ function badgesOf(rule: Rule): string[] {
   `,
 })
 export class RuleListPage {
+  protected readonly moreActionsLabel = moreActionsLabel;
   private readonly store = inject(RulesStore);
   private readonly assets = inject(AssetsStore);
   private readonly confirm = inject(ConfirmService);
@@ -203,7 +213,7 @@ export class RuleListPage {
           actions: rule.actions.map((a) => actionView(a, name)),
           badges: badgesOf(rule),
           warning: clash.length
-            ? `Puede dispararse junto con ${clash.join(', ')} (mismo evento, pantalla y prioridad). Cambia la prioridad para decidir el orden.`
+            ? $localize`Puede dispararse junto con ${clash.join(', ')} (mismo evento, pantalla y prioridad). Cambia la prioridad para decidir el orden.`
             : '',
         };
       });
@@ -218,7 +228,9 @@ export class RuleListPage {
   protected toggle(rule: Rule, enabled: boolean): Promise<void> {
     return this.run(async () => {
       await this.store.setEnabled(rule, enabled);
-      this.toast.success(enabled ? `«${rule.name}» activada` : `«${rule.name}» pausada`);
+      this.toast.success(
+        enabled ? $localize`«${rule.name}» activada` : $localize`«${rule.name}» pausada`,
+      );
     });
   }
 
@@ -227,8 +239,8 @@ export class RuleListPage {
     return this.run(async () => {
       await this.store.duplicate(rule);
       this.toast.success(
-        'Regla duplicada',
-        'La copia se creó desactivada para no dispararse dos veces.',
+        $localize`Regla duplicada`,
+        $localize`La copia se creó desactivada para no dispararse dos veces.`,
       );
     });
   }
@@ -236,15 +248,15 @@ export class RuleListPage {
   protected async remove(rule: Rule): Promise<void> {
     if (this.busy()) return;
     const ok = await this.confirm.confirm({
-      title: `¿Eliminar la regla «${rule.name}»?`,
-      description: 'Dejará de reaccionar a los eventos del LIVE. Esta acción no se puede deshacer.',
-      confirmLabel: 'Eliminar',
+      title: $localize`¿Eliminar la regla «${rule.name}»?`,
+      description: $localize`Dejará de reaccionar a los eventos del LIVE. Esta acción no se puede deshacer.`,
+      confirmLabel: $localize`Eliminar`,
       destructive: true,
     });
     if (!ok) return;
     await this.run(async () => {
       await this.store.delete(rule.id);
-      this.toast.success('Regla eliminada');
+      this.toast.success($localize`Regla eliminada`);
     });
   }
 

@@ -78,6 +78,7 @@ export class UiDialogService {
     <ng-content />
     @if (showClose() && ref) {
       <button
+        i18n-aria-label
         uiButton
         variant="ghost"
         size="icon-sm"

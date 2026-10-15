@@ -10,7 +10,7 @@ import { UI_CARD } from '../ui/card';
 function formatDuration(ms: number): string {
   const minutes = Math.max(0, Math.floor(ms / 60_000));
   const h = Math.floor(minutes / 60);
-  return h > 0 ? `${h} h ${minutes % 60} min` : `${minutes} min`;
+  return h > 0 ? $localize`${h} h ${minutes % 60} min` : $localize`${minutes} min`;
 }
 
 /** Top of the dashboard: is the LIVE connected, since when, and the next action to take. */
@@ -28,7 +28,7 @@ function formatDuration(ms: number): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
-    <section uiCard class="relative overflow-hidden" aria-label="Sesión LIVE">
+    <section i18n-aria-label uiCard class="relative overflow-hidden" aria-label="Sesión LIVE">
       @if (isLive()) {
         <div
           class="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-live via-primary to-gift"
@@ -43,7 +43,7 @@ function formatDuration(ms: number): string {
               <span class="font-medium text-foreground">&#64;{{ target }}</span>
             }
             @if (duration(); as d) {
-              <span class="inline-flex items-center gap-1.5">
+              <span i18n class="inline-flex items-center gap-1.5">
                 <svg lucideTimer class="size-3.5" /> En vivo hace {{ d }}
               </span>
             }
@@ -51,9 +51,14 @@ function formatDuration(ms: number): string {
         </div>
         <div class="flex flex-wrap gap-2">
           <a uiButton [variant]="isLive() ? 'outline' : 'default'" routerLink="/estado">
-            <svg lucideRadio /> {{ isLive() ? 'Gestionar conexión' : 'Conectar a TikTok' }}
+            <svg lucideRadio />
+            @if (isLive()) {
+              <ng-container i18n>Gestionar conexión</ng-container>
+            } @else {
+              <ng-container i18n>Conectar a TikTok</ng-container>
+            }
           </a>
-          <a uiButton variant="outline" routerLink="/simulador">
+          <a i18n uiButton variant="outline" routerLink="/simulador">
             <svg lucideFlaskConical /> Simular evento
           </a>
         </div>

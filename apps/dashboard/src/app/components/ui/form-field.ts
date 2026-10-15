@@ -26,7 +26,7 @@ export function describedBy(
       <label uiLabel [attr.for]="for() || null">
         {{ label() }}
         @if (optional()) {
-          <span class="type-caption font-normal">(opcional)</span>
+          <span i18n class="type-caption font-normal">(opcional)</span>
         }
         <ng-content select="[uiFieldLabelExtra]" />
       </label>

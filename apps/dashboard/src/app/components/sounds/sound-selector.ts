@@ -32,11 +32,12 @@ import { UiSkeleton, UiSpinner } from '../ui/feedback';
 import { UiInput } from '../ui/input';
 import { UI_TOGGLE_GROUP } from '../ui/toggle-group';
 import { SoundPreview } from './sound-preview';
+import { selectLabel } from '../../lib/accessible-labels';
 
 /** Licence notes shown next to Freesound results. */
 const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
-  cc0: 'CC0 · uso libre',
-  'cc-by': 'CC BY · menciona al autor',
+  cc0: $localize`CC0 · uso libre`,
+  'cc-by': $localize`CC BY · menciona al autor`,
 };
 
 /**
@@ -71,14 +72,14 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
     <ng-template #dialog>
       <ui-dialog-content class="gap-5">
         <header uiDialogHeader>
-          <h2 uiDialogTitle>Elegir sonido</h2>
-          <p uiDialogDescription>
+          <h2 i18n uiDialogTitle>Elegir sonido</h2>
+          <p i18n uiDialogDescription>
             Busca en MyInstants o en Freesound. El sonido se reproduce desde su sitio: no se
             descarga.
           </p>
         </header>
 
-        <div uiToggleGroup aria-label="Dónde buscar">
+        <div i18n-aria-label uiToggleGroup aria-label="Dónde buscar">
           @for (source of sources; track source) {
             <button
               uiToggleGroupItem
@@ -100,8 +101,9 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
               lucideSearch
               class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
             />
-            <label class="sr-only" for="sound-q">Buscar sonidos</label>
+            <label i18n class="sr-only" for="sound-q">Buscar sonidos</label>
             <input
+              i18n-placeholder
               #q
               uiInput
               id="sound-q"
@@ -113,16 +115,23 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
               (input)="sounds.searchDebounced(q.value)"
             />
           </div>
-          <button uiButton type="submit" [disabled]="sounds.loading()">Buscar</button>
+          <button i18n uiButton type="submit" [disabled]="sounds.loading()">Buscar</button>
         </form>
 
         @if (audio.blocked()) {
           <div uiAlert variant="warning" role="alert">
             <svg lucideVolumeX />
-            <p uiAlertTitle>El navegador bloqueó el audio</p>
+            <p i18n uiAlertTitle>El navegador bloqueó el audio</p>
             <div uiAlertDescription>
-              <p>Actívalo para poder escuchar las vistas previas.</p>
-              <button uiButton size="sm" variant="outline" type="button" (click)="audio.unlock()">
+              <p i18n>Actívalo para poder escuchar las vistas previas.</p>
+              <button
+                i18n
+                uiButton
+                size="sm"
+                variant="outline"
+                type="button"
+                (click)="audio.unlock()"
+              >
                 Activar audio
               </button>
             </div>
@@ -143,7 +152,7 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
 
         <div class="-mx-2 max-h-[min(24rem,50dvh)] min-h-48 overflow-y-auto px-2 scrollbar-thin">
           @if (sounds.loading() && !sounds.results().length) {
-            <div class="grid gap-2" aria-busy="true" aria-label="Buscando sonidos">
+            <div i18n-aria-label class="grid gap-2" aria-busy="true" aria-label="Buscando sonidos">
               @for (i of skeletons; track i) {
                 <div class="flex items-center gap-3 rounded-lg border p-2">
                   <div uiSkeleton class="size-8"></div>
@@ -154,6 +163,8 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
             </div>
           } @else if (!sounds.searched()) {
             <app-empty-state
+              i18n-description
+              i18n-title
               [icon]="searchIcon"
               title="Busca un sonido"
               description="Escribe una palabra: los resultados aparecen mientras escribes."
@@ -161,13 +172,15 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
             />
           } @else if (!sounds.results().length && !sounds.error()) {
             <app-empty-state
+              i18n-description
+              i18n-title
               [icon]="noResultsIcon"
               title="Sin resultados"
               description="Prueba con otra palabra o en inglés."
               [bordered]="false"
             />
           } @else {
-            <ul class="grid gap-1.5" aria-label="Resultados">
+            <ul i18n-aria-label class="grid gap-1.5" aria-label="Resultados">
               @for (s of sounds.results(); track s.id) {
                 @let selected = s.id === selectedId();
                 <li
@@ -178,7 +191,7 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
                   <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-medium" [title]="s.title">{{ s.title }}</p>
                     @if (s.author) {
-                      <p class="truncate text-xs text-muted-foreground">
+                      <p i18n class="truncate text-xs text-muted-foreground">
                         por
                         <a
                           class="underline-offset-2 hover:underline"
@@ -198,13 +211,13 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
                     size="sm"
                     type="button"
                     [variant]="selected ? 'secondary' : 'default'"
-                    [attr.aria-label]="'Seleccionar ' + s.title"
+                    [attr.aria-label]="selectLabel(s.title)"
                     (click)="pick(s)"
                   >
                     @if (selected) {
-                      <svg lucideCheck /> Elegido
+                      <svg lucideCheck /> <ng-container i18n>Elegido</ng-container>
                     } @else {
-                      Seleccionar
+                      <ng-container i18n>Seleccionar</ng-container>
                     }
                   </button>
                 </li>
@@ -221,9 +234,9 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
                   [disabled]="sounds.loading()"
                 >
                   @if (sounds.loading()) {
-                    <ui-spinner /> Cargando…
+                    <ui-spinner /> <ng-container i18n>Cargando…</ng-container>
                   } @else {
-                    Cargar más
+                    <ng-container i18n>Cargar más</ng-container>
                   }
                 </button>
               </div>
@@ -235,6 +248,7 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
   `,
 })
 export class SoundSelector {
+  protected readonly selectLabel = selectLabel;
   protected readonly sounds = inject(SoundsStore);
   protected readonly audio = inject(AudioService);
   private readonly dialogs = inject(UiDialogService);
@@ -242,7 +256,7 @@ export class SoundSelector {
   private ref: DialogRef | undefined;
 
   readonly selectedId = input<string | undefined>(undefined);
-  readonly buttonLabel = input('Elegir sonido');
+  readonly buttonLabel = input($localize`Elegir sonido`);
   readonly variant = input<ButtonVariants['variant']>('outline');
   readonly size = input<ButtonVariants['size']>('default');
   readonly picked = output<Sound>();

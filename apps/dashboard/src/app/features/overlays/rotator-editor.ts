@@ -49,9 +49,9 @@ const NEW_PANELS: Readonly<Record<RotatorPanel['type'], RotatorPanel>> = {
 };
 
 const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
-  leaderboard: 'Ranking',
-  goal: 'Meta',
-  stats: 'Estadísticas',
+  leaderboard: $localize`Ranking`,
+  goal: $localize`Meta`,
+  stats: $localize`Estadísticas`,
 };
 
 /** Edits a rotator configuration (RF-17): which panels alternate and for how long. */
@@ -80,12 +80,12 @@ const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
   template: `
     <section uiCard aria-labelledby="rot-title">
       <header uiCardHeader>
-        <h2 uiCardTitle id="rot-title">Paneles del rotator «{{ configId() }}»</h2>
-        <p uiCardDescription>
+        <h2 i18n uiCardTitle id="rot-title">Paneles del rotator «{{ configId() }}»</h2>
+        <p i18n uiCardDescription>
           El overlay muestra cada panel durante su tiempo y pasa al siguiente.
         </p>
         <div uiCardAction>
-          <label for="rot-tr" class="sr-only">Transición</label>
+          <label i18n for="rot-tr" class="sr-only">Transición</label>
           <select
             uiNativeSelect
             size="sm"
@@ -93,8 +93,8 @@ const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
             class="w-auto"
             (change)="transition.set($any($event.target).value)"
           >
-            <option value="fade" [selected]="transition() === 'fade'">Fundido</option>
-            <option value="none" [selected]="transition() === 'none'">Corte directo</option>
+            <option i18n value="fade" [selected]="transition() === 'fade'">Fundido</option>
+            <option i18n value="none" [selected]="transition() === 'none'">Corte directo</option>
           </select>
         </div>
       </header>
@@ -109,6 +109,8 @@ const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
               <span class="text-sm font-medium">{{ panelLabels[p.type] }}</span>
               <span class="flex-1"></span>
               <button
+                i18n-uiTooltip
+                i18n-aria-label
                 uiButton
                 variant="ghost"
                 size="icon-sm"
@@ -121,6 +123,8 @@ const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
                 <svg lucideArrowUp />
               </button>
               <button
+                i18n-uiTooltip
+                i18n-aria-label
                 uiButton
                 variant="ghost"
                 size="icon-sm"
@@ -133,6 +137,8 @@ const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
                 <svg lucideArrowDown />
               </button>
               <button
+                i18n-uiTooltip
+                i18n-aria-label
                 uiButton
                 variant="ghost-destructive"
                 size="icon-sm"
@@ -147,7 +153,7 @@ const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
             <div class="form-grid p-3">
               @switch (p.type) {
                 @case ('leaderboard') {
-                  <ui-form-field label="Métrica" [for]="'rp-m-' + i">
+                  <ui-form-field i18n-label label="Métrica" [for]="'rp-m-' + i">
                     <select
                       uiNativeSelect
                       [id]="'rp-m-' + i"
@@ -160,7 +166,7 @@ const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
                       }
                     </select>
                   </ui-form-field>
-                  <ui-form-field label="Período" [for]="'rp-s-' + i">
+                  <ui-form-field i18n-label label="Período" [for]="'rp-s-' + i">
                     <select
                       uiNativeSelect
                       [id]="'rp-s-' + i"
@@ -171,7 +177,7 @@ const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
                       }
                     </select>
                   </ui-form-field>
-                  <ui-form-field label="Cuántos" [for]="'rp-l-' + i">
+                  <ui-form-field i18n-label label="Cuántos" [for]="'rp-l-' + i">
                     <input
                       uiInput
                       [id]="'rp-l-' + i"
@@ -182,7 +188,7 @@ const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
                       (input)="patch(i, { limit: +$any($event.target).value })"
                     />
                   </ui-form-field>
-                  <ui-form-field label="Título" [for]="'rp-t-' + i" [optional]="true">
+                  <ui-form-field i18n-label label="Título" [for]="'rp-t-' + i" [optional]="true">
                     <input
                       uiInput
                       [id]="'rp-t-' + i"
@@ -193,7 +199,7 @@ const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
                   </ui-form-field>
                 }
                 @case ('goal') {
-                  <ui-form-field label="Meta" [for]="'rp-g-' + i">
+                  <ui-form-field i18n-label label="Meta" [for]="'rp-g-' + i">
                     <select
                       uiNativeSelect
                       [id]="'rp-g-' + i"
@@ -207,7 +213,7 @@ const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
                 }
                 @case ('stats') {
                   <fieldset class="col-span-full m-0 grid gap-2 rounded-lg border p-3">
-                    <legend class="px-1 type-label">Datos</legend>
+                    <legend i18n class="px-1 type-label">Datos</legend>
                     <div class="flex flex-wrap gap-x-4 gap-y-2">
                       @for (f of statsFields; track f) {
                         <label class="flex items-center gap-2 text-sm">
@@ -224,7 +230,7 @@ const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
                   </fieldset>
                 }
               }
-              <ui-form-field label="Duración (s)" [for]="'rp-d-' + i">
+              <ui-form-field i18n-label label="Duración (s)" [for]="'rp-d-' + i">
                 <input
                   uiInput
                   [id]="'rp-d-' + i"
@@ -239,6 +245,8 @@ const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
           </div>
         } @empty {
           <app-empty-state
+            i18n-description
+            i18n-title
             title="Sin paneles"
             description="Agrega al menos un panel para que el rotator muestre algo."
             class="py-6"
@@ -255,11 +263,18 @@ const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
         }
       </div>
       <footer uiCardFooter class="border-t border-border-subtle pt-4">
-        <button uiButton variant="outline" size="sm" type="button" [cdkMenuTriggerFor]="addMenu">
+        <button
+          i18n
+          uiButton
+          variant="outline"
+          size="sm"
+          type="button"
+          [cdkMenuTriggerFor]="addMenu"
+        >
           <svg lucidePlus /> Agregar panel
         </button>
         <span class="flex-1"></span>
-        <button uiButton type="button" (click)="save()" [disabled]="busy()">
+        <button i18n uiButton type="button" (click)="save()" [disabled]="busy()">
           <svg lucideSave /> Guardar rotator
         </button>
       </footer>
@@ -267,13 +282,18 @@ const PANEL_LABELS: Readonly<Record<RotatorPanel['type'], string>> = {
 
     <ng-template #addMenu>
       <div cdkMenu uiDropdownMenu>
-        <button cdkMenuItem uiDropdownMenuItem (cdkMenuItemTriggered)="addPanel('leaderboard')">
+        <button
+          i18n
+          cdkMenuItem
+          uiDropdownMenuItem
+          (cdkMenuItemTriggered)="addPanel('leaderboard')"
+        >
           Ranking
         </button>
-        <button cdkMenuItem uiDropdownMenuItem (cdkMenuItemTriggered)="addPanel('goal')">
+        <button i18n cdkMenuItem uiDropdownMenuItem (cdkMenuItemTriggered)="addPanel('goal')">
           Meta
         </button>
-        <button cdkMenuItem uiDropdownMenuItem (cdkMenuItemTriggered)="addPanel('stats')">
+        <button i18n cdkMenuItem uiDropdownMenuItem (cdkMenuItemTriggered)="addPanel('stats')">
           Estadísticas
         </button>
       </div>
@@ -355,7 +375,10 @@ export class RotatorEditor {
     try {
       await this.api.put(`/rotators/${this.configId()}`, parsed.data);
       this.message.set(undefined);
-      this.toast.success('Rotator guardado', 'Las fuentes abiertas lo aplican al recargarse.');
+      this.toast.success(
+        $localize`Rotator guardado`,
+        $localize`Las fuentes abiertas lo aplican al recargarse.`,
+      );
       this.savedChange.emit();
     } catch (e) {
       this.message.set({ ok: false, text: errorMessage(e) });

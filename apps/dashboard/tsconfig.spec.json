@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": { "outDir": "./out-tsc/spec", "rootDir": "../..", "types": [] },
+  "compilerOptions": { "outDir": "./out-tsc/spec", "rootDir": "../..", "types": ["@angular/localize"] },
   "include": ["src/**/*.spec.ts"]
 }

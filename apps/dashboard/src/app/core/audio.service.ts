@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-export const PLAYBACK_ERROR = 'No se pudo reproducir este sonido.';
+export const PLAYBACK_ERROR = $localize`No se pudo reproducir este sonido.`;
 
 /**
  * The dashboard's single audio player (previews and trigger tests). One shared HTMLAudioElement

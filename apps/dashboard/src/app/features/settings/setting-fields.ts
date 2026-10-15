@@ -23,120 +23,120 @@ export interface FieldSection {
 }
 
 const LOG_LABELS: Readonly<Record<(typeof LOG_LEVELS)[number], string>> = {
-  fatal: 'Solo fallos fatales',
-  error: 'Errores',
-  warn: 'Advertencias',
-  info: 'Normal (recomendado)',
-  debug: 'Detallado (diagnóstico)',
-  trace: 'Todo (muy verboso)',
+  fatal: $localize`Solo fallos fatales`,
+  error: $localize`Errores`,
+  warn: $localize`Advertencias`,
+  info: $localize`Normal (recomendado)`,
+  debug: $localize`Detallado (diagnóstico)`,
+  trace: $localize`Todo (muy verboso)`,
 };
 
 /** UI texts for every setting, grouped. The order here is the order on screen. */
 export const SETTING_SECTIONS: readonly FieldSection[] = [
   {
     id: 'tiktok',
-    title: 'TikTok',
-    description: 'Cuenta a la que se conecta el sistema y modo de ensayo.',
+    title: $localize`TikTok`,
+    description: $localize`Cuenta a la que se conecta el sistema y modo de ensayo.`,
     fields: [
       {
         key: 'tiktokUsername',
-        label: 'Usuario de TikTok',
-        help: 'Sin @. Al guardar, el conector se reconecta a esta cuenta. Vacío = no conectar al arrancar.',
+        label: $localize`Usuario de TikTok`,
+        help: $localize`Sin @. Al guardar, el conector se reconecta a esta cuenta. Vacío = no conectar al arrancar.`,
         kind: 'text',
       },
       {
         key: 'simulate',
-        label: 'Modo simulador',
-        help: 'Ensaya sin estar en vivo: los eventos solo llegan desde el simulador.',
+        label: $localize`Modo simulador`,
+        help: $localize`Ensaya sin estar en vivo: los eventos solo llegan desde el simulador.`,
         kind: 'boolean',
       },
       {
         key: 'signApiKey',
-        label: 'Clave de Euler Stream (opcional)',
-        help: 'Solo si el conector la necesita para firmar. Déjala vacía para no cambiarla.',
+        label: $localize`Clave de Euler Stream (opcional)`,
+        help: $localize`Solo si el conector la necesita para firmar. Déjala vacía para no cambiarla.`,
         kind: 'secret',
       },
     ],
   },
   {
     id: 'sounds',
-    title: 'Sonidos',
-    description: 'Catálogos externos donde buscar sonidos para los triggers.',
+    title: $localize`Sonidos`,
+    description: $localize`Catálogos externos donde buscar sonidos para los triggers.`,
     fields: [
       {
         key: 'freesoundApiKey',
-        label: 'Clave de API de Freesound (opcional)',
-        help: 'Gratis en freesound.org/apiv2/apply. Sin ella solo se busca en MyInstants. Se aplica al guardar. Déjala vacía para no cambiarla.',
+        label: $localize`Clave de API de Freesound (opcional)`,
+        help: $localize`Gratis en freesound.org/apiv2/apply. Sin ella solo se busca en MyInstants. Se aplica al guardar. Déjala vacía para no cambiarla.`,
         kind: 'secret',
       },
     ],
   },
   {
     id: 'overlays',
-    title: 'Overlays',
-    description: 'Clave de solo lectura que va en las URLs de los overlays (?key=).',
+    title: $localize`Overlays`,
+    description: $localize`Clave de solo lectura que va en las URLs de los overlays (?key=).`,
     fields: [
       {
         key: 'overlayKey',
-        label: 'Clave de overlays',
-        help: 'Al cambiarla, las URLs anteriores dejan de funcionar al instante y debes pegar las nuevas en LIVE Studio/OBS.',
+        label: $localize`Clave de overlays`,
+        help: $localize`Al cambiarla, las URLs anteriores dejan de funcionar al instante y debes pegar las nuevas en LIVE Studio/OBS.`,
         kind: 'text',
       },
     ],
   },
   {
     id: 'server',
-    title: 'Servidor',
-    description: 'Dónde escucha el servidor. Un valor incorrecto se revierte solo al reiniciar.',
+    title: $localize`Servidor`,
+    description: $localize`Dónde escucha el servidor. Un valor incorrecto se revierte solo al reiniciar.`,
     fields: [
       {
         key: 'port',
-        label: 'Puerto',
-        help: 'Puerto HTTP para el panel, los overlays y la API.',
+        label: $localize`Puerto`,
+        help: $localize`Puerto HTTP para el panel, los overlays y la API.`,
         kind: 'number',
       },
       {
         key: 'host',
-        label: 'Interfaz de red',
-        help: '0.0.0.0 = toda la red local; 127.0.0.1 = solo esta máquina.',
+        label: $localize`Interfaz de red`,
+        help: $localize`0.0.0.0 = toda la red local; 127.0.0.1 = solo esta máquina.`,
         kind: 'text',
       },
     ],
   },
   {
     id: 'storage',
-    title: 'Almacenamiento',
-    description: 'Rutas en disco, relativas a la carpeta del proyecto o absolutas.',
+    title: $localize`Almacenamiento`,
+    description: $localize`Rutas en disco, relativas a la carpeta del proyecto o absolutas.`,
     fields: [
       {
         key: 'dbPath',
-        label: 'Base de datos',
-        help: 'Archivo SQLite con eventos, reglas y rankings.',
+        label: $localize`Base de datos`,
+        help: $localize`Archivo SQLite con eventos, reglas y rankings.`,
         kind: 'text',
       },
       {
         key: 'assetsDir',
-        label: 'Carpeta de assets',
-        help: 'Sonidos e imágenes subidos.',
+        label: $localize`Carpeta de assets`,
+        help: $localize`Sonidos e imágenes subidos.`,
         kind: 'text',
       },
       {
         key: 'overlaysDir',
-        label: 'Carpeta de overlays compilados',
-        help: 'Normalmente no hace falta cambiarla.',
+        label: $localize`Carpeta de overlays compilados`,
+        help: $localize`Normalmente no hace falta cambiarla.`,
         kind: 'text',
       },
     ],
   },
   {
     id: 'logging',
-    title: 'Registro',
-    description: 'Cuánto detalle escribe el servidor en su log.',
+    title: $localize`Registro`,
+    description: $localize`Cuánto detalle escribe el servidor en su log.`,
     fields: [
       {
         key: 'logLevel',
-        label: 'Nivel de log',
-        help: 'Se aplica al instante.',
+        label: $localize`Nivel de log`,
+        help: $localize`Se aplica al instante.`,
         kind: 'select',
         options: LOG_LEVELS.map((l) => ({ value: l, label: LOG_LABELS[l] })),
       },
@@ -145,13 +145,13 @@ export const SETTING_SECTIONS: readonly FieldSection[] = [
 ];
 
 export const APPLY_LABELS: Readonly<Record<ApplyMode, string>> = {
-  live: 'Se aplica al instante',
-  reconnect: 'Reconecta con TikTok',
-  restart: 'Requiere reinicio',
+  live: $localize`Se aplica al instante`,
+  reconnect: $localize`Reconecta con TikTok`,
+  restart: $localize`Requiere reinicio`,
 };
 
 export function sourceLabel(source: SettingSource, env: string): string {
-  if (source === 'ui') return 'Guardado en el panel';
-  if (source === 'env') return `Variable de entorno ${env}`;
-  return 'Valor por defecto';
+  if (source === 'ui') return $localize`Guardado en el panel`;
+  if (source === 'env') return $localize`Variable de entorno ${env}`;
+  return $localize`Valor por defecto`;
 }

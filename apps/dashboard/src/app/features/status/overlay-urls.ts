@@ -13,38 +13,38 @@ interface OverlayLink {
 
 const OVERLAYS: readonly OverlayLink[] = [
   {
-    name: 'Pestaña de audio',
-    help: 'Ábrela en el navegador de la PC de stream y pulsa «Iniciar audio».',
+    name: $localize`Pestaña de audio`,
+    help: $localize`Ábrela en el navegador de la PC de stream y pulsa «Iniciar audio».`,
     path: '/screen/audio/',
   },
   {
-    name: 'Alertas',
-    help: 'Fuente Link (LIVE Studio) o Browser Source (OBS).',
+    name: $localize`Alertas`,
+    help: $localize`Fuente Link (LIVE Studio) o Browser Source (OBS).`,
     path: '/screen/alerts/',
   },
   {
-    name: 'Rotator',
-    help: 'Rankings y estadísticas alternándose en una sola fuente.',
+    name: $localize`Rotator`,
+    help: $localize`Rankings y estadísticas alternándose en una sola fuente.`,
     path: '/overlay/rotator/?config=main',
   },
   {
-    name: 'Ranking de regalos',
-    help: 'Top de diamantes de la sesión.',
+    name: $localize`Ranking de regalos`,
+    help: $localize`Top de diamantes de la sesión.`,
     path: '/overlay/leaderboard/?metric=diamonds&limit=5',
   },
   {
-    name: 'Ranking de likes',
-    help: 'Top de likes de la sesión.',
+    name: $localize`Ranking de likes`,
+    help: $localize`Top de likes de la sesión.`,
     path: '/overlay/leaderboard/?metric=likes&limit=5',
   },
   {
-    name: 'Meta',
-    help: 'Barra de la meta 1; cambia goalId para otra meta.',
+    name: $localize`Meta`,
+    help: $localize`Barra de la meta 1; cambia goalId para otra meta.`,
     path: '/overlay/goal/?goalId=1',
   },
   {
-    name: 'Estadísticas',
-    help: 'Espectadores, likes y diamantes.',
+    name: $localize`Estadísticas`,
+    help: $localize`Espectadores, likes y diamantes.`,
     path: '/overlay/stats/?fields=viewers,likes,diamonds',
   },
 ];
@@ -57,6 +57,8 @@ const OVERLAYS: readonly OverlayLink[] = [
   host: { class: 'grid gap-4' },
   template: `
     <ui-form-field
+      i18n-description
+      i18n-label
       label="Dirección del servidor"
       for="host"
       description="Usa la IP de la red local para la PC de stream; «localhost» solo funciona en esta misma máquina."
@@ -87,7 +89,15 @@ const OVERLAYS: readonly OverlayLink[] = [
             >
             <div class="flex gap-2">
               <app-copy-button [value]="o.url" [label]="o.name" />
-              <a uiButton variant="ghost" size="sm" [href]="o.url" target="_blank" rel="noopener">
+              <a
+                i18n
+                uiButton
+                variant="ghost"
+                size="sm"
+                [href]="o.url"
+                target="_blank"
+                rel="noopener"
+              >
                 <svg lucideExternalLink /> Abrir
               </a>
             </div>

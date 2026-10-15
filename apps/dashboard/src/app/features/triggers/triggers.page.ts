@@ -42,6 +42,7 @@ import { ToastService } from '../../components/ui/toast';
 import { AudioService } from '../../core/audio.service';
 import { TriggersStore } from '../../core/triggers.store';
 import { errorMessage } from '../../lib/labels';
+import { moreActionsLabel } from '../../lib/accessible-labels';
 
 /** What the form edits; becomes a TriggerDefinition on save. */
 interface Draft {
@@ -112,6 +113,7 @@ function percent(volume: number): number {
   templateUrl: './triggers.page.html',
 })
 export class TriggersPage {
+  protected readonly moreActionsLabel = moreActionsLabel;
   protected readonly store = inject(TriggersStore);
   protected readonly audio = inject(AudioService);
   private readonly confirm = inject(ConfirmService);
@@ -128,10 +130,12 @@ export class TriggersPage {
   protected readonly error = signal<string | undefined>(undefined);
 
   protected readonly nameError = computed(() =>
-    this.showErrors() && !this.draft()?.name.trim() ? 'Ponle un nombre al trigger.' : undefined,
+    this.showErrors() && !this.draft()?.name.trim()
+      ? $localize`Ponle un nombre al trigger.`
+      : undefined,
   );
   protected readonly soundError = computed(() =>
-    this.showErrors() && !this.draft()?.sound ? 'Elige un sonido.' : undefined,
+    this.showErrors() && !this.draft()?.sound ? $localize`Elige un sonido.` : undefined,
   );
   protected readonly cards = computed(() =>
     this.store.triggers().map((t) => ({
@@ -140,7 +144,7 @@ export class TriggersPage {
         {
           icon: LucideVolume2,
           tone: 'bg-sound-soft text-sound-text',
-          text: `${t.soundTitle} · volumen ${percent(t.volume)}%`,
+          text: $localize`${t.soundTitle} · volumen ${percent(t.volume)}%`,
         },
       ] satisfies AutomationActionView[],
     })),
@@ -190,7 +194,10 @@ export class TriggersPage {
       await this.store.save(d.id, definition);
       this.audio.stopSound();
       this.draft.set(undefined);
-      this.toast.success('Trigger guardado', `«${definition.name}» ya reacciona al LIVE.`);
+      this.toast.success(
+        $localize`Trigger guardado`,
+        $localize`«${definition.name}» ya reacciona al LIVE.`,
+      );
     });
   }
 
@@ -201,26 +208,26 @@ export class TriggersPage {
   protected async remove(trigger: Trigger): Promise<void> {
     if (this.busy()) return;
     const ok = await this.confirm.confirm({
-      title: `¿Eliminar el trigger «${trigger.name}»?`,
-      description: 'El sonido dejará de reproducirse con este evento.',
-      confirmLabel: 'Eliminar',
+      title: $localize`¿Eliminar el trigger «${trigger.name}»?`,
+      description: $localize`El sonido dejará de reproducirse con este evento.`,
+      confirmLabel: $localize`Eliminar`,
       destructive: true,
     });
     if (!ok) return;
     await this.run(async () => {
       await this.store.delete(trigger.id);
-      this.toast.success('Trigger eliminado');
+      this.toast.success($localize`Trigger eliminado`);
     });
   }
 
   protected testOnScreen(trigger: Trigger): Promise<void> {
     return this.run(async () => {
       const { status } = await this.store.testOnAudioScreen(trigger.id);
-      if (status === 'queued') this.toast.success('Enviado a la pantalla de audio');
+      if (status === 'queued') this.toast.success($localize`Enviado a la pantalla de audio`);
       else
         this.toast.error(
-          'No se pudo enviar el sonido',
-          'Revisa que la pantalla de audio esté abierta.',
+          $localize`No se pudo enviar el sonido`,
+          $localize`Revisa que la pantalla de audio esté abierta.`,
         );
     });
   }

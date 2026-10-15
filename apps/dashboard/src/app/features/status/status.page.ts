@@ -21,7 +21,7 @@ import {
   LucideTriangleAlert,
   LucideUnplug,
 } from '@lucide/angular';
-import type { HealthResponse, SettingsResponse } from '@tiklive/contracts';
+import type { HealthAlert, HealthResponse, SettingsResponse } from '@tiklive/contracts';
 import { EventFeed } from '../../components/live/event-feed';
 import { toFeedItem } from '../../components/live/event-format';
 import { LiveStatus } from '../../components/live/live-status';
@@ -34,6 +34,7 @@ import { UiSkeleton, UiSpinner } from '../../components/ui/feedback';
 import { UiInput } from '../../components/ui/input';
 import { AdminSocketService } from '../../core/admin-socket.service';
 import { ApiClient, ApiError } from '../../core/api-client';
+import { currentLocale } from '../../core/locale';
 import { OverlayUrls } from './overlay-urls';
 
 const HEALTH_POLL_MS = 5_000;
@@ -75,6 +76,23 @@ export class StatusPage {
   private readonly api = inject(ApiClient);
   protected readonly socket = inject(AdminSocketService);
 
+  /** The server words its alerts in Spanish, with details; other languages get a fixed text per code. */
+  protected alertText(alert: HealthAlert): string {
+    if (currentLocale() === 'es') return alert.message;
+    switch (alert.code) {
+      case 'connector_down':
+        return $localize`Sin conexión con TikTok`;
+      case 'audio_offline':
+        return $localize`La pestaña de audio no está conectada`;
+      case 'queue_full':
+        return $localize`Una cola de acciones está casi llena`;
+      case 'disk_low':
+        return $localize`Poco espacio libre en disco`;
+      case 'backup_stale':
+        return $localize`No hay un respaldo reciente de la base de datos`;
+    }
+  }
+
   protected readonly health = signal<HealthResponse | undefined>(undefined);
   protected readonly healthLoading = signal(true);
   protected readonly overlayKey = signal<string | undefined>(undefined);
@@ -104,7 +122,7 @@ export class StatusPage {
   protected async connect(): Promise<void> {
     const username = this.username().trim() || this.connector()?.target;
     if (!username) {
-      this.error.set('Escribe tu usuario de TikTok');
+      this.error.set($localize`Escribe tu usuario de TikTok`);
       return;
     }
     await this.run(() => this.api.post('/connector/connect', { username }));
@@ -117,7 +135,7 @@ export class StatusPage {
   protected uptime(seconds: number): string {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
-    return h > 0 ? `${h} h ${m} min` : `${m} min`;
+    return h > 0 ? $localize`${h} h ${m} min` : $localize`${m} min`;
   }
 
   private async run(action: () => Promise<unknown>): Promise<void> {

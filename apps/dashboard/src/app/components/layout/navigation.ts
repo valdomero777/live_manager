@@ -31,37 +31,39 @@ export interface NavGroup {
  */
 export const NAVIGATION: readonly NavGroup[] = [
   {
-    label: 'General',
-    items: [{ path: '/inicio', label: 'Dashboard', icon: LucideLayoutDashboard, exact: true }],
+    label: $localize`General`,
+    items: [
+      { path: '/inicio', label: $localize`Dashboard`, icon: LucideLayoutDashboard, exact: true },
+    ],
   },
   {
     label: 'LIVE',
     items: [
-      { path: '/estado', label: 'Conexión y estado', icon: LucideRadio },
-      { path: '/eventos', label: 'Eventos', icon: LucideActivity },
-      { path: '/simulador', label: 'Simulador', icon: LucideFlaskConical },
+      { path: '/estado', label: $localize`Conexión y estado`, icon: LucideRadio },
+      { path: '/eventos', label: $localize`Eventos`, icon: LucideActivity },
+      { path: '/simulador', label: $localize`Simulador`, icon: LucideFlaskConical },
     ],
   },
   {
-    label: 'Automatizaciones',
+    label: $localize`Automatizaciones`,
     items: [
-      { path: '/reglas', label: 'Reglas', icon: LucideWorkflow },
-      { path: '/triggers', label: 'Triggers de sonido', icon: LucideZap },
+      { path: '/reglas', label: $localize`Reglas`, icon: LucideWorkflow },
+      { path: '/triggers', label: $localize`Triggers de sonido`, icon: LucideZap },
     ],
   },
   {
-    label: 'Contenido',
+    label: $localize`Contenido`,
     items: [
-      { path: '/assets', label: 'Sonidos e imágenes', icon: LucideMusic },
-      { path: '/overlays', label: 'Overlays', icon: LucideLayers },
+      { path: '/assets', label: $localize`Sonidos e imágenes`, icon: LucideMusic },
+      { path: '/overlays', label: $localize`Overlays`, icon: LucideLayers },
     ],
   },
   {
-    label: 'Analítica',
-    items: [{ path: '/rankings', label: 'Rankings y metas', icon: LucideTrophy }],
+    label: $localize`Analítica`,
+    items: [{ path: '/rankings', label: $localize`Rankings y metas`, icon: LucideTrophy }],
   },
   {
-    label: 'Sistema',
-    items: [{ path: '/ajustes', label: 'Ajustes', icon: LucideSettings }],
+    label: $localize`Sistema`,
+    items: [{ path: '/ajustes', label: $localize`Ajustes`, icon: LucideSettings }],
   },
 ];

@@ -125,7 +125,8 @@ Pendiente o diferido:
   con vista previa en vivo y URL para copiar; editor del rotator), Simulador (cada tipo de evento
   y «prueba completa») y Ajustes. Backend nuevo: `POST/DELETE /assets`, `POST /rules/:id/test`,
   `GET /events/recent`.
-- Pruebas e2e del dashboard con Playwright (2026-10-15): ver [e2e.md](e2e.md). Pendiente del dashboard: textos en archivos de traducción.
+- Textos del dashboard en archivos de traducción (español e inglés, 2026-10-15): ver [i18n.md](i18n.md).
+- Pruebas e2e del dashboard con Playwright (2026-10-15): ver [e2e.md](e2e.md).
 
 ## Criterios de salida de fase 1 (verificables)
 
@@ -163,4 +164,5 @@ Pendiente o diferido:
   copia previa de la base y rollback automático. El paquete se probó en Linux (extraer, `npm ci
   --omit=dev`, arrancar, `/health`, panel y overlays); **los scripts de PowerShell no se han
   podido ejecutar** y hay que ensayarlos (lista al final de `despliegue-windows.md`).
-- Pendiente: runbook de incidentes completo, textos i18n, e2e con Playwright y el ensayo de 4 h.
+- Runbook de incidentes completo en [runbook.md](runbook.md) (2026-10-15).
+- Pendiente: el ensayo de 4 h.

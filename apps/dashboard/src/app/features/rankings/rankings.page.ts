@@ -36,7 +36,9 @@ import { ToastService } from '../../components/ui/toast';
 import { UI_TOGGLE_GROUP } from '../../components/ui/toggle-group';
 import { ApiClient } from '../../core/api-client';
 import { GOAL_METRIC_LABELS, METRIC_LABELS, SCOPE_LABELS, errorMessage } from '../../lib/labels';
+import { numberLocale } from '../../core/locale';
 import { GoalForm } from './goal-form';
+import { deleteLabel, editLabel } from '../../lib/accessible-labels';
 
 const REFRESH_MS = 5_000;
 
@@ -74,6 +76,9 @@ type GoalWithProgress = Goal & { progress?: Omit<GoalProgress, 'seq'> };
   templateUrl: './rankings.page.html',
 })
 export class RankingsPage {
+  protected readonly deleteLabel = deleteLabel;
+  protected readonly editLabel = editLabel;
+  protected readonly numberLocale = numberLocale;
   private readonly api = inject(ApiClient);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
@@ -110,12 +115,12 @@ export class RankingsPage {
   protected async reset(scope: Scope): Promise<void> {
     const warning =
       scope === 'total'
-        ? 'Se borrará el ranking histórico completo. Esta acción no se puede deshacer.'
-        : 'Los demás períodos no cambian.';
+        ? $localize`Se borrará el ranking histórico completo. Esta acción no se puede deshacer.`
+        : $localize`Los demás períodos no cambian.`;
     const ok = await this.confirm.confirm({
-      title: `¿Reiniciar el ranking «${SCOPE_LABELS[scope]}»?`,
+      title: $localize`¿Reiniciar el ranking «${SCOPE_LABELS[scope]}»?`,
       description: warning,
-      confirmLabel: 'Reiniciar',
+      confirmLabel: $localize`Reiniciar`,
       destructive: true,
     });
     if (!ok) return;
@@ -125,8 +130,8 @@ export class RankingsPage {
         confirm: true,
       });
       this.toast.success(
-        `Ranking «${SCOPE_LABELS[scope]}» reiniciado`,
-        `${r.removed} filas borradas.`,
+        $localize`Ranking «${SCOPE_LABELS[scope]}» reiniciado`,
+        $localize`${r.removed} filas borradas.`,
       );
     });
   }
@@ -137,21 +142,21 @@ export class RankingsPage {
       if (editing && editing !== 'new') await this.api.put(`/goals/${editing.id}`, definition);
       else await this.api.post('/goals', definition);
       this.editing.set(undefined);
-      this.toast.success(`Meta «${definition.name}» guardada`);
+      this.toast.success($localize`Meta «${definition.name}» guardada`);
     });
   }
 
   protected async deleteGoal(goal: Goal): Promise<void> {
     const ok = await this.confirm.confirm({
-      title: `¿Eliminar la meta «${goal.name}»?`,
-      description: 'Los overlays que la muestran dejarán de encontrarla.',
-      confirmLabel: 'Eliminar',
+      title: $localize`¿Eliminar la meta «${goal.name}»?`,
+      description: $localize`Los overlays que la muestran dejarán de encontrarla.`,
+      confirmLabel: $localize`Eliminar`,
       destructive: true,
     });
     if (!ok) return;
     await this.run(async () => {
       await this.api.delete(`/goals/${goal.id}`);
-      this.toast.success('Meta eliminada');
+      this.toast.success($localize`Meta eliminada`);
     });
   }
 
@@ -162,7 +167,7 @@ export class RankingsPage {
       .filter(Boolean);
     await this.run(async () => {
       await this.api.put<LeaderboardSettings>('/settings/leaderboard', { excludedUniqueIds });
-      this.toast.success('Lista de usuarios ocultos guardada');
+      this.toast.success($localize`Lista de usuarios ocultos guardada`);
     });
   }
 
