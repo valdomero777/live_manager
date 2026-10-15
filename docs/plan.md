@@ -125,7 +125,7 @@ Pendiente o diferido:
   con vista previa en vivo y URL para copiar; editor del rotator), Simulador (cada tipo de evento
   y «prueba completa») y Ajustes. Backend nuevo: `POST/DELETE /assets`, `POST /rules/:id/test`,
   `GET /events/recent`.
-- Pendiente del dashboard: textos en archivos de traducción y pruebas e2e con Playwright.
+- Pruebas e2e del dashboard con Playwright (2026-10-15): ver [e2e.md](e2e.md). Pendiente del dashboard: textos en archivos de traducción.
 
 ## Criterios de salida de fase 1 (verificables)
 
