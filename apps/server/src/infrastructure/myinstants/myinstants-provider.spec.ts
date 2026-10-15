@@ -42,6 +42,12 @@ describe('MyInstantsProvider', () => {
     });
   });
 
+  it('has no popular list: an empty query returns nothing without calling the API', async () => {
+    const { provider: p, urls } = provider(() => json({}, 503));
+    expect(await p.search('', 1)).toEqual({ query: '', page: 1, hasNext: false, results: [] });
+    expect(urls).toHaveLength(0);
+  });
+
   it('drops items that are malformed or point outside MyInstants', async () => {
     const evil = { ...VINE, id: 'x', mp3: 'https://evil.example/a.mp3' };
     const http = { ...VINE, id: 'y', mp3: 'http://www.myinstants.com/a.mp3' };

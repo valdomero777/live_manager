@@ -106,7 +106,15 @@ describe('sound triggers (MyInstants, remote URL only)', () => {
     expect(first.json<SoundSearchResult>().results).toEqual([VINE]);
     await t.api({ url });
     expect(searches).toHaveLength(1);
-    expect((await t.api({ url: `${API_PREFIX}/sounds/search` })).statusCode).toBe(400);
+    expect(
+      (await t.api({ url: `${API_PREFIX}/sounds/search?q=${'x'.repeat(101)}` })).statusCode,
+    ).toBe(400);
+  });
+
+  it('treats a missing query as the popular list', async () => {
+    const res = await t.api({ url: `${API_PREFIX}/sounds/search` });
+    expect(res.statusCode).toBe(200);
+    expect(res.json<SoundSearchResult>().query).toBe('');
   });
 
   it('hides provider failures behind a friendly message', async () => {

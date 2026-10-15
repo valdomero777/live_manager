@@ -83,6 +83,16 @@ describe('MyInstantsHtmlProvider', () => {
     expect(out.results.map((s) => s.id)).toEqual(['vine-boom-sound-70972']);
   });
 
+  it('reads the trending page when the query is empty and has no further pages', async () => {
+    const { provider: p, urls } = provider(() => html(page(VINE)));
+    const out = await p.search('', 1);
+    expect(urls[0]).toBe('https://www.myinstants.com/en/index/us/');
+    expect(out.results).toHaveLength(1);
+    expect(out.hasNext).toBe(false);
+    expect(await p.search('', 2)).toEqual({ query: '', page: 2, hasNext: false, results: [] });
+    expect(urls).toHaveLength(1);
+  });
+
   it('treats 404 as an empty result set', async () => {
     const { provider: p } = provider(() => html('Not found', { status: 404 }));
     expect(await p.search('zzzz', 1)).toEqual({

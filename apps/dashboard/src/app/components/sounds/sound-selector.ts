@@ -74,8 +74,8 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
         <header uiDialogHeader>
           <h2 i18n uiDialogTitle>Elegir sonido</h2>
           <p i18n uiDialogDescription>
-            Busca en MyInstants o en Freesound. El sonido se reproduce desde su sitio: no se
-            descarga.
+            Elige uno de los sonidos populares o busca en MyInstants o en Freesound. El sonido se
+            reproduce desde su sitio: no se descarga.
           </p>
         </header>
 
@@ -166,8 +166,8 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
               i18n-description
               i18n-title
               [icon]="searchIcon"
-              title="Busca un sonido"
-              description="Escribe una palabra: los resultados aparecen mientras escribes."
+              title="No hay sonidos para mostrar"
+              description="Escribe una palabra para buscar: los resultados aparecen mientras escribes."
               [bordered]="false"
             />
           } @else if (!sounds.results().length && !sounds.error()) {
@@ -180,6 +180,9 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
               [bordered]="false"
             />
           } @else {
+            @if (sounds.popular()) {
+              <p i18n class="pb-2 text-xs font-medium text-muted-foreground">Populares</p>
+            }
             <ul i18n-aria-label class="grid gap-1.5" aria-label="Resultados">
               @for (s of sounds.results(); track s.id) {
                 @let selected = s.id === selectedId();
@@ -270,6 +273,7 @@ export class SoundSelector {
 
   protected open(): void {
     this.ref = this.dialogs.open(this.dialogTpl(), { size: 'lg' });
+    void this.sounds.search('');
     this.ref.closed.subscribe(() => this.audio.stopSound());
   }
 

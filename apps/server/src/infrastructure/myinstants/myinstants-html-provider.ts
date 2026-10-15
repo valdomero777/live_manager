@@ -8,6 +8,8 @@ import type { Logger } from '../../application/ports/logger.js';
 import { SoundSourceError, type SoundProvider } from '../../application/ports/sound-provider.js';
 
 export const MYINSTANTS_SITE_URL = 'https://www.myinstants.com';
+/** Trending page: 36 sounds, no further pages. Used when the search text is empty. */
+const POPULAR_PATH = '/en/index/us/';
 const REQUEST_TIMEOUT_MS = 8_000;
 /** MyInstants renders 36 results per search page and has no pagination markup. */
 const PAGE_SIZE = 36;
@@ -70,9 +72,8 @@ export class MyInstantsHtmlProvider implements SoundProvider {
   ) {}
 
   async search(query: string, page: number): Promise<SoundSearchResult> {
-    const url = new URL('/en/search/', this.siteUrl);
-    url.searchParams.set('name', query);
-    if (page > 1) url.searchParams.set('page', String(page));
+    if (!query && page > 1) return { query, page, hasNext: false, results: [] };
+    const url = this.listUrl(query, page);
     const html = await this.fetchHtml(url);
     if (html === null) return { query, page, hasNext: false, results: [] };
 
@@ -86,7 +87,15 @@ export class MyInstantsHtmlProvider implements SoundProvider {
       const sound = this.normalize(slug, path, titles.get(slug));
       return sound ? [sound] : [];
     });
-    return { query, page, hasNext: buttons.length >= PAGE_SIZE, results };
+    return { query, page, hasNext: query !== '' && buttons.length >= PAGE_SIZE, results };
+  }
+
+  private listUrl(query: string, page: number): URL {
+    if (!query) return new URL(POPULAR_PATH, this.siteUrl);
+    const url = new URL('/en/search/', this.siteUrl);
+    url.searchParams.set('name', query);
+    if (page > 1) url.searchParams.set('page', String(page));
+    return url;
   }
 
   private normalize(slug: string, path: string, title: string | undefined): Sound | null {
