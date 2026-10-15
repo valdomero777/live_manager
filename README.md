@@ -51,6 +51,9 @@ Overlays de datos (misma `key`; todos aceptan `theme=card|clear|light`, `scale`,
 | `/overlay/goal/` | `goalId`, `showNumbers=0` |
 | `/overlay/stats/` | `fields=viewers,peakViewers,likes,diamonds,newFollowers,duration`, `layout=row\|column` |
 | `/overlay/rotator/` | `config=<id>` (se configura con `PUT /api/v1/rotators/<id>`) |
+| `/overlay/topgifter/` | `metric=diamonds\|gift_count\|likes`, `scope=session\|week\|total`, `title`, `name=alias` (líder del ranking) |
+| `/overlay/ticker/` | `messages=uno\|dos`, `speed` (px/s), `pause` (s); no usa WebSocket |
+| `/overlay/social/` | `profiles=youtube:@canal\|kick:usuario`, `interval` (s); no usa WebSocket |
 
 Para ensayar:
 

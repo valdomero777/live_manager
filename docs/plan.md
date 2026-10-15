@@ -90,6 +90,12 @@ en el navegador):
 - Overlays `/overlay/leaderboard`, `/overlay/goal`, `/overlay/stats` y `/overlay/rotator`.
   Animaciones FLIP y de barra solo con `transform`/`opacity`; temas `card`, `clear` y `light`;
   unos 32 KB gzip por overlay.
+- Overlays `/overlay/topgifter` (líder de un ranking, reutiliza su canal), `/overlay/ticker` y
+  `/overlay/social` (listas en el parámetro, separadas por `|`, sin WebSocket) y galería de plantillas
+  predefinidas en la página Overlays (catálogo en el panel, editable y guardable como plantilla propia).
+  Pendientes de la especificación de overlays que necesitan proyecciones nuevas en el servidor: feed de
+  últimos eventos, racha más larga, desafíos de regalos con filtro por regalo y guía regalo→acción;
+  y los que necesitan integración o motor propio: Spotify, subasta y ruleta.
 - API: `GET /leaderboards/:metric`, `POST /leaderboards/reset`, `GET|PUT /settings/leaderboard`,
   CRUD `/goals`, `GET /stats`, `GET|PUT /rotators/:id` y `GET /overlay-data/rotators/:id?key=`.
 - `npm run load-test`: el gate de carga contra los 500 ms de desfase.

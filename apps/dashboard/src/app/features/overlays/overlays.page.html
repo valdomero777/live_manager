@@ -71,6 +71,16 @@
           }
         </select>
       </ui-form-field>
+      } @case ('lines') {
+      <ui-form-field [label]="p.label" [for]="id" [description]="p.hint ?? ''">
+        <textarea
+          uiTextarea
+          [id]="id"
+          rows="4"
+          [value]="lines(p)"
+          (input)="setLines(p, $any($event.target).value)"
+        ></textarea>
+      </ui-form-field>
       } @case ('number') {
       <ui-form-field [label]="p.label" [for]="id">
         <input
@@ -225,6 +235,39 @@
     </div>
   </section>
 </div>
+
+<section uiCard aria-labelledby="preset-title">
+  <header uiCardHeader>
+    <h2 i18n uiCardTitle id="preset-title"><svg lucideLayoutTemplate /> Plantillas predefinidas</h2>
+    <p i18n uiCardDescription>
+      Punto de partida listo para usar. Se cargan en el configurador, donde puedes cambiar todos sus
+      parámetros y guardarlas como tu propia plantilla.
+    </p>
+  </header>
+  <div uiCardContent>
+    <ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      @for (preset of presets; track preset.id) {
+      <li class="flex items-start gap-3 rounded-lg border p-3">
+        <div class="grid min-w-0 flex-1 gap-1">
+          <span class="text-sm font-medium">{{ preset.label }}</span>
+          <span class="type-caption">{{ typeLabel(preset.type) }}</span>
+          <span class="type-secondary">{{ preset.description }}</span>
+        </div>
+        <button
+          uiButton
+          variant="outline"
+          size="sm"
+          type="button"
+          [attr.aria-label]="useLabel(preset)"
+          (click)="usePreset(preset)"
+        >
+          <ng-container i18n>Usar</ng-container>
+        </button>
+      </li>
+      }
+    </ul>
+  </div>
+</section>
 
 <section uiCard aria-labelledby="tpl-title">
   <header uiCardHeader>
