@@ -11,7 +11,6 @@ import {
 import type { ConfigStore } from '../application/ports/config-store.js';
 import { resolveSettings } from '../application/settings/resolve-settings.js';
 import { parseHostList, type WebhookPolicy } from '../domain/webhook/network-guard.js';
-import { DEFAULT_MYINSTANTS_API_URL } from '../infrastructure/myinstants/myinstants-provider.js';
 import { JsonConfigStore } from '../infrastructure/config/json-config-store.js';
 
 const DEFAULT_OVERLAYS_DIR = fileURLToPath(
@@ -56,7 +55,8 @@ export interface AppConfig {
   readonly signApiKey: string | undefined;
   readonly version: string;
   /** Base URL of the community MyInstants API; a deployment detail, not a UI setting. */
-  readonly myInstantsApiUrl: string;
+  /** Community MyInstants API; when unset, www.myinstants.com is read directly. */
+  readonly myInstantsApiUrl: string | undefined;
   /** Hosts the webhook action may call (WEBHOOK_ALLOWED_HOSTS); empty = webhooks disabled. */
   readonly webhookPolicy: WebhookPolicy;
   /** BACKUP_DIR: where daily database and weekly assets backups go. */
@@ -140,7 +140,7 @@ export function loadConfig(env: NodeJS.ProcessEnv, version: string): AppConfig {
     simulate: s.simulate,
     signApiKey: s.signApiKey || undefined,
     version,
-    myInstantsApiUrl: env['MYINSTANTS_API_URL'] || DEFAULT_MYINSTANTS_API_URL,
+    myInstantsApiUrl: env['MYINSTANTS_API_URL'] || undefined,
     backupDir: absolute(env['BACKUP_DIR'] || './data/backups'),
     recordPath: env['RECORD_PATH'] ? absolute(env['RECORD_PATH']) : undefined,
     webhookPolicy: {

@@ -106,8 +106,8 @@ tools/simulate.ts  CLI del simulador
 Triggers de sonido: `GET /api/v1/sounds/search?q=&page=&source=myinstants|freesound` ·
 `GET|POST /api/v1/triggers` · `GET|PUT|DELETE /api/v1/triggers/:id` · `POST /api/v1/triggers/:id/test`.
 Solo se guardan metadatos y la URL del MP3; el navegador (pestaña de audio) lo reproduce directamente
-desde MyInstants o Freesound. MyInstants se busca con la API comunitaria no oficial
-`MYINSTANTS_API_URL` (ver `.env.example`). Freesound usa su API oficial y necesita una clave gratuita
+desde MyInstants o Freesound. MyInstants se busca leyendo directamente `www.myinstants.com` (sin API
+oficial); si defines `MYINSTANTS_API_URL` (ver `.env.example`) se usa en su lugar una API comunitaria que alojes. Freesound usa su API oficial y necesita una clave gratuita
 (<https://freesound.org/apiv2/apply>) en **Ajustes → Sonidos** o `FREESOUND_API_KEY`; solo se muestran
 sonidos CC0 y CC BY de hasta 30 s (los CC BY requieren mencionar al autor).
 WebSocket: `/ws/screen/:screenId?key=` (overlays) y `/ws/admin` (dashboard).

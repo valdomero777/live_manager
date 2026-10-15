@@ -137,7 +137,7 @@ flowchart LR
 
 - Frontend ↔ Backend: REST JSON con errores `application/problem+json` (RFC 9457) y WebSocket `/ws/admin` (eventos en vivo, estado del conector).
 - Overlays ↔ Backend: WebSocket `/ws/screen/:screenId?key=`; sobres `{v, type, ts, payload}` versión 1; snapshot inicial + deltas con `seq`.
-- Backend ↔ externos: TikTok (librería), API comunitaria MyInstants (HTTPS, timeout 8 s), API oficial de Freesound (necesita clave), catálogo de regalos de TikTok (`TikTokGiftCatalog`) y los webhooks que el usuario permita (`WEBHOOK_ALLOWED_HOSTS`; timeout 3 s, sin redirecciones, protección SSRF y *circuit breaker*).
+- Backend ↔ externos: TikTok (librería), MyInstants (HTML público de `www.myinstants.com`, o una API comunitaria si se define `MYINSTANTS_API_URL`; HTTPS, timeout 8 s), API oficial de Freesound (necesita clave), catálogo de regalos de TikTok (`TikTokGiftCatalog`) y los webhooks que el usuario permita (`WEBHOOK_ALLOWED_HOSTS`; timeout 3 s, sin redirecciones, protección SSRF y *circuit breaker*).
 
 ---
 
@@ -256,7 +256,7 @@ Formato abreviado; todas con estado **IMPLEMENTADO** salvo indicación. Todas la
 | F2 | Simulador de eventos | `features/simulator` | `simulator-service.ts` | `POST /simulator/emit`, WS `simulator.emit` | todas las de ingesta | `app.e2e.spec.ts` |
 | F3 | Registro de eventos y vista en vivo | `features/events` | `ingest-live-event.ts` | `GET /events/recent`, WS `event.received` | `live_event`, `viewer` | `sqlite.integration.spec.ts` |
 | F4 | Reglas (CRUD, probar, duplicar) | `features/rules` | `rule-service.ts`, `rule-engine.ts` | `/rules`, `/rules/:id`, `/rules/:id/test` | `rule` | `rule-engine.spec.ts`, `conditions.spec.ts`, `rules-core.spec.ts`, `assets-rules.e2e.spec.ts` |
-| F5 | Triggers de sonido (MyInstants y Freesound) | `features/triggers` | `trigger-service.ts`, `trigger-executor.ts`, `myinstants-provider.ts` | `/sounds/search`, `/triggers…` | `sound_trigger` | `trigger-executor.spec.ts`, `sound-search-service.spec.ts`, `myinstants-provider.spec.ts`, `freesound-provider.spec.ts`, `triggers.e2e.spec.ts` |
+| F5 | Triggers de sonido (MyInstants y Freesound) | `features/triggers` | `trigger-service.ts`, `trigger-executor.ts`, `myinstants-provider.ts` | `/sounds/search`, `/triggers…` | `sound_trigger` | `trigger-executor.spec.ts`, `sound-search-service.spec.ts`, `myinstants-provider.spec.ts`, `myinstants-html-provider.spec.ts`, `freesound-provider.spec.ts`, `triggers.e2e.spec.ts` |
 | F6 | Assets (subir/borrar) | `features/assets` | `asset-service.ts` | `/assets` | `asset` | `assets-rules.e2e.spec.ts` |
 | F7 | Rankings | `features/rankings` | `leaderboard-service.ts` | `/leaderboards/:metric`, `/leaderboards/reset`, `/settings/leaderboard` | `leaderboard_total`, `metric_total`, `app_setting` | `projections.*.spec.ts` |
 | F8 | Metas con ciclos | `features/rankings` | `goal-service.ts` | `/goals…` | `goal`, `goal_cycle` | `projections.integration.spec.ts` |
@@ -527,7 +527,7 @@ erDiagram
 | --- | --- | --- | --- |
 | TikTok LIVE (protocolo no oficial vía `tiktok-live-connector` 2.5.0) | Eventos del live | `infrastructure/tiktok/*` | Alto: puede romperse sin aviso (R-01); firma opcional `TIKTOK_SIGN_API_KEY` (Euler Stream) |
 | Catálogo de regalos de TikTok | Lista de regalos para el editor | `tiktok-gift-catalog.ts` | Medio: con caché `stale` |
-| API comunitaria MyInstants (`https://myinstants-api.vercel.app`) | Buscar sonidos | `myinstants-provider.ts` | Medio-alto: tercero no oficial; el audio lo reproduce el navegador directamente desde `*.myinstants.com`. El 2026-10-14 respondió `503` durante un live real (ADR 0011) |
+| `www.myinstants.com` (HTML público de búsqueda) | Buscar sonidos | `myinstants-html-provider.ts` | Medio-alto: sin API oficial, el HTML puede cambiar o Cloudflare puede bloquear; el audio lo reproduce el navegador directamente desde `*.myinstants.com`. La API comunitaria que se usaba antes quedó pausada el 2026-10-14 (ADR 0011, ADR 0012) |
 | API de Freesound (oficial, con clave) | Segunda fuente de sonidos (solo CC0 y CC BY de hasta 30 s) | `freesound-provider.ts` | Bajo: API oficial; sin clave la búsqueda devuelve 503 |
 | Webhooks configurados por el usuario | Acción `webhook` | `http-webhook-client.ts` | Medio: solo hosts de `WEBHOOK_ALLOWED_HOSTS`; direcciones privadas bloqueadas salvo `WEBHOOK_PRIVATE_HOSTS` |
 | CDN de TikTok | Avatares/imagenes de regalos | overlays | Bajo (`referrerPolicy=no-referrer`, CSP `img-src https:`) |
@@ -557,7 +557,7 @@ No hay SMTP, SMS, almacenamiento en nube, colas, cachés externas ni OAuth.
 | `WEBHOOK_PRIVATE_HOSTS` | No | Subconjunto de los anteriores que puede resolver a direcciones privadas | vacío | No | solo env |
 | `LOG_LEVEL` | No | Nivel Pino | `info` | No | live |
 | `ADMIN_PASSWORD_HASH` | No | Hash argon2id de la contraseña | — | **Sí** | solo env |
-| `MYINSTANTS_API_URL` | No | Base de la API de sonidos | `https://myinstants-api.vercel.app` | No | solo env |
+| `MYINSTANTS_API_URL` | No | API comunitaria alojada por ti; vacío = leer `www.myinstants.com` directamente | vacío | No | solo env |
 | `DASHBOARD_DIR` | No | Build del panel | `apps/dashboard/dist/dashboard/browser` | No | solo env |
 | `TIKLIVE_URL` / `TIKLIVE_PASSWORD` | CLI | `tools/*` | `http://localhost:3000` / — | **Sí** | solo herramientas |
 | `TIKLIVE_BACKEND` | No | Proxy de Vite en dev | `http://localhost:3000` | No | dev |
@@ -606,7 +606,7 @@ Reglas: precedencia **panel (`config.json`) > entorno > defecto**; valores invá
 | Runtime | Node.js ≥22 (Angular 21 verificado en 22.20) |
 | BD | SQLite embebida (sin servicio) |
 | Navegador | Moderno en la PC de stream (Chromium/LIVE Studio/OBS); autoplay requiere pulsar «Iniciar audio». Para las pruebas e2e, Chromium de Playwright |
-| Servicios externos | Internet hacia TikTok, `myinstants-api.vercel.app`, `*.myinstants.com`, `freesound.org` (API y `cdn.freesound.org`), CDN de TikTok |
+| Servicios externos | Internet hacia TikTok, `www.myinstants.com` (y `*.myinstants.com` para el audio), `freesound.org` (API y `cdn.freesound.org`), CDN de TikTok |
 
 | Servicio | Puerto | Protocolo | Uso |
 | --- | --- | --- | --- |
@@ -808,7 +808,7 @@ Guía de incidentes durante un live (triage, pasos y recuperación): [`docs/runb
 | Conector `reconnecting`/`stopped` | `lastError` | Red; fallo de firma; límites | Ver `Estado`; revisar `TIKTOK_SIGN_API_KEY`; actualizar la librería |
 | Reinicio desde Ajustes no vuelve | Panel sin respuesta | F-02 | Reiniciar el proceso manualmente |
 | Docker no inicia | — | **No existe Docker** | — |
-| Servicio externo no responde | `/sounds/search` 502 | MyInstants (ya falló en un live real, ADR 0011) o Freesound | Probar la otra fuente; revisar `MYINSTANTS_API_URL` y la clave de Freesound (503 si falta) |
+| Servicio externo no responde | `/sounds/search` 502 | MyInstants (bloqueo de Cloudflare, cambio de HTML o API comunitaria caída; ADR 0011/0012) o Freesound | Probar la otra fuente; si `MYINSTANTS_API_URL` apunta a una API caída, vaciarla; revisar `MYINSTANTS_API_URL` y la clave de Freesound (503 si falta) |
 | Pruebas inestables | Fallos por tiempo | CPU saturada | Ejecutar aislada: `npx vitest run <archivo>` |
 
 Comandos útiles: `curl http://localhost:3000/api/v1/health`, `npm run watch-events`, `npm test`.
