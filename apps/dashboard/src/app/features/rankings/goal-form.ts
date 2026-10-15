@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   inject,
   input,
@@ -11,7 +12,7 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
   GOAL_METRICS,
-  GoalDefinitionSchema,
+  GoalRequestSchema,
   type ActionConfig,
   type Goal,
   type GoalDefinition,
@@ -23,6 +24,7 @@ import { UiFormField } from '../../components/ui/form-field';
 import { UiInput, UiNativeSelect } from '../../components/ui/input';
 import { UiSwitch } from '../../components/ui/switch';
 import { AssetsStore } from '../../core/assets.store';
+import { GiftsStore } from '../../core/gifts.store';
 import { GOAL_METRIC_LABELS } from '../../lib/labels';
 
 /** Celebration presets: sound + alert + speech. Other onReach actions are kept as they are. */
@@ -32,6 +34,25 @@ function splitActions(actions: readonly ActionConfig[]) {
   const speak = actions.find((a) => a.type === 'speak');
   const rest = actions.filter((a) => a !== sound && a !== alert && a !== speak);
   return { sound, alert, speak, rest };
+}
+
+interface CelebrationFields {
+  readonly soundId: string;
+  readonly alertText: string;
+  readonly speakText: string;
+}
+
+/** The kept actions plus the sound, alert and voice typed in the form. */
+function celebration(v: CelebrationFields, rest: readonly ActionConfig[]): ActionConfig[] {
+  const onReach: ActionConfig[] = [...rest];
+  if (v.soundId) {
+    onReach.push({ type: 'playSound', screen: 'audio', assetId: Number(v.soundId), volume: 1 });
+  }
+  const alert = v.alertText.trim();
+  if (alert) onReach.push({ type: 'showAlert', screen: 'alerts', text: alert, durationMs: 6000 });
+  const speech = v.speakText.trim();
+  if (speech) onReach.push({ type: 'speak', screen: 'audio', text: speech, volume: 1 });
+  return onReach;
 }
 
 /** Create or edit a goal (RF-15) with a simple celebration made of sound, alert and voice. */
@@ -64,6 +85,29 @@ function splitActions(actions: readonly ActionConfig[]) {
         </ui-form-field>
         <ui-form-field i18n-label label="Objetivo" for="g-target">
           <input uiInput id="g-target" type="number" min="1" formControlName="target" />
+        </ui-form-field>
+        <ui-form-field
+          class="col-span-2"
+          i18n-description
+          i18n-label
+          label="Solo cuenta este regalo"
+          for="g-gift"
+          description="Desafío de regalos: ignora los demás. Cuenta desde que lo guardas, no recuenta regalos pasados. No sirve con likes."
+        >
+          <select
+            uiNativeSelect
+            id="g-gift"
+            formControlName="giftId"
+            aria-describedby="g-gift-description"
+          >
+            <option i18n value="">Todos los regalos</option>
+            @if (savedGift(); as saved) {
+              <option [value]="saved.id">{{ saved.name }}</option>
+            }
+            @for (g of gifts(); track g.id) {
+              <option [value]="g.id">{{ g.name }} · {{ g.diamonds }}</option>
+            }
+          </select>
         </ui-form-field>
         <ui-form-field i18n-label label="Período" for="g-scope">
           <select uiNativeSelect id="g-scope" formControlName="scope">
@@ -167,6 +211,16 @@ export class GoalForm {
   readonly cancelled = output();
 
   protected readonly assets = inject(AssetsStore);
+  private readonly giftStore = inject(GiftsStore);
+  protected readonly gifts = computed(() => this.giftStore.catalog()?.gifts ?? []);
+  /** The goal's own gift stays selectable when the catalog is unavailable or lacks it. */
+  protected readonly savedGift = computed(() => {
+    const goal = this.goal();
+    const known = this.gifts().some((g) => g.id === goal?.giftId);
+    return goal?.giftId != null && !known
+      ? { id: goal.giftId, name: goal.giftName ?? `#${goal.giftId}` }
+      : undefined;
+  });
   protected readonly metrics = GOAL_METRICS;
   protected readonly metricLabels = GOAL_METRIC_LABELS;
   protected readonly error = signal<string | undefined>(undefined);
@@ -179,11 +233,13 @@ export class GoalForm {
     soundId: new FormControl('', { nonNullable: true }),
     alertText: new FormControl('¡{goalName} cumplida!', { nonNullable: true }),
     speakText: new FormControl('', { nonNullable: true }),
+    giftId: new FormControl('', { nonNullable: true }),
     active: new FormControl(true, { nonNullable: true }),
   });
 
   constructor() {
     void this.assets.load();
+    void this.giftStore.load();
     effect(() => {
       const goal = this.goal();
       if (goal) this.fill(goal);
@@ -192,26 +248,16 @@ export class GoalForm {
 
   protected submit(): void {
     const v = this.form.getRawValue();
-    const rest = splitActions(this.goal()?.onReach ?? []).rest;
-    const onReach: ActionConfig[] = [...rest];
-    if (v.soundId)
-      onReach.push({ type: 'playSound', screen: 'audio', assetId: Number(v.soundId), volume: 1 });
-    if (v.alertText.trim()) {
-      onReach.push({
-        type: 'showAlert',
-        screen: 'alerts',
-        text: v.alertText.trim(),
-        durationMs: 6000,
-      });
-    }
-    if (v.speakText.trim())
-      onReach.push({ type: 'speak', screen: 'audio', text: v.speakText.trim(), volume: 1 });
-    const parsed = GoalDefinitionSchema.safeParse({
+    const onReach = celebration(v, splitActions(this.goal()?.onReach ?? []).rest);
+    const gift = this.selectedGift(v.giftId);
+    const parsed = GoalRequestSchema.safeParse({
       name: v.name,
       metric: v.metric,
       target: v.target,
       scope: v.scope,
       repeatFactor: v.repeat ? Number(v.repeat) : null,
+      giftId: gift?.id ?? null,
+      giftName: gift?.name ?? null,
       active: v.active,
       onReach,
     });
@@ -225,6 +271,13 @@ export class GoalForm {
     this.saved.emit(parsed.data);
   }
 
+  private selectedGift(value: string): { id: number; name: string } | undefined {
+    if (!value) return undefined;
+    const id = Number(value);
+    const found = this.gifts().find((g) => g.id === id);
+    return { id, name: found?.name ?? this.goal()?.giftName ?? `#${id}` };
+  }
+
   private fill(goal: Goal): void {
     const { sound, alert, speak } = splitActions(goal.onReach);
     this.form.reset({
@@ -236,6 +289,7 @@ export class GoalForm {
       soundId: sound?.type === 'playSound' ? String(sound.assetId) : '',
       alertText: alert?.type === 'showAlert' ? alert.text : '',
       speakText: speak?.type === 'speak' ? speak.text : '',
+      giftId: goal.giftId === null ? '' : String(goal.giftId),
       active: goal.active,
     });
   }

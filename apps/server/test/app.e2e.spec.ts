@@ -203,6 +203,41 @@ describe('app end to end (simulator -> rules -> queue -> overlay)', () => {
     ws.terminate();
   });
 
+  it('counts a gift challenge only for its gift and rejects a gift filter on likes', async () => {
+    const bad = await t.api({
+      method: 'POST',
+      url: `${API_PREFIX}/goals`,
+      payload: { name: 'Mal', metric: 'likes', target: 10, giftId: 5655, giftName: 'Rose' },
+    });
+    expect(bad.statusCode).toBe(400);
+
+    const created = await t.api({
+      method: 'POST',
+      url: `${API_PREFIX}/goals`,
+      payload: { name: 'Mil rosas', metric: 'gifts', target: 4, giftId: 5655, giftName: 'Rose' },
+    });
+    expect(created.statusCode).toBe(201);
+    const goalId = created.json<{ id: number }>().id;
+
+    const ws = await app.http.injectWS(`/ws/screen/rotator?key=${KEY}`);
+    const screen = collect(ws);
+    hello(ws, 'rotator', [{ kind: 'goal', goalId }]);
+    expect((await screen.next('goal.progress')).payload).toMatchObject({
+      current: 0,
+      giftId: 5655,
+      giftName: 'Rose',
+    });
+
+    const emit = (payload: object) =>
+      t.api({ method: 'POST', url: `${API_PREFIX}/simulator/emit`, payload });
+    await emit({ kind: 'gift', user: 'ana', giftId: 99, giftName: 'Otro', quantity: 3 });
+    await emit({ kind: 'gift', user: 'ana', giftId: 5655, giftName: 'Rose', quantity: 2 });
+    let progress = await screen.next('goal.progress');
+    while (progress.payload.current < 2) progress = await screen.next('goal.progress');
+    expect(progress.payload).toMatchObject({ current: 2, reached: false });
+    ws.terminate();
+  });
+
   it('resets the session ranking but keeps totals, and requires confirm for total (RF-14)', async () => {
     await t.api({
       method: 'POST',

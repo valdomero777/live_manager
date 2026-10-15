@@ -403,6 +403,35 @@ export const OVERLAY_TYPES: readonly OverlayType[] = [
     ],
   },
   {
+    id: 'challenge',
+    label: $localize`Desafío de regalos`,
+    path: '/overlay/challenge/',
+    help: $localize`Barra de un desafío que solo cuenta un regalo concreto. Créalo en «Rankings y metas» eligiendo el regalo y selecciónalo aquí; el mensaje de hito solo se muestra, no ejecuta nada.`,
+    params: [
+      { key: 'goalId', label: $localize`Desafío`, kind: 'goal', default: '1' },
+      {
+        key: 'reward',
+        label: $localize`Mensaje al completarse (opcional)`,
+        kind: 'text',
+        default: '',
+      },
+      {
+        key: 'showNumbers',
+        label: $localize`Números`,
+        kind: 'select',
+        default: '',
+        options: [
+          { value: '', label: $localize`Mostrar` },
+          { value: '0', label: $localize`Ocultar` },
+        ],
+      },
+      THEME,
+      SCALE,
+      FONT,
+      DEBUG,
+    ],
+  },
+  {
     id: 'audio',
     label: $localize`Pestaña de audio`,
     path: '/screen/audio/',
@@ -541,6 +570,20 @@ export const OVERLAY_PRESETS: readonly OverlayPreset[] = [
     description: $localize`La misma guía en horizontal, para una franja del escenario.`,
     type: 'giftguide',
     params: { layout: 'row', speed: '60' },
+  },
+  {
+    id: 'gift-challenge',
+    label: $localize`Desafío de un regalo`,
+    description: $localize`Meta compartida que solo suma un regalo (por ejemplo, 1000 rosas). Crea el desafío en «Rankings y metas» y elígelo aquí.`,
+    type: 'challenge',
+    params: { goalId: '1' },
+  },
+  {
+    id: 'gift-challenge-reward',
+    label: $localize`Desafío con hito`,
+    description: $localize`El desafío anuncia tu hito al completarse. Escribe el mensaje antes de usarla; la recompensa no se ejecuta sola.`,
+    type: 'challenge',
+    params: { goalId: '1', reward: '¡Toca la sorpresa!' },
   },
   {
     id: 'ticker',

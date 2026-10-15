@@ -316,6 +316,16 @@
   color: var(--panel-muted);
 }
 
+/* ---- gift challenge: the goal bar plus the counted gift and the completion message ---- */
+.challenge__gift {
+  margin: 0 0 0.3em;
+  color: var(--panel-muted);
+}
+.challenge__done {
+  margin: 0.4em 0 0;
+  font-weight: 800;
+}
+
 /* ---- ticker: a full-width strip; the text slides with the Web Animations API (transform) ---- */
 .stage--ticker {
   padding: 0;

@@ -1,5 +1,5 @@
 import {
-  GoalDefinitionSchema,
+  GoalRequestSchema,
   LeaderboardResetSchema,
   LeaderboardSettingsSchema,
   MAX_LEADERBOARD_LIMIT,
@@ -92,7 +92,7 @@ function registerGoalRoutes(app: FastifyInstance, p: ProjectionServices): void {
   app.get('/goals', () => p.goals.list());
 
   app.post('/goals', async (req, reply) => {
-    const goal = await p.goals.create(GoalDefinitionSchema.parse(req.body));
+    const goal = await p.goals.create(GoalRequestSchema.parse(req.body));
     p.publisher.markDirty(`goal:${goal.id}`);
     return reply.status(201).send(goal);
   });
@@ -106,7 +106,7 @@ function registerGoalRoutes(app: FastifyInstance, p: ProjectionServices): void {
 
   app.put('/goals/:id', async (req, reply) => {
     const { id } = IdParams.parse(req.params);
-    const goal = await p.goals.update(id, GoalDefinitionSchema.parse(req.body));
+    const goal = await p.goals.update(id, GoalRequestSchema.parse(req.body));
     if (!goal) return notFound(reply, `goal ${id}`);
     p.publisher.markDirty(`goal:${id}`);
     return goal;

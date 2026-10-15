@@ -14,6 +14,12 @@ import type { LeaderboardReader } from '../ports/leaderboard-repository.js';
 import type { Logger } from '../ports/logger.js';
 import type { IdGenerator } from '../ports/scheduler.js';
 
+/** A gift challenge only reacts to final gifts of its gift; any other goal reacts to every event. */
+function countsFor(goal: Goal, event: LiveEvent): boolean {
+  if (goal.giftId === null) return true;
+  return event.type === 'gift' && event.isStreakFinal && event.giftId === goal.giftId;
+}
+
 /** Goal celebrations outrank ordinary rule reactions in the per-screen queues. */
 export const GOAL_ACTION_PRIORITY = 80;
 
@@ -62,7 +68,11 @@ export class GoalService implements GoalAdjuster {
   }
 
   async update(id: number, definition: GoalDefinition): Promise<Goal | undefined> {
+    const previous = this.get(id);
     const goal = await this.deps.repo.update(id, definition);
+    if (previous && previous.giftId !== definition.giftId) {
+      await this.deps.repo.clearGiftTotals(id);
+    }
     await this.reload();
     return goal;
   }
@@ -76,10 +86,21 @@ export class GoalService implements GoalAdjuster {
   /** Checks goals fed by the changed metrics; returns the ids whose progress may have moved. */
   async evaluate(event: LiveEvent, metrics: readonly Metric[]): Promise<number[]> {
     const affected = this.goals.filter(
-      (g) => g.active && metrics.includes(goalMetricToMetric(g.metric)),
+      (g) => g.active && metrics.includes(goalMetricToMetric(g.metric)) && countsFor(g, event),
     );
-    for (const goal of affected) await this.checkReached(goal, event.id);
+    for (const goal of affected) {
+      if (goal.giftId !== null) await this.countGift(goal, event);
+      await this.checkReached(goal, event.id);
+    }
     return affected.map((g) => g.id);
+  }
+
+  /** A gift challenge keeps its own tally: the room totals cannot tell one gift from another. */
+  private async countGift(goal: Goal, event: LiveEvent): Promise<void> {
+    if (event.type !== 'gift') return;
+    const key = goal.scope === 'total' ? 'total' : `session:${event.sessionId}`;
+    const amount = goal.metric === 'gifts' ? event.quantity : event.diamondValue * event.quantity;
+    await this.deps.repo.addGiftTotal(goal.id, key, amount);
   }
 
   /** Called when a goal's progress changes without an event (manual adjustment). */
@@ -109,7 +130,8 @@ export class GoalService implements GoalAdjuster {
     const current = key === undefined ? 0 : await this.currentValue(goal, key);
     const last = key === undefined ? 0 : await this.deps.repo.lastCycle(goal.id, key);
     const status = goalStatus(goal, current, last);
-    return { goalId: goal.id, name: goal.name, metric: goal.metric, current, ...status };
+    const gift = goal.giftId === null ? {} : { giftId: goal.giftId, giftName: goal.giftName };
+    return { goalId: goal.id, name: goal.name, metric: goal.metric, current, ...status, ...gift };
   }
 
   private async checkReached(goal: Goal, eventId: string): Promise<void> {
@@ -156,7 +178,10 @@ export class GoalService implements GoalAdjuster {
   }
 
   private async currentValue(goal: Goal, key: string): Promise<number> {
-    const earned = await this.deps.totals.roomTotal(goalMetricToMetric(goal.metric), key);
+    const earned =
+      goal.giftId === null
+        ? await this.deps.totals.roomTotal(goalMetricToMetric(goal.metric), key)
+        : await this.deps.repo.giftTotal(goal.id, key);
     const manual = await this.deps.repo.adjustment(goal.id, key);
     return Math.max(0, earned + manual);
   }

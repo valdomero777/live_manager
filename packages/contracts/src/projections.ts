@@ -62,9 +62,23 @@ export const GoalDefinitionSchema = z.object({
   /** When set, a reached goal starts a new cycle with target x repeatFactor. */
   repeatFactor: z.number().min(1.01).max(100).nullable().default(null),
   active: z.boolean().default(true),
+  /**
+   * Gift challenge: when set, only that gift counts (by diamonds or by units; never likes).
+   * Counting starts when the goal is saved with this filter; past gifts are not recounted.
+   */
+  giftId: z.number().int().nullable().default(null),
+  /** Display name of the filtered gift, so the overlay needs no catalog. */
+  giftName: z.string().trim().min(1).max(60).nullable().default(null),
 });
 export type GoalDefinition = z.infer<typeof GoalDefinitionSchema>;
 export type GoalDefinitionInput = z.input<typeof GoalDefinitionSchema>;
+
+/** What the API accepts: a gift filter needs a metric that gifts can feed. */
+export const GoalRequestSchema = GoalDefinitionSchema.superRefine((g, ctx) => {
+  if (g.giftId !== null && g.metric === 'likes') {
+    ctx.addIssue({ code: 'custom', path: ['giftId'], message: 'A gift filter cannot count likes' });
+  }
+});
 
 export const GoalSchema = GoalDefinitionSchema.extend({ id: z.number().int().positive() });
 export type Goal = z.infer<typeof GoalSchema>;
@@ -78,6 +92,9 @@ export const GoalProgressSchema = z.object({
   ratio: z.number().min(0).max(1),
   cycle: z.number().int().positive(),
   reached: z.boolean(),
+  /** Set for a gift challenge: the only gift that counts. */
+  giftId: z.number().int().nullable().optional(),
+  giftName: z.string().nullable().optional(),
   seq: z.number().int().nonnegative(),
 });
 export type GoalProgress = z.infer<typeof GoalProgressSchema>;
