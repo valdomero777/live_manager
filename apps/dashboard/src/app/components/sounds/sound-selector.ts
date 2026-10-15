@@ -32,6 +32,7 @@ import { UiSkeleton, UiSpinner } from '../ui/feedback';
 import { UiInput } from '../ui/input';
 import { UI_TOGGLE_GROUP } from '../ui/toggle-group';
 import { SoundPreview } from './sound-preview';
+import { selectLabel } from '../../lib/accessible-labels';
 
 /** Licence notes shown next to Freesound results. */
 const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
@@ -210,8 +211,7 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
                     size="sm"
                     type="button"
                     [variant]="selected ? 'secondary' : 'default'"
-                    aria-label="Seleccionar {{ s.title }}"
-                    i18n-aria-label
+                    [attr.aria-label]="selectLabel(s.title)"
                     (click)="pick(s)"
                   >
                     @if (selected) {
@@ -248,6 +248,7 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
   `,
 })
 export class SoundSelector {
+  protected readonly selectLabel = selectLabel;
   protected readonly sounds = inject(SoundsStore);
   protected readonly audio = inject(AudioService);
   private readonly dialogs = inject(UiDialogService);

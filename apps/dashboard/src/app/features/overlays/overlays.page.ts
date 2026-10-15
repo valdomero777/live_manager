@@ -36,6 +36,7 @@ import {
   type OverlayType,
 } from './overlay-catalog';
 import { RotatorEditor } from './rotator-editor';
+import { deleteLabel } from '../../lib/accessible-labels';
 
 function isTemplateType(id: string): id is OverlayTemplateType {
   return (OVERLAY_TEMPLATE_TYPES as readonly string[]).includes(id);
@@ -74,6 +75,7 @@ function isTemplateType(id: string): id is OverlayTemplateType {
   templateUrl: './overlays.page.html',
 })
 export class OverlaysPage {
+  protected readonly deleteLabel = deleteLabel;
   private readonly api = inject(ApiClient);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly confirm = inject(ConfirmService);

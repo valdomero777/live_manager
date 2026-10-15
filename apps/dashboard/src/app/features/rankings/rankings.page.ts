@@ -38,6 +38,7 @@ import { ApiClient } from '../../core/api-client';
 import { GOAL_METRIC_LABELS, METRIC_LABELS, SCOPE_LABELS, errorMessage } from '../../lib/labels';
 import { numberLocale } from '../../core/locale';
 import { GoalForm } from './goal-form';
+import { deleteLabel, editLabel } from '../../lib/accessible-labels';
 
 const REFRESH_MS = 5_000;
 
@@ -75,6 +76,8 @@ type GoalWithProgress = Goal & { progress?: Omit<GoalProgress, 'seq'> };
   templateUrl: './rankings.page.html',
 })
 export class RankingsPage {
+  protected readonly deleteLabel = deleteLabel;
+  protected readonly editLabel = editLabel;
   protected readonly numberLocale = numberLocale;
   private readonly api = inject(ApiClient);
   private readonly confirm = inject(ConfirmService);

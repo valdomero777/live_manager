@@ -14,6 +14,7 @@ import { UiButton } from '../ui/button';
 import { UiSpinner } from '../ui/feedback';
 import { UiSlider } from '../ui/input';
 import { absoluteSoundUrl } from './sound-url';
+import { playbackLabel } from '../../lib/accessible-labels';
 
 /**
  * The chosen sound: play / pause / stop and the volume it will have on stream. Changing the
@@ -53,12 +54,7 @@ import { absoluteSoundUrl } from './sound-url';
     </div>
 
     <div class="flex flex-wrap items-center gap-3">
-      <div
-        class="flex items-center gap-1"
-        role="group"
-        aria-label="Reproducción de {{ title() }}"
-        i18n-aria-label
-      >
+      <div class="flex items-center gap-1" role="group" [attr.aria-label]="playbackLabel(title())">
         @if (loading()) {
           <button
             i18n-aria-label
@@ -144,6 +140,7 @@ import { absoluteSoundUrl } from './sound-url';
   `,
 })
 export class SoundPlayer {
+  protected readonly playbackLabel = playbackLabel;
   protected readonly audio = inject(AudioService);
   readonly url = input.required<string>();
   readonly title = input.required<string>();

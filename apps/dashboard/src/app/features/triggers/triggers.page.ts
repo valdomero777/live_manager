@@ -42,6 +42,7 @@ import { ToastService } from '../../components/ui/toast';
 import { AudioService } from '../../core/audio.service';
 import { TriggersStore } from '../../core/triggers.store';
 import { errorMessage } from '../../lib/labels';
+import { moreActionsLabel } from '../../lib/accessible-labels';
 
 /** What the form edits; becomes a TriggerDefinition on save. */
 interface Draft {
@@ -112,6 +113,7 @@ function percent(volume: number): number {
   templateUrl: './triggers.page.html',
 })
 export class TriggersPage {
+  protected readonly moreActionsLabel = moreActionsLabel;
   protected readonly store = inject(TriggersStore);
   protected readonly audio = inject(AudioService);
   private readonly confirm = inject(ConfirmService);

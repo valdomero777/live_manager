@@ -11,8 +11,7 @@
         type="search"
         class="pl-9"
         placeholder="Buscar regalo…"
-        aria-label="{{ label() }}: buscar"
-        i18n-aria-label
+        [attr.aria-label]="searchLabel(label())"
         [value]="query()"
         (input)="search($any($event.target).value)"
       />
@@ -54,10 +53,8 @@
       role="listitem"
       class="grid cursor-pointer justify-items-center gap-1.5 rounded-lg border bg-surface px-1.5 pt-2.5 pb-2 transition-[border-color,background-color,transform] hover:-translate-y-px hover:border-gift focus-visible:ring-[3px] focus-visible:ring-ring/40 focus-visible:outline-none aria-pressed:border-gift aria-pressed:bg-gift-soft"
       [attr.aria-pressed]="isSelected(gift)"
-      aria-label="{{ gift.name }}, {{ gift.diamonds }} monedas"
-      i18n-aria-label
-      title="{{ gift.name }} · ID {{ gift.id }}"
-      i18n-title
+      [attr.aria-label]="giftLabel(gift.name, gift.diamonds)"
+      [attr.title]="giftTitle(gift.name, gift.id)"
       (click)="pick.emit(gift)"
     >
       <span class="grid size-12 place-items-center rounded-full bg-surface-active">

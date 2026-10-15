@@ -8,6 +8,7 @@ import { OVERLAY_TYPES, buildOverlayUrl } from '../../features/overlays/overlay-
 import { EmptyState } from '../shared/empty-state';
 import { UiBadge } from '../ui/badge';
 import { UiSwitch } from '../ui/switch';
+import { liveOverlayTitle } from '../../lib/accessible-labels';
 
 const ALERTS_KEY = 'tiklive.dashboard.alerts';
 
@@ -59,8 +60,7 @@ function readAlertsPreference(): boolean {
             <div class="aspect-video overflow-hidden rounded-lg border bg-checker">
               <iframe
                 [src]="tile.url"
-                title="Overlay en vivo: {{ tile.name }}"
-                i18n-title
+                [title]="liveOverlayTitle(tile.name)"
                 class="size-full border-0 bg-transparent scheme-light"
               ></iframe>
             </div>
@@ -79,6 +79,7 @@ function readAlertsPreference(): boolean {
   `,
 })
 export class LiveOverlays {
+  protected readonly liveOverlayTitle = liveOverlayTitle;
   protected readonly keys = inject(OverlayKeyStore);
   private readonly templates = inject(OverlayTemplatesStore);
   private readonly sanitizer = inject(DomSanitizer);

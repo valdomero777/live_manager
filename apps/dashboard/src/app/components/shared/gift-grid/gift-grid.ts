@@ -16,6 +16,7 @@ import { UiSkeleton, UiSpinner } from '../../ui/feedback';
 import { UiInput } from '../../ui/input';
 import { UiTooltip } from '../../ui/tooltip';
 import { numberLocale } from '../../../core/locale';
+import { searchLabel, giftLabel, giftTitle } from '../../../lib/accessible-labels';
 
 /** Gifts shown before the list is filtered: the grid stays light with 600+ gifts. */
 const PAGE = 60;
@@ -42,6 +43,9 @@ const PAGE = 60;
   templateUrl: './gift-grid.html',
 })
 export class GiftGrid {
+  protected readonly searchLabel = searchLabel;
+  protected readonly giftLabel = giftLabel;
+  protected readonly giftTitle = giftTitle;
   protected readonly numberLocale = numberLocale;
   readonly selected = input<string | number | null | undefined>();
   readonly label = input($localize`Regalos de TikTok`);

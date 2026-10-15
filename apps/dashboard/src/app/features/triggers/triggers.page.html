@@ -187,8 +187,7 @@
       variant="ghost"
       size="icon-sm"
       type="button"
-      aria-label="Más acciones para {{ t.name }}"
-      i18n-aria-label
+      [attr.aria-label]="moreActionsLabel(t.name)"
       [cdkMenuTriggerFor]="more"
       [cdkMenuTriggerData]="{ $implicit: t }"
     >

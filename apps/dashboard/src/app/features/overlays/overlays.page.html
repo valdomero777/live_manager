@@ -264,8 +264,7 @@
             variant="ghost-destructive"
             size="icon-sm"
             type="button"
-            aria-label="Eliminar {{ t.name }}"
-            i18n-aria-label
+            [attr.aria-label]="deleteLabel(t.name)"
             (click)="deleteTemplate(t)"
           >
             <svg lucideTrash2 />

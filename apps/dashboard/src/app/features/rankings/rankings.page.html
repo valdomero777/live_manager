@@ -144,8 +144,7 @@
             variant="ghost"
             size="icon-sm"
             type="button"
-            aria-label="Editar {{ g.name }}"
-            i18n-aria-label
+            [attr.aria-label]="editLabel(g.name)"
             (click)="editing.set(g)"
           >
             <svg lucidePencil />
@@ -155,8 +154,7 @@
             variant="ghost-destructive"
             size="icon-sm"
             type="button"
-            aria-label="Eliminar {{ g.name }}"
-            i18n-aria-label
+            [attr.aria-label]="deleteLabel(g.name)"
             (click)="deleteGoal(g)"
             [disabled]="busy()"
           >

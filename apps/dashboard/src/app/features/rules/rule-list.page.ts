@@ -32,6 +32,7 @@ import { ToastService } from '../../components/ui/toast';
 import { AssetsStore } from '../../core/assets.store';
 import { RulesStore } from '../../core/rules.store';
 import { errorMessage } from '../../lib/labels';
+import { moreActionsLabel } from '../../lib/accessible-labels';
 
 function actionView(
   action: ActionConfig,
@@ -141,8 +142,7 @@ function badgesOf(rule: Rule): string[] {
               variant="ghost"
               size="icon-sm"
               type="button"
-              aria-label="Más acciones para {{ item.rule.name }}"
-              i18n-aria-label
+              [attr.aria-label]="moreActionsLabel(item.rule.name)"
               [cdkMenuTriggerFor]="more"
               [cdkMenuTriggerData]="{ $implicit: item.rule }"
             >
@@ -190,6 +190,7 @@ function badgesOf(rule: Rule): string[] {
   `,
 })
 export class RuleListPage {
+  protected readonly moreActionsLabel = moreActionsLabel;
   private readonly store = inject(RulesStore);
   private readonly assets = inject(AssetsStore);
   private readonly confirm = inject(ConfirmService);
