@@ -87,6 +87,13 @@ export interface Database {
     on_reach: string | null;
     repeat_factor: number | null;
     active: number;
+    gift_id: number | null;
+    gift_name: string | null;
+  };
+  goal_gift_total: {
+    goal_id: number;
+    scope_key: string;
+    value: number;
   };
   goal_cycle: {
     goal_id: number;

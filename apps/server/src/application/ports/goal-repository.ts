@@ -12,6 +12,11 @@ export interface GoalRepository {
   recordCycle(goalId: number, scopeKey: string, cycle: number, reachedAt: number): Promise<boolean>;
   /** Manual progress (updateGoal) for the goal in that scope key; 0 when none. */
   adjustment(goalId: number, scopeKey: string): Promise<number>;
+  /** Units or diamonds of the goal's gift counted in that scope key; 0 when none. */
+  giftTotal(goalId: number, scopeKey: string): Promise<number>;
+  addGiftTotal(goalId: number, scopeKey: string, amount: number): Promise<void>;
+  /** Forgets the tallies, e.g. when the goal now counts a different gift. */
+  clearGiftTotals(goalId: number): Promise<void>;
   /** Adds (or subtracts) manual progress and returns the new adjustment. */
   addAdjustment(goalId: number, scopeKey: string, amount: number): Promise<number>;
 }
