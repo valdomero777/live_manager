@@ -91,6 +91,11 @@ describe('sound triggers (MyInstants, remote URL only)', () => {
         if (freesoundFailure) return Promise.reject(freesoundFailure);
         return Promise.resolve({ query, page, hasNext: false, results: [BOOM] });
       },
+      popular: (page): Promise<SoundSearchResult> => {
+        searches.push(`freesound:popular:${page}`);
+        if (freesoundFailure) return Promise.reject(freesoundFailure);
+        return Promise.resolve({ query: '', page, hasNext: true, results: [BOOM] });
+      },
     };
     t = await startTestApp({}, { soundProviders: { myinstants, freesound } });
   });
@@ -126,6 +131,26 @@ describe('sound triggers (MyInstants, remote URL only)', () => {
     expect(searches).toEqual(['freesound:boom']);
     const unknown = await t.api({ url: `${API_PREFIX}/sounds/search?q=boom&source=spotify` });
     expect(unknown.statusCode).toBe(400);
+  });
+
+  it('lists popular sounds for Freesound and an empty page for MyInstants', async () => {
+    const res = await t.api({ url: `${API_PREFIX}/sounds/popular?source=freesound&page=2` });
+    expect(res.statusCode).toBe(200);
+    expect(res.json<SoundSearchResult>()).toMatchObject({ page: 2, results: [BOOM] });
+    expect(searches).toEqual(['freesound:popular:2']);
+
+    const mine = await t.api({ url: `${API_PREFIX}/sounds/popular` });
+    expect(mine.json<SoundSearchResult>().results).toEqual([]);
+    expect((await t.api({ url: `${API_PREFIX}/sounds/popular?source=spotify` })).statusCode).toBe(
+      400,
+    );
+    expect((await t.api({ url: `${API_PREFIX}/sounds/popular?page=0` })).statusCode).toBe(400);
+  });
+
+  it('maps popular-list failures to the same friendly problems', async () => {
+    freesoundFailure = new SoundSourceError('no key', { reason: 'not_configured' });
+    const res = await t.api({ url: `${API_PREFIX}/sounds/popular?source=freesound` });
+    expect(res.statusCode).toBe(503);
   });
 
   it('tells the user to add the Freesound key when it is missing or rejected', async () => {

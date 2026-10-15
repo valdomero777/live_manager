@@ -19,10 +19,7 @@ const SearchQuery = z.object({
   page: z.coerce.number().int().min(1).max(SOUND_PAGE_MAX).default(1),
   source: SoundSourceSchema.default('myinstants'),
 });
-const PopularQuery = z.object({
-  page: z.coerce.number().int().min(1).max(SOUND_PAGE_MAX).default(1),
-  source: SoundSourceSchema.default('myinstants'),
-});
+const PopularQuery = SearchQuery.omit({ q: true });
 
 /**
  * What the dashboard shows when a catalogue fails. Technical details were already logged by the

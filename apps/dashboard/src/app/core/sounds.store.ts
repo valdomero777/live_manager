@@ -50,12 +50,13 @@ export class SoundsStore {
     else await this.loadPopular();
   }
 
-  /** Loads the popular list for the current catalogue, once per catalogue while it is shown. */
+  /** Loads the popular list for the current catalogue; skipped while it is already loaded. */
   async loadPopular(): Promise<void> {
     if (!this.popularSupported()) {
       this.popular.set([]);
       return;
     }
+    if (this.popular().length && !this.popularError()) return;
     const id = ++this.popularRequest;
     const source = this.source();
     this.popularLoading.set(true);

@@ -46,11 +46,11 @@ export class SoundSearchService {
    */
   popular(source: SoundSource, page = 1): Promise<SoundSearchResult> {
     const safePage = clampPage(page);
-    const provider = this.providers[source];
-    if (!provider.popular) {
+    const popular = this.providers[source].popular?.bind(this.providers[source]);
+    if (!popular) {
       return Promise.resolve({ query: '', page: safePage, hasNext: false, results: [] });
     }
-    return this.cached(`${source}|popular|${safePage}`, () => provider.popular!(safePage));
+    return this.cached(`${source}|popular|${safePage}`, () => popular(safePage));
   }
 
   private cached(key: string, load: () => Promise<SoundSearchResult>): Promise<SoundSearchResult> {
