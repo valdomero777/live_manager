@@ -116,6 +116,56 @@
         Pégala en LIVE Studio como fuente <strong>Link</strong> o en OBS como
         <strong>Browser Source</strong>.
       </p>
+
+      @if (typeId() !== 'audio') {
+      <div class="grid gap-2 rounded-lg border p-3">
+        <ui-form-field label="Guardar como plantilla" for="o-template-name">
+          <input
+            uiInput
+            id="o-template-name"
+            type="text"
+            maxlength="60"
+            placeholder="Ej.: Top regalos del live"
+            [value]="templateName()"
+            (input)="templateName.set($any($event.target).value)"
+            (keydown.enter)="saveTemplate(!loadedTemplate())"
+          />
+        </ui-form-field>
+        <div class="flex flex-wrap gap-2">
+          @if (loadedTemplate(); as t) {
+          <button
+            uiButton
+            size="sm"
+            type="button"
+            [disabled]="!canSaveTemplate()"
+            (click)="saveTemplate(false)"
+          >
+            <svg lucideSave /> Actualizar «{{ t.name }}»
+          </button>
+          <button
+            uiButton
+            variant="outline"
+            size="sm"
+            type="button"
+            [disabled]="!canSaveTemplate()"
+            (click)="saveTemplate(true)"
+          >
+            <svg lucideBookmark /> Guardar como nueva
+          </button>
+          } @else {
+          <button
+            uiButton
+            size="sm"
+            type="button"
+            [disabled]="!canSaveTemplate()"
+            (click)="saveTemplate(true)"
+          >
+            <svg lucideBookmark /> Guardar plantilla
+          </button>
+          }
+        </div>
+      </div>
+      }
     </div>
   </section>
 
@@ -161,12 +211,67 @@
         ></iframe>
       </div>
       <p class="type-caption">
-        Usa el Simulador para ver datos en movimiento. La pestaña de audio necesita un clic en
-        «Iniciar audio» incluso aquí.
+        Usa el Simulador para ver datos en movimiento. El sonido del LIVE ya suena en este panel
+        (botón «Sonido» de la barra superior); la pestaña de audio solo hace falta para otra PC.
       </p>
     </div>
   </section>
 </div>
+
+<section uiCard aria-labelledby="tpl-title">
+  <header uiCardHeader>
+    <h2 uiCardTitle id="tpl-title"><svg lucideBookmark /> Plantillas guardadas</h2>
+    <p uiCardDescription>
+      Carga una plantilla para editarla, copia su URL o actívala para verla en vivo en el Dashboard.
+    </p>
+  </header>
+  <div uiCardContent>
+    @if (store.templates().length) {
+    <ul class="grid">
+      @for (t of store.templates(); track t.id) { @let pinId = 'tpl-pin-' + t.id;
+      <li
+        class="flex flex-wrap items-center gap-3 border-b border-border-subtle py-3 last:border-b-0"
+        [class.bg-muted]="t.id === templateId()"
+      >
+        <div class="grid min-w-0 flex-1">
+          <span class="truncate text-sm font-medium">{{ t.name }}</span>
+          <span class="type-caption">{{ typeLabel(t.type) }}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <ui-switch
+            [inputId]="pinId"
+            [checked]="t.pinned"
+            [controlled]="true"
+            (toggled)="setPinned(t, $event)"
+          />
+          <label class="type-caption" [for]="pinId">Mostrar en el dashboard</label>
+        </div>
+        <div class="flex gap-1">
+          <button uiButton variant="ghost" size="sm" type="button" (click)="loadTemplate(t)">
+            <svg lucideFolderOpen /> Cargar
+          </button>
+          <app-copy-button [value]="templateUrl(t)" [label]="'URL de ' + t.name" />
+          <button
+            uiButton
+            variant="ghost-destructive"
+            size="icon-sm"
+            type="button"
+            [attr.aria-label]="'Eliminar ' + t.name"
+            (click)="deleteTemplate(t)"
+          >
+            <svg lucideTrash2 />
+          </button>
+        </div>
+      </li>
+      }
+    </ul>
+    } @else {
+    <p class="type-secondary">
+      Aún no hay plantillas. Configura un overlay arriba, ponle nombre y pulsa «Guardar plantilla».
+    </p>
+    }
+  </div>
+</section>
 
 @if (typeId() === 'rotator') {
 <app-rotator-editor

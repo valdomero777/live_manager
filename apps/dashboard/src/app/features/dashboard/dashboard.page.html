@@ -59,6 +59,31 @@
 <div class="grid gap-4 lg:grid-cols-5">
   <app-analytics-card
     class="lg:col-span-3"
+    title="Overlays en vivo"
+    titleId="live-overlays-title"
+    description="Tal como se ven en tu stream, sin abrir otras páginas"
+    [icon]="icons.layers"
+  >
+    <a analyticsCardAction uiButton variant="ghost" size="sm" routerLink="/overlays">
+      Plantillas <svg lucideArrowRight />
+    </a>
+    <app-live-overlays />
+  </app-analytics-card>
+
+  <app-analytics-card
+    class="lg:col-span-2"
+    title="Sonido del LIVE"
+    titleId="live-audio-title"
+    description="Sonidos y voz de tus reglas, reproducidos en este panel"
+    [icon]="icons.volume"
+  >
+    <app-live-audio-panel />
+  </app-analytics-card>
+</div>
+
+<div class="grid gap-4 lg:grid-cols-5">
+  <app-analytics-card
+    class="lg:col-span-3"
     title="Actividad del LIVE"
     titleId="activity-title"
     description="Interacciones por minuto, últimos 15 minutos"

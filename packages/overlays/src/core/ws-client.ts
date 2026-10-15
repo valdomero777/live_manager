@@ -15,7 +15,8 @@ export type ConnectionState = 'connecting' | 'open' | 'closed';
 
 export interface ScreenSocketOptions {
   readonly screenId: string;
-  readonly key: string;
+  /** Read on every (re)connect, so a caller can follow a rotated overlay key. */
+  readonly key: string | (() => string);
   readonly onMessage: (message: ScreenServerMessage) => void;
   readonly onState?: (state: ConnectionState) => void;
   /** Data channels to receive (leaderboards, goals, stats); sent in every client.hello. */
@@ -32,6 +33,7 @@ export class ScreenSocket {
   private socket: WebSocket | undefined;
   private attempt = 0;
   private pingTimer: number | undefined;
+  private retryTimer: number | undefined;
   private closedByUser = false;
 
   constructor(private readonly options: ScreenSocketOptions) {}
@@ -39,12 +41,13 @@ export class ScreenSocket {
   connect(): void {
     this.closedByUser = false;
     const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-    const url = `${protocol}://${location.host}/ws/screen/${encodeURIComponent(this.options.screenId)}?key=${encodeURIComponent(this.options.key)}`;
+    const { key } = this.options;
+    const url = `${protocol}://${location.host}/ws/screen/${encodeURIComponent(this.options.screenId)}?key=${encodeURIComponent(typeof key === 'function' ? key() : key)}`;
     this.options.onState?.('connecting');
     const socket = new WebSocket(url);
     socket.addEventListener('open', () => this.onOpen());
     socket.addEventListener('message', (e) => this.onRaw(e.data));
-    socket.addEventListener('close', () => this.onClose());
+    socket.addEventListener('close', () => this.onClose(socket));
     this.socket = socket;
   }
 
@@ -55,7 +58,11 @@ export class ScreenSocket {
 
   close(): void {
     this.closedByUser = true;
+    window.clearTimeout(this.retryTimer);
+    window.clearInterval(this.pingTimer);
     this.socket?.close();
+    this.socket = undefined;
+    this.options.onState?.('closed');
   }
 
   private onOpen(): void {
@@ -81,11 +88,16 @@ export class ScreenSocket {
     else console.warn('[tiklive] invalid message discarded', parsed.error.issues);
   }
 
-  private onClose(): void {
+  private onClose(socket: WebSocket): void {
+    // A socket replaced by close() + connect() must not touch the new one.
+    if (socket !== this.socket) return;
     window.clearInterval(this.pingTimer);
+    this.socket = undefined;
     this.options.onState?.('closed');
     if (this.closedByUser) return;
     const delay = Math.min(MAX_RETRY_MS, BASE_RETRY_MS * 2 ** this.attempt++) + Math.random() * 500;
-    window.setTimeout(() => this.connect(), delay);
+    this.retryTimer = window.setTimeout(() => {
+      if (!this.closedByUser) this.connect();
+    }, delay);
   }
 }

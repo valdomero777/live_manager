@@ -12,18 +12,20 @@ import {
 } from '@lucide/angular';
 import { AdminSocketService } from '../../core/admin-socket.service';
 import { ThemeService, type ThemePreference } from '../../core/theme.service';
+import { LiveAudioToggle } from '../live/live-audio-toggle';
 import { LiveStatus } from '../live/live-status';
 import { UiBadge } from '../ui/badge';
 import { UiButton } from '../ui/button';
 import { UI_DROPDOWN_MENU } from '../ui/dropdown-menu';
 import { UiTooltip } from '../ui/tooltip';
 
-/** Always-visible bar: TikTok connection, panel connectivity, theme and session. */
+/** Always-visible bar: TikTok connection, panel connectivity, LIVE sound, theme and session. */
 @Component({
   selector: 'app-topbar',
   imports: [
     RouterLink,
     LiveStatus,
+    LiveAudioToggle,
     UiBadge,
     UiButton,
     UiTooltip,
@@ -71,6 +73,8 @@ import { UiTooltip } from '../ui/tooltip';
     }
 
     <span class="flex-1"></span>
+
+    <app-live-audio-toggle />
 
     <button
       uiButton

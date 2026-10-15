@@ -12,6 +12,7 @@ import type { AdminNotifier } from '../../application/ports/admin-notifier.js';
 import type { ChannelGateway } from '../../application/ports/channel-gateway.js';
 import type { GoalService } from '../../application/projections/goal-service.js';
 import type { LeaderboardService } from '../../application/projections/leaderboard-service.js';
+import type { OverlayTemplateService } from '../../application/projections/overlay-template-service.js';
 import type { RotatorService } from '../../application/projections/rotator-service.js';
 import type { SnapshotPublisher } from '../../application/projections/snapshot-publisher.js';
 import type { StatsProjection } from '../../domain/projections/stats-projection.js';
@@ -47,13 +48,14 @@ export interface HttpServices {
   readonly metrics: Pick<MetricsRegistry, 'render'>;
 }
 
-/** Leaderboards, goals, stats and rotators (phase 3). */
+/** Leaderboards, goals, stats, rotators and saved overlay templates (phase 3). */
 export interface ProjectionServices {
   readonly leaderboards: LeaderboardService;
   readonly goals: GoalService;
   readonly stats: Pick<StatsProjection, 'snapshot'>;
   readonly publisher: SnapshotPublisher;
   readonly rotators: RotatorService;
+  readonly overlayTemplates: OverlayTemplateService;
   readonly channels: ChannelGateway;
 }
 
