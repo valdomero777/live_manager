@@ -114,6 +114,28 @@ describe('FreesoundProvider', () => {
   });
 });
 
+describe('FreesoundProvider.popular', () => {
+  it('lists an empty query sorted by downloads, with the same filters and key header', async () => {
+    const { provider: p, requests } = provider(() =>
+      json({ count: 1, next: null, results: [BOOM] }),
+    );
+    const out = await p.popular(1);
+
+    const url = new URL(requests[0]!.url);
+    expect(url.searchParams.get('query')).toBe('');
+    expect(url.searchParams.get('sort')).toBe('downloads_desc');
+    expect(url.searchParams.get('filter')).toBe('duration:[0 TO 30]');
+    expect(new Headers(requests[0]!.init?.headers).get('authorization')).toBe('Token k3y');
+    expect(out).toMatchObject({ query: '', page: 1, hasNext: false, results: [{ id: '33637' }] });
+  });
+
+  it('search does not send a sort parameter', async () => {
+    const { provider: p, requests } = provider(() => json({ next: null, results: [] }));
+    await p.search('boom', 1);
+    expect(new URL(requests[0]!.url).searchParams.has('sort')).toBe(false);
+  });
+});
+
 describe('classifyLicense', () => {
   it.each([
     ['Creative Commons 0', 'cc0'],

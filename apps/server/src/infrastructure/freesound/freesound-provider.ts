@@ -60,6 +60,19 @@ export class FreesoundProvider implements SoundProvider {
   ) {}
 
   async search(query: string, page: number): Promise<SoundSearchResult> {
+    return this.list(query, page, undefined);
+  }
+
+  /** Empty query sorted by downloads: what people use most, short enough for an alert. */
+  async popular(page: number): Promise<SoundSearchResult> {
+    return this.list('', page, 'downloads_desc');
+  }
+
+  private async list(
+    query: string,
+    page: number,
+    sort: 'downloads_desc' | undefined,
+  ): Promise<SoundSearchResult> {
     const key = this.apiKey();
     if (!key) {
       throw new SoundSourceError('Freesound API key is not set', { reason: 'not_configured' });
@@ -70,6 +83,7 @@ export class FreesoundProvider implements SoundProvider {
     url.searchParams.set('page_size', String(FREESOUND_PAGE_SIZE));
     url.searchParams.set('fields', 'id,name,url,previews,duration,license,username');
     url.searchParams.set('filter', `duration:[0 TO ${FREESOUND_MAX_DURATION_S}]`);
+    if (sort) url.searchParams.set('sort', sort);
     const body = await this.fetchJson(url, key);
     const parsed = ExternalResponseSchema.safeParse(body);
     if (!parsed.success) {

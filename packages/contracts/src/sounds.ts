@@ -5,6 +5,9 @@ export const SOUND_SOURCES = ['myinstants', 'freesound'] as const;
 export const SoundSourceSchema = z.enum(SOUND_SOURCES);
 export type SoundSource = z.infer<typeof SoundSourceSchema>;
 
+/** Sources that can list their most downloaded sounds without a search term. */
+export const POPULAR_SOUND_SOURCES: readonly SoundSource[] = ['freesound'];
+
 /** Name shown in the dashboard for each source. */
 export const SOUND_SOURCE_LABELS: Readonly<Record<SoundSource, string>> = {
   myinstants: 'MyInstants',

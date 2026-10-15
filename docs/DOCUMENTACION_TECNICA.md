@@ -333,6 +333,7 @@ Base: `/api/v1`. Errores: `application/problem+json` `{type,title,status,detail?
 | GET | `/settings/addresses` | IPv4 de la LAN | S | idem |
 | GET/PUT | `/settings/moderation` | Moderación TTS | S | idem |
 | GET | `/sounds/search?q=&page=&source=` | Búsqueda MyInstants o Freesound (502 si falla, 503 si falta la clave de Freesound) | S | `trigger-routes.ts` |
+| GET | `/sounds/popular?page=&source=` | Sonidos más descargados (solo Freesound, orden `downloads_desc`; MyInstants responde lista vacía) | S | `trigger-routes.ts` |
 | GET/POST | `/triggers` | Listar / crear | S | idem |
 | GET/PUT/DELETE | `/triggers/:id` | CRUD | S | idem |
 | POST | `/triggers/:id/test` | Encola el sonido guardado | S | idem |

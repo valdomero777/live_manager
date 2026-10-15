@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   type TemplateRef,
+  computed,
   inject,
   input,
   output,
@@ -152,14 +153,38 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
                 </div>
               }
             </div>
-          } @else if (!sounds.searched()) {
-            <app-empty-state
-              [icon]="searchIcon"
-              title="Busca un sonido"
-              description="Escribe una palabra: los resultados aparecen mientras escribes."
-              [bordered]="false"
-            />
-          } @else if (!sounds.results().length && !sounds.error()) {
+          } @else if (!sounds.searched() && !sounds.popular().length) {
+            @if (!sounds.popularSupported()) {
+              <app-empty-state
+                [icon]="searchIcon"
+                title="Busca un sonido"
+                description="MyInstants no publica una lista de sonidos más usados. Escribe una palabra para buscar."
+                [bordered]="false"
+              />
+            } @else if (sounds.popularLoading()) {
+              <div class="grid gap-2" aria-busy="true" aria-label="Cargando los más descargados">
+                @for (i of skeletons; track i) {
+                  <div class="flex items-center gap-3 rounded-lg border p-2">
+                    <div uiSkeleton class="size-8"></div>
+                    <div uiSkeleton class="h-4 flex-1"></div>
+                    <div uiSkeleton class="h-8 w-24"></div>
+                  </div>
+                }
+              </div>
+            } @else if (sounds.popularError()) {
+              <div uiAlert variant="destructive" role="alert">
+                <svg lucideCircleAlert />
+                <p uiAlertDescription>No se pudieron cargar los más descargados.</p>
+              </div>
+            } @else {
+              <app-empty-state
+                [icon]="searchIcon"
+                title="Busca un sonido"
+                description="Escribe una palabra: los resultados aparecen mientras escribes."
+                [bordered]="false"
+              />
+            }
+          } @else if (sounds.searched() && !sounds.results().length && !sounds.error()) {
             <app-empty-state
               [icon]="noResultsIcon"
               title="Sin resultados"
@@ -167,8 +192,16 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
               [bordered]="false"
             />
           } @else {
-            <ul class="grid gap-1.5" aria-label="Resultados">
-              @for (s of sounds.results(); track s.id) {
+            @if (!sounds.searched()) {
+              <p class="mb-2 text-sm font-medium">
+                Más descargados en {{ sourceLabels[sounds.source()] }}
+              </p>
+            }
+            <ul
+              class="grid gap-1.5"
+              [attr.aria-label]="sounds.searched() ? 'Resultados' : 'Más descargados'"
+            >
+              @for (s of listed(); track s.id) {
                 @let selected = s.id === selectedId();
                 <li
                   class="flex items-center gap-3 rounded-lg border p-2 transition-colors hover:bg-surface-hover"
@@ -210,7 +243,7 @@ const LICENSE_LABELS: Readonly<Record<SoundLicense, string>> = {
                 </li>
               }
             </ul>
-            @if (sounds.hasNext()) {
+            @if (sounds.searched() && sounds.hasNext()) {
               <div class="flex justify-center pt-3">
                 <button
                   uiButton
@@ -254,7 +287,13 @@ export class SoundSelector {
   protected readonly sourceLabels = SOUND_SOURCE_LABELS;
   protected readonly licenseLabels = LICENSE_LABELS;
 
+  /** What the list shows: search results once the user searched, the popular sounds before. */
+  protected readonly listed = computed(() =>
+    this.sounds.searched() ? this.sounds.results() : this.sounds.popular(),
+  );
+
   protected open(): void {
+    void this.sounds.loadPopular();
     this.ref = this.dialogs.open(this.dialogTpl(), { size: 'lg' });
     this.ref.closed.subscribe(() => this.audio.stopSound());
   }

@@ -4,9 +4,10 @@ import {
   SOUND_SOURCE_LABELS,
   SoundSourceSchema,
   TriggerDefinitionRequestSchema,
+  type SoundSearchResult,
   type SoundSource,
 } from '@tiklive/contracts';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { SoundSourceError } from '../../application/ports/sound-provider.js';
 import { notFound, sendProblem } from './problem.js';
@@ -15,6 +16,10 @@ import type { HttpServices } from './services.js';
 const IdParams = z.object({ id: z.coerce.number().int().positive() });
 const SearchQuery = z.object({
   q: z.string().trim().min(1).max(SOUND_QUERY_MAX),
+  page: z.coerce.number().int().min(1).max(SOUND_PAGE_MAX).default(1),
+  source: SoundSourceSchema.default('myinstants'),
+});
+const PopularQuery = z.object({
   page: z.coerce.number().int().min(1).max(SOUND_PAGE_MAX).default(1),
   source: SoundSourceSchema.default('myinstants'),
 });
@@ -30,16 +35,31 @@ function searchProblem(error: SoundSourceError, source: SoundSource) {
     : { title: `No se pudieron cargar los sonidos de ${label}. Intenta nuevamente.`, status: 502 };
 }
 
+/** Answers with a catalogue call; a provider failure becomes the problem the dashboard shows. */
+async function answerCatalogue(
+  reply: FastifyReply,
+  source: SoundSource,
+  call: () => Promise<SoundSearchResult>,
+) {
+  try {
+    return await call();
+  } catch (error) {
+    if (!(error instanceof SoundSourceError)) throw error;
+    return sendProblem(reply, { type: 'about:blank', ...searchProblem(error, source) });
+  }
+}
+
 /** Sound search (proxy to the provider) and sound-trigger CRUD. All behind the admin session. */
 export function registerTriggerRoutes(app: FastifyInstance, s: HttpServices): void {
-  app.get('/sounds/search', async (req, reply) => {
+  app.get('/sounds/search', (req, reply) => {
     const { q, page, source } = SearchQuery.parse(req.query);
-    try {
-      return await s.sounds.search(source, q, page);
-    } catch (error) {
-      if (!(error instanceof SoundSourceError)) throw error;
-      return sendProblem(reply, { type: 'about:blank', ...searchProblem(error, source) });
-    }
+    return answerCatalogue(reply, source, () => s.sounds.search(source, q, page));
+  });
+
+  /** Most downloaded sounds (empty for catalogues without that list). */
+  app.get('/sounds/popular', (req, reply) => {
+    const { page, source } = PopularQuery.parse(req.query);
+    return answerCatalogue(reply, source, () => s.sounds.popular(source, page));
   });
 
   app.get('/triggers', () => s.triggers.list());

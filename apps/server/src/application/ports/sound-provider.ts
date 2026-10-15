@@ -17,4 +17,6 @@ export class SoundSourceError extends Error {
 /** A catalogue of sounds (MyInstants, Freesound). Implementations return provider-neutral sounds. */
 export interface SoundProvider {
   search(query: string, page: number): Promise<SoundSearchResult>;
+  /** Most downloaded sounds first. Absent when the catalogue offers no such list. */
+  popular?(page: number): Promise<SoundSearchResult>;
 }

@@ -67,4 +67,30 @@ describe('SoundSearchService', () => {
     await expect(service.search('freesound', 'bruh')).rejects.toBeInstanceOf(SoundSourceError);
     expect(calls).toHaveLength(2);
   });
+
+  it('serves popular sounds from the provider and caches them per catalogue', async () => {
+    const popularCalls: [SoundSource, number][] = [];
+    const clock = new FakeClock(1_000);
+    const providers = {
+      myinstants: { search: () => Promise.reject(new Error('unused')) },
+      freesound: {
+        search: () => Promise.reject(new Error('unused')),
+        popular: (page: number) => {
+          popularCalls.push(['freesound', page]);
+          return Promise.resolve({ query: '', page, hasNext: true, results: [] });
+        },
+      },
+    };
+    const service = new SoundSearchService(providers, clock);
+    await service.popular('freesound', 1);
+    await service.popular('freesound', 1);
+    expect(popularCalls).toEqual([['freesound', 1]]);
+  });
+
+  it('answers an empty page for a catalogue without a popular list', async () => {
+    const { service, calls } = setup();
+    const out = await service.popular('myinstants', 3);
+    expect(out).toEqual({ query: '', page: 3, hasNext: false, results: [] });
+    expect(calls).toEqual([]);
+  });
 });

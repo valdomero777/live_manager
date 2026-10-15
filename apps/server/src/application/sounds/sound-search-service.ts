@@ -10,6 +10,10 @@ import type { SoundProvider } from '../ports/sound-provider.js';
 export const SEARCH_CACHE_TTL_MS = 5 * 60_000;
 export const SEARCH_CACHE_MAX_ENTRIES = 200;
 
+function clampPage(page: number): number {
+  return Math.min(Math.max(1, Math.trunc(page)), SOUND_PAGE_MAX);
+}
+
 interface CacheEntry {
   readonly expiresAt: number;
   readonly value: SoundSearchResult;
@@ -30,17 +34,33 @@ export class SoundSearchService {
 
   search(source: SoundSource, rawQuery: string, page = 1): Promise<SoundSearchResult> {
     const query = rawQuery.trim().replace(/\s+/g, ' ').slice(0, SOUND_QUERY_MAX);
-    const safePage = Math.min(Math.max(1, Math.trunc(page)), SOUND_PAGE_MAX);
-    const key = `${source}|${query.toLowerCase()}|${safePage}`;
+    const safePage = clampPage(page);
+    return this.cached(`${source}|${query.toLowerCase()}|${safePage}`, () =>
+      this.providers[source].search(query, safePage),
+    );
+  }
 
+  /**
+   * Most downloaded sounds of a catalogue. A catalogue without such a list answers an empty page
+   * instead of failing, so the dashboard can show «not available» next to it.
+   */
+  popular(source: SoundSource, page = 1): Promise<SoundSearchResult> {
+    const safePage = clampPage(page);
+    const provider = this.providers[source];
+    if (!provider.popular) {
+      return Promise.resolve({ query: '', page: safePage, hasNext: false, results: [] });
+    }
+    return this.cached(`${source}|popular|${safePage}`, () => provider.popular!(safePage));
+  }
+
+  private cached(key: string, load: () => Promise<SoundSearchResult>): Promise<SoundSearchResult> {
     const cached = this.cache.get(key);
     if (cached && cached.expiresAt > this.clock.now()) return Promise.resolve(cached.value);
 
     const pending = this.inFlight.get(key);
     if (pending) return pending;
 
-    const request = this.providers[source]
-      .search(query, safePage)
+    const request = load()
       .then((value) => {
         this.remember(key, value);
         return value;
