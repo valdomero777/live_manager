@@ -8,7 +8,8 @@ export type SnapshotMessage = Extract<
       | 'goal.progress'
       | 'stats.snapshot'
       | 'feed.snapshot'
-      | 'streak.snapshot';
+      | 'streak.snapshot'
+      | 'giftguide.snapshot';
   }
 >;
 
@@ -25,6 +26,8 @@ export function channelOfMessage(message: ScreenServerMessage): string | undefin
       return 'feed';
     case 'streak.snapshot':
       return 'streak';
+    case 'giftguide.snapshot':
+      return 'giftguide';
     default:
       return undefined;
   }

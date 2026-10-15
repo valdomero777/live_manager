@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { LiveEventSchema } from './events.js';
 import {
   FeedSnapshotSchema,
+  GiftGuideSnapshotSchema,
   GoalProgressSchema,
   LeaderboardSnapshotSchema,
   StatsSnapshotSchema,
@@ -80,6 +81,7 @@ export const LeaderboardSnapshotMessageSchema = envelope(
 export const GoalProgressMessageSchema = envelope('goal.progress', GoalProgressSchema);
 export const StatsSnapshotMessageSchema = envelope('stats.snapshot', StatsSnapshotSchema);
 export const FeedSnapshotMessageSchema = envelope('feed.snapshot', FeedSnapshotSchema);
+export const GiftGuideMessageSchema = envelope('giftguide.snapshot', GiftGuideSnapshotSchema);
 export const StreakSnapshotMessageSchema = envelope('streak.snapshot', StreakSnapshotSchema);
 
 export const ScreenServerMessageSchema = z.discriminatedUnion('type', [
@@ -93,6 +95,7 @@ export const ScreenServerMessageSchema = z.discriminatedUnion('type', [
   StatsSnapshotMessageSchema,
   FeedSnapshotMessageSchema,
   StreakSnapshotMessageSchema,
+  GiftGuideMessageSchema,
 ]);
 export type ScreenServerMessage = z.infer<typeof ScreenServerMessageSchema>;
 export type ScreenActionMessage = Extract<
@@ -108,7 +111,7 @@ export const ScreenClientMessageSchema = z.discriminatedUnion('type', [
     z.object({
       screenId: z.string().min(1),
       clientVersion: z.string(),
-      /** Data channels this overlay wants (leaderboards, goals, stats, feed, streak). */
+      /** Data channels this overlay wants (leaderboards, goals, stats, feed, streak, giftguide). */
       subscriptions: z.array(SubscriptionSchema).max(20).default([]),
     }),
   ),

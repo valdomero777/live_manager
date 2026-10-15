@@ -35,6 +35,7 @@ import { FileBackupStore } from '../infrastructure/backup/file-backup-store.js';
 import { SqliteEventRetention } from '../infrastructure/sqlite/sqlite-event-retention.js';
 import { JsonlRecorder } from '../infrastructure/recording/jsonl-recorder.js';
 import { HttpWebhookClient } from '../infrastructure/http/http-webhook-client.js';
+import { GiftGuideService } from '../application/projections/gift-guide-service.js';
 import { GoalService } from '../application/projections/goal-service.js';
 import { LeaderboardService } from '../application/projections/leaderboard-service.js';
 import { OverlayTemplateService } from '../application/projections/overlay-template-service.js';
@@ -251,42 +252,89 @@ function buildGoalService(rt: Runtime, db: Persistence, r: Reactions): GoalServi
   });
 }
 
-/** Leaderboards, goals and stats: read models fed by every accepted event (spec 11). */
-function buildProjections(rt: Runtime, db: Persistence, screens: ScreenSocketHub, r: Reactions) {
-  const currentSessionId = () => db.sessions.currentId();
+interface SessionViews {
+  readonly stats: StatsProjection;
+  readonly feed: FeedProjection;
+  readonly streak: StreakProjection;
+}
+
+/** A new session (or the first one) starts every in-memory view empty. */
+function resetViewsOnSession(db: Persistence, views: SessionViews, publisher: SnapshotPublisher) {
+  db.sessions.onChange((session) => {
+    if (session) views.stats.startSession(session.id, session.startedAt);
+    views.feed.reset();
+    views.streak.reset();
+    publisher.refreshAll();
+  });
+}
+
+interface PublisherParts {
+  readonly leaderboards: LeaderboardService;
+  readonly goals: GoalService;
+  readonly views: SessionViews;
+}
+
+function buildPublisher(
+  c: { rt: Runtime; db: Persistence; screens: ScreenSocketHub; giftCatalog: GiftCatalogService },
+  parts: PublisherParts,
+): SnapshotPublisher {
+  const { leaderboards, goals, views } = parts;
+  return new SnapshotPublisher({
+    gateway: c.screens,
+    leaderboards,
+    goals,
+    ...views,
+    guide: new GiftGuideService({
+      rules: c.db.rules,
+      gifts: c.giftCatalog,
+      logger: c.rt.logger.child({ module: 'gift-guide' }),
+    }),
+    scheduler: c.rt.scheduler,
+    clock: c.rt.clock,
+    logger: c.rt.logger.child({ module: 'projections' }),
+  });
+}
+
+/** Leaderboards, goals, stats and the other overlay read models, fed by accepted events (spec 11). */
+function buildProjections(
+  rt: Runtime,
+  db: Persistence,
+  screens: ScreenSocketHub,
+  r: Reactions,
+  giftCatalog: GiftCatalogService,
+) {
+  const goals = buildGoalService(rt, db, r);
+  r.goalLink.current = goals;
   const leaderboards = new LeaderboardService({
     repo: db.leaderboards,
     settings: db.settings,
-    currentSessionId,
+    currentSessionId: () => db.sessions.currentId(),
     clock: rt.clock,
   });
-  const goals = buildGoalService(rt, db, r);
-  r.goalLink.current = goals;
-  const [stats, feed, streak] = [
-    new StatsProjection(),
-    new FeedProjection(),
-    new StreakProjection(),
-  ];
-  const publisher = new SnapshotPublisher({
-    gateway: screens,
+  const views: SessionViews = {
+    stats: new StatsProjection(),
+    feed: new FeedProjection(),
+    streak: new StreakProjection(),
+  };
+  const publisher = buildPublisher(
+    { rt, db, screens, giftCatalog },
+    { leaderboards, goals, views },
+  );
+  resetViewsOnSession(db, views, publisher);
+  r.engine.onReload(() => publisher.markDirty('giftguide'));
+  const rotators = new RotatorService(db.settings);
+  const overlayTemplates = new OverlayTemplateService(db.settings, rt.ids, rt.clock);
+  const { stats } = views;
+  return {
     leaderboards,
     goals,
     stats,
-    feed,
-    streak,
-    scheduler: rt.scheduler,
-    clock: rt.clock,
-    logger: rt.logger.child({ module: 'projections' }),
-  });
-  db.sessions.onChange((session) => {
-    if (session) stats.startSession(session.id, session.startedAt);
-    feed.reset();
-    streak.reset();
-    publisher.refreshAll();
-  });
-  const rotators = new RotatorService(db.settings);
-  const overlayTemplates = new OverlayTemplateService(db.settings, rt.ids, rt.clock);
-  return { leaderboards, goals, stats, publisher, rotators, overlayTemplates, channels: screens };
+    publisher,
+    rotators,
+    overlayTemplates,
+    giftCatalog,
+    channels: screens,
+  };
 }
 type Projections = ReturnType<typeof buildProjections>;
 
@@ -433,12 +481,12 @@ function buildAssetService(p: ServiceParts): AssetService {
   });
 }
 
-function buildGiftService(p: ServiceParts): GiftCatalogService {
+function buildGiftService(hooks: AppHooks, db: Persistence, rt: Runtime): GiftCatalogService {
   return new GiftCatalogService({
-    source: p.hooks.giftSource ?? new TikTokGiftCatalog(),
-    settings: p.db.settings,
-    clock: p.rt.clock,
-    logger: p.rt.logger.child({ module: 'gifts' }),
+    source: hooks.giftSource ?? new TikTokGiftCatalog(),
+    settings: db.settings,
+    clock: rt.clock,
+    logger: rt.logger.child({ module: 'gifts' }),
   });
 }
 
@@ -507,7 +555,7 @@ function buildServices(p: ServiceParts): HttpServices {
     settings: buildSettings(p),
     moderation: p.reactions.moderation,
     tts: p.reactions.tts,
-    gifts: buildGiftService(p),
+    gifts: p.projections.giftCatalog,
     maintenance: p.maintenance,
     metrics: p.metrics,
     ...buildTriggerServices(p),
@@ -576,7 +624,7 @@ function buildCore(cfg: AppConfig, hooks: AppHooks) {
   const admin = new AdminSocketHub(rt.clock);
   const { metrics, notifier, connectorState } = buildObservability(admin);
   const reactions = buildReactions(cfg, hooks, rt, db, screens, notifier, metrics);
-  const projections = buildProjections(rt, db, screens, reactions);
+  const projections = buildProjections(rt, db, screens, reactions, buildGiftService(hooks, db, rt));
   const consumers = [projections.publisher, reactions.engine, reactions.triggers];
   const pipeline = buildIntake(rt, db, consumers, notifier, metrics);
   const { supervisor, recorder } = buildConnector(cfg, rt, pipeline, notifier);

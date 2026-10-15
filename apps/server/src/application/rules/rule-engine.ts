@@ -114,7 +114,14 @@ export class RuleEngine implements LiveEventConsumer {
   private compiled: readonly CompiledRule[] = [];
   private readonly activity = new ViewerActivityTracker();
 
+  private readonly reloadListeners: (() => void)[] = [];
+
   constructor(private readonly deps: RuleEngineDeps) {}
+
+  /** Called after every reload, i.e. whenever a rule was created, edited or deleted. */
+  onReload(listener: () => void): void {
+    this.reloadListeners.push(listener);
+  }
 
   async reload(): Promise<void> {
     const rules = await this.deps.rules.listAll();
@@ -126,6 +133,7 @@ export class RuleEngine implements LiveEventConsumer {
     }
     this.compiled = compiled.sort(byPriority);
     this.deps.logger.info({ rules: this.compiled.length }, 'rules loaded');
+    this.reloadListeners.forEach((notify) => notify());
   }
 
   /** Clears limiter state for an edited rule so its new cooldown starts fresh. */
