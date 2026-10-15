@@ -43,30 +43,30 @@ export class LiveAudioToggle {
   protected readonly label = computed(() => {
     switch (this.audio.state()) {
       case 'on':
-        return 'Sonido activo';
+        return $localize`Sonido activo`;
       case 'connecting':
-        return 'Conectando sonido…';
+        return $localize`Conectando sonido…`;
       case 'waiting':
-        return 'Activar sonido';
+        return $localize`Activar sonido`;
       case 'error':
-        return 'Reintentar sonido';
+        return $localize`Reintentar sonido`;
       default:
-        return 'Sonido apagado';
+        return $localize`Sonido apagado`;
     }
   });
 
   protected readonly hint = computed(() => {
     switch (this.audio.state()) {
       case 'on':
-        return 'Los sonidos y la voz del LIVE suenan en este panel. Clic para silenciar.';
+        return $localize`Los sonidos y la voz del LIVE suenan en este panel. Clic para silenciar.`;
       case 'connecting':
-        return 'Conectando con el servidor…';
+        return $localize`Conectando con el servidor…`;
       case 'waiting':
-        return 'El navegador necesita un clic para reproducir sonido.';
+        return $localize`El navegador necesita un clic para reproducir sonido.`;
       case 'error':
-        return this.audio.error() ?? 'No se pudo iniciar el audio.';
+        return this.audio.error() ?? $localize`No se pudo iniciar el audio.`;
       default:
-        return 'Clic para escuchar el LIVE en este panel.';
+        return $localize`Clic para escuchar el LIVE en este panel.`;
     }
   });
 }

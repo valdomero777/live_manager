@@ -131,7 +131,7 @@ export class LiveAudioService {
     this.state.set('connecting');
     const key = await this.keys.load();
     if (!key) {
-      this.fail('No se pudo leer la clave de overlays. Revisa la sesión del panel.');
+      this.fail($localize`No se pudo leer la clave de overlays. Revisa la sesión del panel.`);
       return;
     }
     if (!this.enabled() || this.socket) return; // turned off, or started elsewhere meanwhile
@@ -145,7 +145,7 @@ export class LiveAudioService {
       this.speech ??= new BrowserSpeech(() => this.volume());
       await this.player.unlock(testTone);
     } catch (error) {
-      this.fail(`No se pudo iniciar el audio: ${describeError(error)}`);
+      this.fail($localize`No se pudo iniciar el audio: ${describeError(error)}`);
       return false;
     }
     if (this.player.running) return true;

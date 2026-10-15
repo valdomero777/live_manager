@@ -29,11 +29,11 @@ import { AuthStore } from '../../core/auth.store';
   template: `
     <form uiCard [formGroup]="form" (ngSubmit)="save()" aria-labelledby="pw-title" novalidate>
       <header uiCardHeader>
-        <h2 uiCardTitle id="pw-title">Contraseña del panel</h2>
-        <p uiCardDescription>Al cambiarla se cierran las demás sesiones abiertas.</p>
+        <h2 i18n uiCardTitle id="pw-title">Contraseña del panel</h2>
+        <p i18n uiCardDescription>Al cambiarla se cierran las demás sesiones abiertas.</p>
       </header>
       <div uiCardContent class="grid max-w-md gap-4">
-        <ui-form-field label="Contraseña actual" for="pw-current">
+        <ui-form-field i18n-label label="Contraseña actual" for="pw-current">
           <input
             uiInput
             id="pw-current"
@@ -43,9 +43,11 @@ import { AuthStore } from '../../core/auth.store';
           />
         </ui-form-field>
         <ui-form-field
+          i18n-label
           label="Nueva contraseña"
           for="pw-next"
-          [description]="'Mínimo ' + minLength + ' caracteres.'"
+          description="Mínimo {{ minLength }} caracteres."
+          i18n-description
         >
           <input
             uiInput
@@ -56,7 +58,7 @@ import { AuthStore } from '../../core/auth.store';
             aria-describedby="pw-next-description"
           />
         </ui-form-field>
-        <ui-form-field label="Repite la nueva contraseña" for="pw-confirm">
+        <ui-form-field i18n-label label="Repite la nueva contraseña" for="pw-confirm">
           <input
             uiInput
             id="pw-confirm"
@@ -83,7 +85,7 @@ import { AuthStore } from '../../core/auth.store';
         </div>
       }
       <footer uiCardFooter class="border-t border-border-subtle pt-4">
-        <button uiButton type="submit" [disabled]="busy()">
+        <button i18n uiButton type="submit" [disabled]="busy()">
           @if (busy()) {
             <ui-spinner />
           }
@@ -109,19 +111,19 @@ export class PasswordForm {
     if (next.length < MIN_PASSWORD_LENGTH) {
       this.message.set({
         ok: false,
-        text: `La nueva contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`,
+        text: $localize`La nueva contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`,
       });
       return;
     }
     if (next !== confirm) {
-      this.message.set({ ok: false, text: 'Las contraseñas nuevas no coinciden.' });
+      this.message.set({ ok: false, text: $localize`Las contraseñas nuevas no coinciden.` });
       return;
     }
     this.busy.set(true);
     try {
       await this.auth.changePassword(current, next);
       this.form.reset();
-      this.message.set({ ok: true, text: 'Contraseña cambiada.' });
+      this.message.set({ ok: true, text: $localize`Contraseña cambiada.` });
     } catch (e) {
       this.message.set({ ok: false, text: e instanceof ApiError ? e.message : String(e) });
     } finally {

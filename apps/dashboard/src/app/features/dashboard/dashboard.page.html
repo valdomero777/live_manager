@@ -1,4 +1,6 @@
 <app-page-header
+  i18n-description
+  i18n-title
   title="Dashboard"
   description="Lo que pasa en tu LIVE ahora mismo y cómo reaccionan tus automatizaciones."
 />
@@ -12,22 +14,32 @@
 @if (statsError()) {
 <div uiAlert variant="warning" role="status">
   <svg lucideCircleAlert />
-  <p uiAlertTitle>No se pudieron actualizar las métricas</p>
-  <p uiAlertDescription>Se muestran los últimos valores recibidos. Se reintenta cada 5 s.</p>
+  <p i18n uiAlertTitle>No se pudieron actualizar las métricas</p>
+  <p i18n uiAlertDescription>Se muestran los últimos valores recibidos. Se reintenta cada 5 s.</p>
 </div>
 }
 
-<section aria-label="Métricas del live" class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+<section
+  i18n-aria-label
+  aria-label="Métricas del live"
+  class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
+>
   <app-metric-card
+    i18n-emptyHint
+    i18n-label
     label="Espectadores"
     tone="analytics"
     [icon]="icons.viewers"
     [loading]="statsLoading()"
     [value]="metric(stats()?.viewers)"
-    [hint]="'Pico del live: ' + formatMetric(stats()?.peakViewers ?? 0)"
+    hint="Pico del live: {{ formatMetric(stats()?.peakViewers ?? 0) }}"
+    i18n-hint
     emptyHint="Sin live en curso"
   />
   <app-metric-card
+    i18n-emptyHint
+    i18n-hint
+    i18n-label
     label="Likes"
     tone="live"
     [icon]="icons.likes"
@@ -37,6 +49,9 @@
     emptyHint="Sin live en curso"
   />
   <app-metric-card
+    i18n-emptyHint
+    i18n-hint
+    i18n-label
     label="Diamantes"
     tone="gift"
     [icon]="icons.diamonds"
@@ -46,31 +61,37 @@
     emptyHint="Sin live en curso"
   />
   <app-metric-card
+    i18n-emptyHint
+    i18n-label
     label="Nuevos seguidores"
     tone="follow"
     [icon]="icons.followers"
     [loading]="statsLoading()"
     [value]="metric(stats()?.newFollowers)"
-    [hint]="stats()?.lastFollower ? 'Último: @' + stats()?.lastFollower?.uniqueId : 'En este live'"
+    [hint]="followerHint()"
     emptyHint="Sin live en curso"
   />
 </section>
 
 <div class="grid gap-4 lg:grid-cols-5">
   <app-analytics-card
+    i18n-description
+    i18n-title
     class="lg:col-span-3"
     title="Overlays en vivo"
     titleId="live-overlays-title"
     description="Tal como se ven en tu stream, sin abrir otras páginas"
     [icon]="icons.layers"
   >
-    <a analyticsCardAction uiButton variant="ghost" size="sm" routerLink="/overlays">
+    <a i18n analyticsCardAction uiButton variant="ghost" size="sm" routerLink="/overlays">
       Plantillas <svg lucideArrowRight />
     </a>
     <app-live-overlays />
   </app-analytics-card>
 
   <app-analytics-card
+    i18n-description
+    i18n-title
     class="lg:col-span-2"
     title="Sonido del LIVE"
     titleId="live-audio-title"
@@ -83,6 +104,8 @@
 
 <div class="grid gap-4 lg:grid-cols-5">
   <app-analytics-card
+    i18n-description
+    i18n-title
     class="lg:col-span-3"
     title="Actividad del LIVE"
     titleId="activity-title"
@@ -90,6 +113,8 @@
     [icon]="icons.activity"
   >
     <app-chart-container
+      i18n-emptyDescription
+      i18n-emptyTitle
       height="14rem"
       [series]="chartSeries"
       [loading]="socket.historyLoading()"
@@ -102,15 +127,17 @@
   </app-analytics-card>
 
   <app-analytics-card
+    i18n-title
     class="lg:col-span-2"
     title="Eventos en tiempo real"
     titleId="feed-title"
     [icon]="icons.sparkles"
   >
-    <a analyticsCardAction uiButton variant="ghost" size="sm" routerLink="/eventos">
+    <a i18n analyticsCardAction uiButton variant="ghost" size="sm" routerLink="/eventos">
       Ver todos <svg lucideArrowRight />
     </a>
     <app-event-feed
+      i18n-label
       [items]="feed()"
       [loading]="socket.historyLoading()"
       [realtime]="!socket.lostConnection()"
@@ -122,13 +149,15 @@
 
 <div class="grid gap-4 lg:grid-cols-5">
   <app-analytics-card
+    i18n-description
+    i18n-title
     class="lg:col-span-3"
     title="Automatizaciones recientes"
     titleId="automations-title"
     description="Reglas que reaccionaron desde que abriste el panel"
     [icon]="icons.workflow"
   >
-    <a analyticsCardAction uiButton variant="ghost" size="sm" routerLink="/reglas">
+    <a i18n analyticsCardAction uiButton variant="ghost" size="sm" routerLink="/reglas">
       Reglas <svg lucideArrowRight />
     </a>
     <app-recent-automations
@@ -139,6 +168,8 @@
   </app-analytics-card>
 
   <app-analytics-card
+    i18n-description
+    i18n-title
     class="lg:col-span-2"
     title="Destacados"
     titleId="highlights-title"
@@ -153,13 +184,13 @@
           <svg [lucideIcon]="icons.crown" class="size-4" />
         </span>
         <div class="grid min-w-0">
-          <dt class="type-caption">Mayor regalo</dt>
+          <dt i18n class="type-caption">Mayor regalo</dt>
           <dd class="truncate text-sm font-medium">
             @if (stats()?.topGift; as g) { &#64;{{ g.uniqueId }} · {{ g.quantity }} × {{ g.giftName
             }}
-            <span class="text-gift-text">· {{ formatMetric(g.diamonds) }} diamantes</span>
+            <span i18n class="text-gift-text">· {{ formatMetric(g.diamonds) }} diamantes</span>
             } @else {
-            <span class="text-muted-foreground">Todavía sin regalos</span>
+            <span i18n class="text-muted-foreground">Todavía sin regalos</span>
             }
           </dd>
         </div>
@@ -171,11 +202,11 @@
           <svg [lucideIcon]="icons.gift" class="size-4" />
         </span>
         <div class="grid min-w-0">
-          <dt class="type-caption">Último regalo</dt>
+          <dt i18n class="type-caption">Último regalo</dt>
           <dd class="truncate text-sm font-medium">
             @if (stats()?.lastGift; as g) { &#64;{{ g.uniqueId }} · {{ g.quantity }} × {{ g.giftName
             }} } @else {
-            <span class="text-muted-foreground">Todavía sin regalos</span>
+            <span i18n class="text-muted-foreground">Todavía sin regalos</span>
             }
           </dd>
         </div>
@@ -187,12 +218,12 @@
           <svg [lucideIcon]="icons.followers" class="size-4" />
         </span>
         <div class="grid min-w-0">
-          <dt class="type-caption">Último seguidor</dt>
+          <dt i18n class="type-caption">Último seguidor</dt>
           <dd class="truncate text-sm font-medium">
             @if (stats()?.lastFollower; as f) { {{ f.nickname }}
             <span class="text-muted-foreground">&#64;{{ f.uniqueId }}</span>
             } @else {
-            <span class="text-muted-foreground">Todavía sin seguidores nuevos</span>
+            <span i18n class="text-muted-foreground">Todavía sin seguidores nuevos</span>
             }
           </dd>
         </div>

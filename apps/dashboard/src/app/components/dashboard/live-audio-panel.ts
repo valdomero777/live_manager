@@ -17,24 +17,25 @@ import { UiButton } from '../ui/button';
     <div class="flex flex-wrap items-center gap-3">
       @switch (audio.state()) {
         @case ('on') {
-          <span uiBadge variant="success">Sonando en este panel</span>
+          <span i18n uiBadge variant="success">Sonando en este panel</span>
         }
         @case ('connecting') {
-          <span uiBadge variant="info">Conectando…</span>
+          <span i18n uiBadge variant="info">Conectando…</span>
         }
         @case ('waiting') {
-          <span uiBadge variant="warning">Esperando un clic</span>
+          <span i18n uiBadge variant="warning">Esperando un clic</span>
         }
         @case ('error') {
-          <span uiBadge variant="danger">Error</span>
+          <span i18n uiBadge variant="danger">Error</span>
         }
         @default {
-          <span uiBadge>Apagado</span>
+          <span i18n uiBadge>Apagado</span>
         }
       }
       <span class="flex-1"></span>
       @if (audio.enabled() && (audio.state() === 'on' || audio.state() === 'connecting')) {
         <button
+          i18n
           uiButton
           variant="outline"
           size="sm"
@@ -45,7 +46,14 @@ import { UiButton } from '../ui/button';
           <svg lucideVolumeOff /> Silenciar
         </button>
       } @else {
-        <button uiButton size="sm" type="button" data-live-audio-control (click)="audio.enable()">
+        <button
+          i18n
+          uiButton
+          size="sm"
+          type="button"
+          data-live-audio-control
+          (click)="audio.enable()"
+        >
           <svg lucideVolume2 /> Activar sonido
         </button>
       }
@@ -58,7 +66,7 @@ import { UiButton } from '../ui/button';
     }
 
     <label class="grid gap-1.5">
-      <span class="flex items-center justify-between type-label">
+      <span i18n class="flex items-center justify-between type-label">
         Volumen <span class="type-caption tabular-nums">{{ percent() }} %</span>
       </span>
       <input
@@ -73,7 +81,7 @@ import { UiButton } from '../ui/button';
     </label>
 
     @if (audio.entries().length) {
-      <ol class="grid max-h-48 overflow-y-auto" aria-label="Últimos sonidos">
+      <ol i18n-aria-label class="grid max-h-48 overflow-y-auto" aria-label="Últimos sonidos">
         @for (e of audio.entries(); track e.id) {
           <li
             class="flex gap-3 border-b border-border-subtle py-1.5 text-sm last:border-b-0"
@@ -88,6 +96,8 @@ import { UiButton } from '../ui/button';
       </ol>
     } @else {
       <app-empty-state
+        i18n-description
+        i18n-title
         [icon]="icons.volume"
         title="Todavía no ha sonado nada"
         description="Los sonidos y la voz de tus reglas y triggers se reproducen aquí, sin abrir otra pestaña."

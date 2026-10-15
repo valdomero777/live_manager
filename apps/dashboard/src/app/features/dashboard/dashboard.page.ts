@@ -97,6 +97,10 @@ export class DashboardPage {
   protected readonly eventLabels = EVENT_LABELS;
   protected readonly chartSeries = ACTIVITY_SERIES;
   protected readonly formatMetric = formatMetric;
+  protected readonly followerHint = computed(() => {
+    const last = this.stats()?.lastFollower;
+    return last ? $localize`Último: @${last.uniqueId}` : $localize`En este live`;
+  });
 
   protected readonly stats = signal<StatsSnapshot | undefined>(undefined);
   protected readonly statsLoading = signal(true);

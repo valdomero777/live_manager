@@ -1,4 +1,5 @@
 import type { LiveEvent, LiveEventType } from '@tiklive/contracts';
+import { numberLocale } from '../../core/locale';
 
 /** One row of the event feed, ready to render (no work left for the template). */
 export interface FeedItem {
@@ -18,21 +19,21 @@ export interface FeedItem {
 function actionOf(e: LiveEvent): string {
   switch (e.type) {
     case 'comment':
-      return 'comentó';
+      return $localize`comentó`;
     case 'gift':
-      return `envió ${e.quantity} × ${e.giftName}`;
+      return $localize`envió ${e.quantity} × ${e.giftName}`;
     case 'like':
-      return `dio ${e.likeDelta.toLocaleString('es')} likes`;
+      return $localize`dio ${e.likeDelta.toLocaleString(numberLocale())} likes`;
     case 'follow':
-      return 'empezó a seguirte';
+      return $localize`empezó a seguirte`;
     case 'join':
-      return 'entró al live';
+      return $localize`entró al live`;
     case 'share':
-      return 'compartió el live';
+      return $localize`compartió el live`;
     case 'viewerCount':
-      return `${e.viewerCount.toLocaleString('es')} espectadores`;
+      return $localize`${e.viewerCount.toLocaleString(numberLocale())} espectadores`;
     case 'streamEnd':
-      return 'El live terminó';
+      return $localize`El live terminó`;
   }
 }
 
@@ -41,9 +42,9 @@ function detailOf(e: LiveEvent): string {
     case 'comment':
       return e.text;
     case 'gift':
-      return `${(e.diamondValue * e.quantity).toLocaleString('es')} diamantes`;
+      return $localize`${(e.diamondValue * e.quantity).toLocaleString(numberLocale())} diamantes`;
     case 'like':
-      return `Total del live: ${e.totalLikes.toLocaleString('es')}`;
+      return $localize`Total del live: ${e.totalLikes.toLocaleString(numberLocale())}`;
     default:
       return '';
   }

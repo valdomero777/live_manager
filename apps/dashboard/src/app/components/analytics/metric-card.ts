@@ -3,6 +3,7 @@ import { LucideDynamicIcon, type LucideIconInput } from '@lucide/angular';
 import { cn } from '../../lib/utils';
 import { UI_CARD } from '../ui/card';
 import { UiSkeleton } from '../ui/feedback';
+import { numberLocale } from '../../core/locale';
 
 export type MetricTone = 'live' | 'gift' | 'automation' | 'sound' | 'analytics' | 'follow';
 
@@ -19,10 +20,11 @@ const COMPACT_FROM = 100_000;
 
 /** 1.245 → "1.245"; 124.500 → "124,5 mil". Big LIVE numbers stay readable at a glance. */
 export function formatMetric(value: number): string {
-  if (Math.abs(value) < COMPACT_FROM) return value.toLocaleString('es');
-  return new Intl.NumberFormat('es', { notation: 'compact', maximumFractionDigits: 1 }).format(
-    value,
-  );
+  if (Math.abs(value) < COMPACT_FROM) return value.toLocaleString(numberLocale());
+  return new Intl.NumberFormat(numberLocale(), {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value);
 }
 
 /**
@@ -62,7 +64,7 @@ export class MetricCard {
   readonly icon = input.required<LucideIconInput>();
   readonly tone = input<MetricTone>('analytics');
   readonly hint = input('');
-  readonly emptyHint = input('Sin datos todavía');
+  readonly emptyHint = input($localize`Sin datos todavía`);
   readonly loading = input(false);
 
   protected readonly display = computed(() => {

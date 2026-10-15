@@ -17,7 +17,9 @@ export type FieldValue = string | number | boolean;
 /** Client-side validation with the same schema the server uses. */
 export function validateField(key: SettingKey, value: FieldValue): string | undefined {
   const result = SettingsValuesSchema.shape[key].safeParse(value);
-  return result.success ? undefined : (result.error.issues[0]?.message ?? 'Valor no válido');
+  return result.success
+    ? undefined
+    : (result.error.issues[0]?.message ?? $localize`Valor no válido`);
 }
 
 /** Settings page state: what the server reports, saving patches and the restart flow. */
@@ -107,7 +109,9 @@ export class SettingsStore {
       }
     }
     this.restarting.set(false);
-    throw new Error('El servidor tardó demasiado en volver. Revisa la consola del servidor.');
+    throw new Error(
+      $localize`El servidor tardó demasiado en volver. Revisa la consola del servidor.`,
+    );
   }
 }
 

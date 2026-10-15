@@ -35,7 +35,7 @@ const ROW_PX = 60;
     @if (!realtime()) {
       <div uiAlert variant="warning" class="mb-3" role="status">
         <svg lucideWifiOff />
-        <p uiAlertDescription>Sin conexión en tiempo real con el servidor. Reconectando…</p>
+        <p i18n uiAlertDescription>Sin conexión en tiempo real con el servidor. Reconectando…</p>
       </div>
     }
     @if (error()) {
@@ -43,7 +43,7 @@ const ROW_PX = 60;
         <p uiAlertDescription>{{ error() }}</p>
       </div>
     } @else if (loading() && !items().length) {
-      <div class="grid gap-3 px-1" aria-busy="true" aria-label="Cargando eventos">
+      <div i18n-aria-label class="grid gap-3 px-1" aria-busy="true" aria-label="Cargando eventos">
         @for (i of skeletonRows; track i) {
           <div class="flex items-center gap-3">
             <div uiSkeleton class="size-8 rounded-full"></div>
@@ -116,10 +116,10 @@ export class EventFeed {
   /** False while the panel's websocket is down. */
   readonly realtime = input(true);
   readonly height = input('24rem');
-  readonly label = input('Eventos en vivo');
-  readonly emptyTitle = input('Aún no llegan eventos');
+  readonly label = input($localize`Eventos en vivo`);
+  readonly emptyTitle = input($localize`Aún no llegan eventos`);
   readonly emptyDescription = input(
-    'Inicia tu live o usa el Simulador para ver la actividad aquí.',
+    $localize`Inicia tu live o usa el Simulador para ver la actividad aquí.`,
   );
 
   protected readonly rowPx = ROW_PX;

@@ -123,13 +123,16 @@ export class RuleEditorPage {
   protected readonly testResult = signal<RuleTestResult | undefined>(undefined);
 
   protected readonly isNew = computed(() => this.id() === undefined || this.id() === 'nueva');
+  protected readonly pageTitle = computed(() =>
+    this.isNew() ? $localize`Nueva regla` : this.draft().name || $localize`Editar regla`,
+  );
   protected readonly validation = computed(() => validateDraft(this.draft()));
   /** Errors shown next to their field (the rest are listed by the save bar). */
   protected readonly nameError = computed(() => {
     const error = this.showErrors() ? this.validation().fieldErrors['name'] : undefined;
     if (!error) return undefined;
     // The shared schema's messages are not localized; the common case gets a Spanish one.
-    return this.draft().name.trim() ? error : 'Ponle un nombre a la regla.';
+    return this.draft().name.trim() ? error : $localize`Ponle un nombre a la regla.`;
   });
   protected readonly variables = computed(() => TEMPLATE_VARIABLES[this.draft().trigger] ?? []);
   protected readonly conditionTypes = computed(() =>
@@ -263,7 +266,7 @@ export class RuleEditorPage {
       const rule = await this.store.save(this.saved()?.id, definition);
       this.saved.set(rule);
       this.draft.set(draftFromRule(rule));
-      this.toast.success('Regla guardada', 'Los cambios ya están activos.');
+      this.toast.success($localize`Regla guardada`, $localize`Los cambios ya están activos.`);
       if (this.isNew()) await this.router.navigate(['/reglas', rule.id], { replaceUrl: true });
     });
   }

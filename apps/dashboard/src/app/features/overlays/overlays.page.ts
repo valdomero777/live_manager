@@ -100,9 +100,9 @@ export class OverlaysPage {
   protected readonly goals = signal<readonly Goal[]>([]);
   protected readonly previewBg = signal<'checker' | 'dark' | 'light'>('checker');
   protected readonly backgrounds = [
-    { value: 'checker', label: 'Transparente' },
-    { value: 'dark', label: 'Oscuro' },
-    { value: 'light', label: 'Claro' },
+    { value: 'checker', label: $localize`Transparente` },
+    { value: 'dark', label: $localize`Oscuro` },
+    { value: 'light', label: $localize`Claro` },
   ] as const;
   protected readonly reloadToken = signal(0);
 
@@ -174,9 +174,12 @@ export class OverlaysPage {
         ? await this.store.update(current.id, input)
         : await this.store.create(input);
       this.templateId.set(saved.id);
-      this.toast.success(current ? 'Plantilla actualizada' : 'Plantilla guardada', saved.name);
+      this.toast.success(
+        current ? $localize`Plantilla actualizada` : $localize`Plantilla guardada`,
+        saved.name,
+      );
     } catch (error) {
-      this.toast.error('No se pudo guardar la plantilla', this.describe(error));
+      this.toast.error($localize`No se pudo guardar la plantilla`, this.describe(error));
     } finally {
       this.saving.set(false);
     }
@@ -186,15 +189,15 @@ export class OverlaysPage {
     try {
       await this.store.setPinned(template, pinned);
     } catch (error) {
-      this.toast.error('No se pudo cambiar la plantilla', this.describe(error));
+      this.toast.error($localize`No se pudo cambiar la plantilla`, this.describe(error));
     }
   }
 
   protected async deleteTemplate(template: OverlayTemplate): Promise<void> {
     const ok = await this.confirm.confirm({
-      title: `¿Eliminar «${template.name}»?`,
-      description: 'Las fuentes de OBS o LIVE Studio que ya usan su URL seguirán funcionando.',
-      confirmLabel: 'Eliminar',
+      title: $localize`¿Eliminar «${template.name}»?`,
+      description: $localize`Las fuentes de OBS o LIVE Studio que ya usan su URL seguirán funcionando.`,
+      confirmLabel: $localize`Eliminar`,
       destructive: true,
     });
     if (!ok) return;
@@ -202,7 +205,7 @@ export class OverlaysPage {
       await this.store.remove(template.id);
       if (this.templateId() === template.id) this.templateId.set(undefined);
     } catch (error) {
-      this.toast.error('No se pudo eliminar la plantilla', this.describe(error));
+      this.toast.error($localize`No se pudo eliminar la plantilla`, this.describe(error));
     }
   }
 

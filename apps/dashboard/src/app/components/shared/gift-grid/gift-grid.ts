@@ -15,6 +15,7 @@ import { UiButton } from '../../ui/button';
 import { UiSkeleton, UiSpinner } from '../../ui/feedback';
 import { UiInput } from '../../ui/input';
 import { UiTooltip } from '../../ui/tooltip';
+import { numberLocale } from '../../../core/locale';
 
 /** Gifts shown before the list is filtered: the grid stays light with 600+ gifts. */
 const PAGE = 60;
@@ -41,8 +42,9 @@ const PAGE = 60;
   templateUrl: './gift-grid.html',
 })
 export class GiftGrid {
+  protected readonly numberLocale = numberLocale;
   readonly selected = input<string | number | null | undefined>();
-  readonly label = input('Regalos de TikTok');
+  readonly label = input($localize`Regalos de TikTok`);
   readonly pick = output<GiftInfo>();
 
   protected readonly store = inject(GiftsStore);

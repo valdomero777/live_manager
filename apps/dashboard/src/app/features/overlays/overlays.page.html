@@ -1,4 +1,6 @@
 <app-page-header
+  i18n-description
+  i18n-title
   title="Overlays"
   description="Elige un overlay, ajusta sus parámetros y copia la URL final. La vista previa se actualiza al instante."
 />
@@ -6,10 +8,10 @@
 <div class="grid items-start gap-4 lg:grid-cols-[minmax(18rem,26rem)_minmax(0,1fr)]">
   <section uiCard aria-labelledby="cfg-title">
     <header uiCardHeader>
-      <h2 uiCardTitle id="cfg-title"><svg lucideSlidersHorizontal /> Configurar</h2>
+      <h2 i18n uiCardTitle id="cfg-title"><svg lucideSlidersHorizontal /> Configurar</h2>
     </header>
     <div uiCardContent class="grid gap-4">
-      <ui-form-field label="Overlay" for="o-type" [description]="type().help">
+      <ui-form-field i18n-label label="Overlay" for="o-type" [description]="type().help">
         <select
           uiNativeSelect
           id="o-type"
@@ -63,7 +65,7 @@
           @for (g of goals(); track g.id) {
           <option [value]="g.id" [selected]="g.id + '' === value(p)">{{ g.name }}</option>
           } @empty {
-          <option value="1" [selected]="value(p) === '1'">
+          <option i18n value="1" [selected]="value(p) === '1'">
             No hay metas: créalas en Rankings y metas
           </option>
           }
@@ -94,7 +96,7 @@
       </ui-form-field>
       } } }
 
-      <ui-form-field label="Dirección para la PC de stream" for="o-host">
+      <ui-form-field i18n-label label="Dirección para la PC de stream" for="o-host">
         <select uiNativeSelect id="o-host" (change)="host.set($any($event.target).value)">
           @for (h of hosts(); track h) {
           <option [value]="h" [selected]="h === host()">{{ h }}</option>
@@ -103,24 +105,25 @@
       </ui-form-field>
 
       <div class="grid gap-2 rounded-lg border bg-muted/40 p-3">
-        <span class="type-label">URL del overlay</span>
+        <span i18n class="type-label">URL del overlay</span>
         <code class="font-mono text-xs break-all text-muted-foreground">{{ url() }}</code>
         <div class="flex gap-2">
-          <app-copy-button [value]="url()" label="URL del overlay" />
-          <a uiButton variant="ghost" size="sm" [href]="url()" target="_blank" rel="noopener"
+          <app-copy-button i18n-label [value]="url()" label="URL del overlay" />
+          <a i18n uiButton variant="ghost" size="sm" [href]="url()" target="_blank" rel="noopener"
             ><svg lucideExternalLink /> Abrir</a
           >
         </div>
       </div>
-      <p class="type-caption">
+      <p i18n class="type-caption">
         Pégala en LIVE Studio como fuente <strong>Link</strong> o en OBS como
         <strong>Browser Source</strong>.
       </p>
 
       @if (typeId() !== 'audio') {
       <div class="grid gap-2 rounded-lg border p-3">
-        <ui-form-field label="Guardar como plantilla" for="o-template-name">
+        <ui-form-field i18n-label label="Guardar como plantilla" for="o-template-name">
           <input
+            i18n-placeholder
             uiInput
             id="o-template-name"
             type="text"
@@ -134,6 +137,7 @@
         <div class="flex flex-wrap gap-2">
           @if (loadedTemplate(); as t) {
           <button
+            i18n
             uiButton
             size="sm"
             type="button"
@@ -143,6 +147,7 @@
             <svg lucideSave /> Actualizar «{{ t.name }}»
           </button>
           <button
+            i18n
             uiButton
             variant="outline"
             size="sm"
@@ -154,6 +159,7 @@
           </button>
           } @else {
           <button
+            i18n
             uiButton
             size="sm"
             type="button"
@@ -171,9 +177,10 @@
 
   <section uiCard class="lg:sticky lg:top-20" aria-labelledby="prev-title">
     <header uiCardHeader>
-      <h2 uiCardTitle id="prev-title"><svg lucideTv /> Vista previa</h2>
+      <h2 i18n uiCardTitle id="prev-title"><svg lucideTv /> Vista previa</h2>
       <div uiCardAction>
         <button
+          i18n-aria-label
           uiButton
           variant="ghost"
           size="icon-sm"
@@ -186,7 +193,7 @@
       </div>
     </header>
     <div uiCardContent class="grid gap-3">
-      <div uiToggleGroup aria-label="Fondo de la vista previa">
+      <div i18n-aria-label uiToggleGroup aria-label="Fondo de la vista previa">
         @for (b of backgrounds; track b.value) {
         <button
           uiToggleGroupItem
@@ -205,12 +212,13 @@
         [class.bg-zinc-100]="previewBg() === 'light'"
       >
         <iframe
+          i18n-title
           [src]="previewUrl()"
           title="Vista previa del overlay"
           class="size-full border-0 bg-transparent scheme-light"
         ></iframe>
       </div>
-      <p class="type-caption">
+      <p i18n class="type-caption">
         Usa el Simulador para ver datos en movimiento. El sonido del LIVE ya suena en este panel
         (botón «Sonido» de la barra superior); la pestaña de audio solo hace falta para otra PC.
       </p>
@@ -220,8 +228,8 @@
 
 <section uiCard aria-labelledby="tpl-title">
   <header uiCardHeader>
-    <h2 uiCardTitle id="tpl-title"><svg lucideBookmark /> Plantillas guardadas</h2>
-    <p uiCardDescription>
+    <h2 i18n uiCardTitle id="tpl-title"><svg lucideBookmark /> Plantillas guardadas</h2>
+    <p i18n uiCardDescription>
       Carga una plantilla para editarla, copia su URL o actívala para verla en vivo en el Dashboard.
     </p>
   </header>
@@ -244,19 +252,20 @@
             [controlled]="true"
             (toggled)="setPinned(t, $event)"
           />
-          <label class="type-caption" [for]="pinId">Mostrar en el dashboard</label>
+          <label i18n class="type-caption" [for]="pinId">Mostrar en el dashboard</label>
         </div>
         <div class="flex gap-1">
-          <button uiButton variant="ghost" size="sm" type="button" (click)="loadTemplate(t)">
+          <button i18n uiButton variant="ghost" size="sm" type="button" (click)="loadTemplate(t)">
             <svg lucideFolderOpen /> Cargar
           </button>
-          <app-copy-button [value]="templateUrl(t)" [label]="'URL de ' + t.name" />
+          <app-copy-button [value]="templateUrl(t)" label="URL de {{ t.name }}" i18n-label />
           <button
             uiButton
             variant="ghost-destructive"
             size="icon-sm"
             type="button"
-            [attr.aria-label]="'Eliminar ' + t.name"
+            aria-label="Eliminar {{ t.name }}"
+            i18n-aria-label
             (click)="deleteTemplate(t)"
           >
             <svg lucideTrash2 />
@@ -266,7 +275,7 @@
       }
     </ul>
     } @else {
-    <p class="type-secondary">
+    <p i18n class="type-secondary">
       Aún no hay plantillas. Configura un overlay arriba, ponle nombre y pulsa «Guardar plantilla».
     </p>
     }

@@ -37,6 +37,7 @@ function readCollapsed(): boolean {
   host: { class: 'flex min-h-dvh' },
   template: `
     <a
+      i18n
       href="#contenido"
       class="fixed top-2 left-2 z-50 -translate-y-20 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-transform focus:translate-y-0"
       >Saltar al contenido</a
@@ -98,7 +99,7 @@ export class AppShell {
   }
 
   protected openMobileNav(): void {
-    this.sheet = this.dialogs.openSheet(this.mobileNav(), 'Menú principal');
+    this.sheet = this.dialogs.openSheet(this.mobileNav(), $localize`Menú principal`);
   }
 
   protected closeMobileNav(): void {
