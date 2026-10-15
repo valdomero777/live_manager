@@ -114,12 +114,45 @@ export const STATS_FIELDS = [
 ] as const;
 export type StatsField = (typeof STATS_FIELDS)[number];
 
+// ---------- Event feed ----------
+
+/** Event types the feed keeps; likes and chat are too frequent to be a useful list. */
+export const FEED_EVENT_TYPES = ['gift', 'follow', 'share', 'join'] as const;
+export const FeedEventTypeSchema = z.enum(FEED_EVENT_TYPES);
+export type FeedEventType = z.infer<typeof FeedEventTypeSchema>;
+
+/** Most recent events the server keeps and publishes; overlays slice to their own `limit`. */
+export const MAX_FEED_ITEMS = 30;
+
+export const FeedItemSchema = z.object({
+  /** The live event id: a re-delivered event never appears twice. */
+  id: z.string().min(1),
+  type: FeedEventTypeSchema,
+  occurredAt: z.number().int().nonnegative(),
+  nickname: z.string(),
+  uniqueId: z.string(),
+  avatarUrl: z.string().optional(),
+  giftName: z.string().optional(),
+  giftImageUrl: z.string().optional(),
+  quantity: z.number().int().positive().optional(),
+  diamonds: z.number().int().nonnegative().optional(),
+});
+export type FeedItem = z.infer<typeof FeedItemSchema>;
+
+export const FeedSnapshotSchema = z.object({
+  seq: z.number().int().nonnegative(),
+  /** Newest first. */
+  items: z.array(FeedItemSchema).max(MAX_FEED_ITEMS),
+});
+export type FeedSnapshot = z.infer<typeof FeedSnapshotSchema>;
+
 // ---------- Subscriptions (overlay -> server, inside client.hello) ----------
 
 export const SubscriptionSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('leaderboard'), metric: MetricSchema, scope: ScopeSchema }),
   z.object({ kind: z.literal('goal'), goalId: z.number().int().positive() }),
   z.object({ kind: z.literal('stats') }),
+  z.object({ kind: z.literal('feed') }),
 ]);
 export type Subscription = z.infer<typeof SubscriptionSchema>;
 
@@ -127,6 +160,7 @@ export type Subscription = z.infer<typeof SubscriptionSchema>;
 export function channelOf(s: Subscription): string {
   if (s.kind === 'leaderboard') return `leaderboard:${s.metric}:${s.scope}`;
   if (s.kind === 'goal') return `goal:${s.goalId}`;
+  if (s.kind === 'feed') return 'feed';
   return 'stats';
 }
 

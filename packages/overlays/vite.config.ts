@@ -20,6 +20,7 @@ export default defineConfig({
         topgifter: resolve(import.meta.dirname, 'overlay/topgifter/index.html'),
         ticker: resolve(import.meta.dirname, 'overlay/ticker/index.html'),
         social: resolve(import.meta.dirname, 'overlay/social/index.html'),
+        feed: resolve(import.meta.dirname, 'overlay/feed/index.html'),
       },
     },
   },

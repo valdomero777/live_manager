@@ -223,6 +223,41 @@
   color: var(--panel-muted);
 }
 
+/* ---- last events feed ---- */
+.feed__list {
+  display: grid;
+  gap: 0.35em;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.feed__row {
+  display: grid;
+  grid-template-columns: 1.6em auto 1fr;
+  align-items: baseline;
+  gap: 0.5em;
+  min-width: 0;
+}
+.feed__row--new {
+  animation: row-in 400ms ease-out both;
+}
+.feed__name {
+  overflow: hidden;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 10em;
+}
+.feed__action {
+  overflow: hidden;
+  color: var(--panel-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.feed__empty {
+  color: var(--panel-muted);
+}
+
 /* ---- ticker: a full-width strip; the text slides with the Web Animations API (transform) ---- */
 .stage--ticker {
   padding: 0;
@@ -267,6 +302,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .topgifter__body--new,
+  .feed__row--new,
   .social--in {
     animation: none;
   }

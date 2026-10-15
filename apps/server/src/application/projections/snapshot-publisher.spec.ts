@@ -2,6 +2,7 @@ import type { LeaderboardRow, ScreenServerMessage } from '@tiklive/contracts';
 import { describe, expect, it } from 'vitest';
 import { aCommentEvent, aGiftEvent } from '../../../test/support/builders.js';
 import { FakeScheduler } from '../../../test/support/fakes.js';
+import { FeedProjection } from '../../domain/projections/feed-projection.js';
 import { StatsProjection } from '../../domain/projections/stats-projection.js';
 import type { ChannelGateway } from '../ports/channel-gateway.js';
 import { silentLogger } from '../ports/logger.js';
@@ -48,6 +49,7 @@ function setup(subscribed: string[]) {
     leaderboards,
     goals,
     stats: new StatsProjection(),
+    feed: new FeedProjection(),
     scheduler,
     clock: scheduler.clock,
     logger: silentLogger,
@@ -106,6 +108,23 @@ describe('SnapshotPublisher', () => {
     expect(t.published).toHaveLength(1);
   });
 
+  it('publishes the feed when a listed event arrives and ignores chat', async () => {
+    const t = setup(['feed']);
+    await t.publisher.handle(aCommentEvent());
+    t.scheduler.advance(SNAPSHOT_DEBOUNCE_MS);
+    await settle();
+    expect(t.published).toEqual([]);
+
+    await t.publisher.handle(aGiftEvent({ id: 'g1' }));
+    t.scheduler.advance(SNAPSHOT_DEBOUNCE_MS);
+    await settle();
+    const message = t.published.find((p) => p.channel === 'feed')?.message;
+    expect(message?.type).toBe('feed.snapshot');
+    expect((message?.payload as { items: { id: string }[] }).items.map((i) => i.id)).toEqual([
+      'g1',
+    ]);
+  });
+
   it('sends a full snapshot for each requested channel on hello', async () => {
     const t = setup([]);
     const sent: string[] = [];
@@ -113,12 +132,14 @@ describe('SnapshotPublisher', () => {
       'leaderboard:likes:week',
       'goal:7',
       'stats',
+      'feed',
       'leaderboard:bogus:week',
     ]);
     expect(sent.map((d) => (JSON.parse(d) as { type: string }).type)).toEqual([
       'leaderboard.snapshot',
       'goal.progress',
       'stats.snapshot',
+      'feed.snapshot',
     ]);
   });
 });

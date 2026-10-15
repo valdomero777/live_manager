@@ -49,6 +49,7 @@ import { ModerationService } from '../application/settings/moderation-service.js
 import { SettingsService } from '../application/settings/settings-service.js';
 import { TtsService } from '../application/tts/tts-service.js';
 import { SIMULATOR_TARGET, SimulatorService } from '../application/simulator/simulator-service.js';
+import { FeedProjection } from '../domain/projections/feed-projection.js';
 import { StatsProjection } from '../domain/projections/stats-projection.js';
 import { scopeKey } from '../domain/projections/scopes.js';
 import { createDefaultActionRegistry } from '../domain/rules/actions.js';
@@ -234,6 +235,21 @@ function buildReactions(
 }
 type Reactions = ReturnType<typeof buildReactions>;
 
+function buildGoalService(rt: Runtime, db: Persistence, r: Reactions): GoalService {
+  return new GoalService({
+    repo: db.goals,
+    totals: db.leaderboards,
+    currentSessionId: () => db.sessions.currentId(),
+    actions: r.handlers,
+    assets: db.assets,
+    sink: r.actions,
+    speech: () => r.tts.voice(),
+    ids: rt.ids,
+    clock: rt.clock,
+    logger: rt.logger.child({ module: 'goals' }),
+  });
+}
+
 /** Leaderboards, goals and stats: read models fed by every accepted event (spec 11). */
 function buildProjections(rt: Runtime, db: Persistence, screens: ScreenSocketHub, r: Reactions) {
   const currentSessionId = () => db.sessions.currentId();
@@ -243,31 +259,22 @@ function buildProjections(rt: Runtime, db: Persistence, screens: ScreenSocketHub
     currentSessionId,
     clock: rt.clock,
   });
-  const goals = new GoalService({
-    repo: db.goals,
-    totals: db.leaderboards,
-    currentSessionId,
-    actions: r.handlers,
-    assets: db.assets,
-    sink: r.actions,
-    speech: () => r.tts.voice(),
-    ids: rt.ids,
-    clock: rt.clock,
-    logger: rt.logger.child({ module: 'goals' }),
-  });
+  const goals = buildGoalService(rt, db, r);
   r.goalLink.current = goals;
-  const stats = new StatsProjection();
+  const [stats, feed] = [new StatsProjection(), new FeedProjection()];
   const publisher = new SnapshotPublisher({
     gateway: screens,
     leaderboards,
     goals,
     stats,
+    feed,
     scheduler: rt.scheduler,
     clock: rt.clock,
     logger: rt.logger.child({ module: 'projections' }),
   });
   db.sessions.onChange((session) => {
     if (session) stats.startSession(session.id, session.startedAt);
+    feed.reset();
     publisher.refreshAll();
   });
   const rotators = new RotatorService(db.settings);

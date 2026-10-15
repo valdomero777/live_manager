@@ -1,4 +1,4 @@
-import { METRICS, SCOPES, STATS_FIELDS } from '@tiklive/contracts';
+import { FEED_EVENT_TYPES, METRICS, SCOPES, STATS_FIELDS } from '@tiklive/contracts';
 import { METRIC_LABELS, SCOPE_LABELS } from '../../lib/labels';
 
 /** "lines": one item per line in the editor, stored in the URL joined by "|". */
@@ -65,6 +65,13 @@ const STATS_LABELS: Readonly<Record<(typeof STATS_FIELDS)[number], string>> = {
   diamonds: $localize`Diamantes`,
   newFollowers: $localize`Nuevos seguidores`,
   duration: $localize`Duración`,
+};
+
+const FEED_LABELS: Readonly<Record<(typeof FEED_EVENT_TYPES)[number], string>> = {
+  gift: $localize`Regalos`,
+  follow: $localize`Nuevos seguidores`,
+  share: $localize`Compartidos`,
+  join: $localize`Entradas`,
 };
 
 /** Every overlay page and its URL parameters (spec 12). Defaults are omitted from the URL. */
@@ -302,6 +309,45 @@ export const OVERLAY_TYPES: readonly OverlayType[] = [
     ],
   },
   {
+    id: 'feed',
+    label: $localize`Últimos eventos`,
+    path: '/overlay/feed/',
+    help: $localize`Lista de los eventos más recientes del directo (regalos, seguidores, compartidos y entradas); solo muestra lo que llegó de verdad.`,
+    params: [
+      {
+        key: 'types',
+        label: $localize`Eventos`,
+        kind: 'multi',
+        default: 'gift,follow',
+        options: FEED_EVENT_TYPES.map((t) => ({ value: t, label: FEED_LABELS[t] })),
+      },
+      {
+        key: 'limit',
+        label: $localize`Cuántos mostrar`,
+        kind: 'number',
+        default: '6',
+        min: 1,
+        max: 15,
+        step: 1,
+      },
+      { key: 'title', label: $localize`Título (opcional)`, kind: 'text', default: '' },
+      {
+        key: 'name',
+        label: $localize`Mostrar`,
+        kind: 'select',
+        default: '',
+        options: [
+          { value: '', label: $localize`Apodo` },
+          { value: 'alias', label: '@usuario' },
+        ],
+      },
+      THEME,
+      SCALE,
+      FONT,
+      DEBUG,
+    ],
+  },
+  {
     id: 'audio',
     label: $localize`Pestaña de audio`,
     path: '/screen/audio/',
@@ -405,6 +451,20 @@ export const OVERLAY_PRESETS: readonly OverlayPreset[] = [
     description: $localize`Espectadores, likes y diamantes en columna.`,
     type: 'stats',
     params: { fields: 'viewers,likes,diamonds', layout: 'column' },
+  },
+  {
+    id: 'last-events',
+    label: $localize`Últimos eventos`,
+    description: $localize`Regalos y nuevos seguidores recién llegados, el más reciente arriba.`,
+    type: 'feed',
+    params: { types: 'gift,follow', limit: '6' },
+  },
+  {
+    id: 'last-gifts',
+    label: $localize`Últimos regalos`,
+    description: $localize`Solo los 5 regalos más recientes.`,
+    type: 'feed',
+    params: { types: 'gift', limit: '5', title: 'Últimos regalos' },
   },
   {
     id: 'ticker',
