@@ -102,6 +102,20 @@ function ensureOverlayKey(store: ConfigStore, env: Partial<SettingsValues>): voi
 
 const absolute = (path: string) => (path === IN_MEMORY_DB ? path : resolve(path));
 
+/** The saved-settings file; problems with it become boot warnings instead of failures. */
+function openConfigStore(configPath: string, warnings: string[]): JsonConfigStore {
+  return new JsonConfigStore(
+    configPath,
+    (key) => warnings.push(`${key} guardado en ${configPath} no es válido y se ignora`),
+    ({ movedTo, reason }) =>
+      warnings.push(
+        movedTo
+          ? `${configPath} está dañado (${reason}): se movió a ${movedTo} y se arranca con los valores por defecto; hay que volver a crear la contraseña, revisar Ajustes y copiar las URLs nuevas de los overlays`
+          : `${configPath} está dañado (${reason}) y no se pudo mover: se arranca con los valores por defecto`,
+      ),
+  );
+}
+
 /**
  * Builds the running configuration. Precedence per setting: saved from the UI > environment
  * variable > default. Re-run on every in-process restart so UI changes take effect.
@@ -109,9 +123,7 @@ const absolute = (path: string) => (path === IN_MEMORY_DB ? path : resolve(path)
 export function loadConfig(env: NodeJS.ProcessEnv, version: string): AppConfig {
   const warnings: string[] = [];
   const configPath = absolute(env[CONFIG_PATH_ENV] || DEFAULT_CONFIG_PATH);
-  const store = new JsonConfigStore(configPath, (key) =>
-    warnings.push(`${key} guardado en ${configPath} no es válido y se ignora`),
-  );
+  const store = openConfigStore(configPath, warnings);
   const envValues = readEnv(env, warnings);
   ensureOverlayKey(store, envValues);
   const s = resolveSettings(DEFAULT_SETTINGS, envValues, store.read().settings).values;

@@ -55,11 +55,14 @@ Síntomas: `/health` sin respuesta, panel en blanco, overlays desconectados.
    - `EADDRINUSE`: otro proceso usa el puerto. Cambia `PORT` en `tiklive.env` o cierra el otro.
    - `Migration … failed`: el despliegue cambió el esquema. Haz **rollback** y restaura la base
      (ver [§4](#4-restaurar-y-volver-atrás)).
-   - Error al leer `data\config.json` (JSON roto, por ejemplo tras un corte de energía en pleno
-     guardado): el servidor no arranca. Renombra el archivo a `config.json.bad` y arranca. Se
-     pierden los ajustes del panel y la contraseña: vuelve a crearla con el código de
-     configuración de la consola y reconfigura Ajustes. Las reglas y los datos están en la base,
-     no se pierden.
+   - `data\config.json` dañado (JSON roto, por ejemplo tras un corte de energía en pleno
+     guardado): el servidor arranca igual. Mueve el archivo a `config.json.corrupt-<hora>` junto
+     al original, usa los valores por defecto y avisa en el log (busca «está dañado»). Hay que
+     crear la contraseña de nuevo con el código de configuración que sale en el log, revisar
+     Ajustes (usuario de TikTok, claves) y copiar las URLs nuevas de los overlays, porque la clave
+     se genera otra vez. Las reglas y los datos están en la base, no se pierden. Si el archivo
+     movido era recuperable (por ejemplo, le falta solo una llave), arréglalo con cuidado y
+     devuélvelo a su nombre con el servidor detenido.
    - Reinicio desde Ajustes que no vuelve (el proceso queda vivo sin servidor HTTP): mata el
      proceso (`taskkill /F /IM node.exe`) y la tarea lo arranca de nuevo.
 4. Dos instancias contra el mismo `app.db` no están protegidas. Comprueba que solo hay un

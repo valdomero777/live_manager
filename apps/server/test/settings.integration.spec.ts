@@ -1,9 +1,12 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { FakeClock } from '../src/domain/shared/time.js';
-import { JsonConfigStore } from '../src/infrastructure/config/json-config-store.js';
+import {
+  JsonConfigStore,
+  type CorruptConfig,
+} from '../src/infrastructure/config/json-config-store.js';
 import { DEFAULT_SETTINGS, loadConfig } from '../src/main/config.js';
 import {
   AuthError,
@@ -61,6 +64,61 @@ describe('JsonConfigStore', () => {
     writeFileSync(path, JSON.stringify({ version: 1, settings: { port: 'nope', host: 'x' } }));
     expect(store.read().settings).toEqual({ host: 'x' });
     expect(invalid).toEqual(['port']);
+  });
+});
+
+describe('JsonConfigStore with a damaged file', () => {
+  const quarantined = (dir: string): string[] =>
+    readdirSync(dir).filter((f) => f.startsWith('config.json.corrupt-'));
+
+  it.each([
+    ['half-written JSON', '{"version":1,"settings":{"port":40'],
+    ['an empty file', ''],
+    ['a value of the wrong shape', JSON.stringify({ version: 2, settings: [] })],
+  ])('moves %s aside and starts from the defaults', (_name, content) => {
+    const dir = tempDir();
+    const path = join(dir, 'config.json');
+    writeFileSync(path, content);
+    const found: CorruptConfig[] = [];
+    const store = new JsonConfigStore(path, undefined, (info) => found.push(info));
+
+    expect(store.read()).toEqual({ settings: {} });
+
+    const [moved] = quarantined(dir);
+    expect(moved).toBeDefined();
+    expect(found).toHaveLength(1);
+    expect(found[0]?.movedTo).toBe(join(dir, moved ?? ''));
+    expect(readFileSync(join(dir, moved ?? ''), 'utf8')).toBe(content);
+    expect(existsSync(path)).toBe(false);
+  });
+
+  it('reports the damage once and keeps working afterwards', () => {
+    const dir = tempDir();
+    const path = join(dir, 'config.json');
+    writeFileSync(path, 'not json');
+    const found: CorruptConfig[] = [];
+    const store = new JsonConfigStore(path, undefined, (info) => found.push(info));
+
+    store.read();
+    store.read();
+    store.write({ settings: { port: 4100 } });
+
+    expect(found).toHaveLength(1);
+    expect(store.read().settings).toEqual({ port: 4100 });
+    expect(quarantined(dir)).toHaveLength(1);
+  });
+
+  it('loadConfig boots with a warning and a fresh overlay key', () => {
+    const dir = tempDir();
+    const path = join(dir, 'config.json');
+    writeFileSync(path, '{"settings":');
+
+    const cfg = loadConfig({ CONFIG_PATH: path }, 't');
+
+    expect(cfg.warnings.some((w) => w.includes('dañado') && w.includes(path))).toBe(true);
+    expect(cfg.port).toBe(DEFAULT_SETTINGS.port);
+    expect(cfg.overlayKey.length).toBeGreaterThanOrEqual(16);
+    expect(cfg.configStore.read().adminPasswordHash).toBeUndefined();
   });
 });
 
