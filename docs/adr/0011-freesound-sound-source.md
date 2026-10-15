@@ -14,7 +14,7 @@ Alternativas revisadas:
 | Opción | Resultado |
 | --- | --- |
 | Freesound (API oficial v2) | Estable, documentada, búsqueda + vista previa MP3, licencias por sonido. Requiere clave gratuita |
-| Alojar la API comunitaria de MyInstants | Ya posible con `MYINSTANTS_API_URL`; sigue dependiendo de leer el HTML de MyInstants |
+| Alojar la API comunitaria de MyInstants | Ya posible con `MYINSTANTS_API_URL`; sigue dependiendo de leer el HTML de MyInstants (ver ADR 0012 para la lectura directa) |
 | Pixabay, Zapsplat, BBC Sound Effects | Sin API pública de audio o licencia incompatible |
 | Subir MP3 propios (Assets) | Ya existe; sigue siendo el respaldo sin internet |
 

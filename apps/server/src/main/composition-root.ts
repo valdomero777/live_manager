@@ -54,6 +54,7 @@ import { createDefaultConditionRegistry } from '../domain/rules/conditions.js';
 import { RuleRateLimiter } from '../domain/rules/rate-limiter.js';
 import { Argon2Hasher } from '../infrastructure/auth/argon2-hasher.js';
 import { FreesoundProvider } from '../infrastructure/freesound/freesound-provider.js';
+import { MyInstantsHtmlProvider } from '../infrastructure/myinstants/myinstants-html-provider.js';
 import { MyInstantsProvider } from '../infrastructure/myinstants/myinstants-provider.js';
 import { SimulatedSource } from '../infrastructure/simulator/simulated-source.adapter.js';
 import { LocalAssetStorage } from '../infrastructure/storage/local-asset-storage.js';
@@ -408,7 +409,12 @@ function buildTriggerServices(p: ServiceParts) {
   const providers: Record<SoundSource, SoundProvider> = {
     myinstants:
       fakes.myinstants ??
-      new MyInstantsProvider(p.rt.logger.child({ module: 'myinstants' }), p.cfg.myInstantsApiUrl),
+      (p.cfg.myInstantsApiUrl
+        ? new MyInstantsProvider(
+            p.rt.logger.child({ module: 'myinstants' }),
+            p.cfg.myInstantsApiUrl,
+          )
+        : new MyInstantsHtmlProvider(p.rt.logger.child({ module: 'myinstants' }))),
     freesound:
       fakes.freesound ??
       new FreesoundProvider(
