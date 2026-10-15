@@ -50,6 +50,7 @@ import { SettingsService } from '../application/settings/settings-service.js';
 import { TtsService } from '../application/tts/tts-service.js';
 import { SIMULATOR_TARGET, SimulatorService } from '../application/simulator/simulator-service.js';
 import { FeedProjection } from '../domain/projections/feed-projection.js';
+import { StreakProjection } from '../domain/projections/streak-projection.js';
 import { StatsProjection } from '../domain/projections/stats-projection.js';
 import { scopeKey } from '../domain/projections/scopes.js';
 import { createDefaultActionRegistry } from '../domain/rules/actions.js';
@@ -261,13 +262,18 @@ function buildProjections(rt: Runtime, db: Persistence, screens: ScreenSocketHub
   });
   const goals = buildGoalService(rt, db, r);
   r.goalLink.current = goals;
-  const [stats, feed] = [new StatsProjection(), new FeedProjection()];
+  const [stats, feed, streak] = [
+    new StatsProjection(),
+    new FeedProjection(),
+    new StreakProjection(),
+  ];
   const publisher = new SnapshotPublisher({
     gateway: screens,
     leaderboards,
     goals,
     stats,
     feed,
+    streak,
     scheduler: rt.scheduler,
     clock: rt.clock,
     logger: rt.logger.child({ module: 'projections' }),
@@ -275,6 +281,7 @@ function buildProjections(rt: Runtime, db: Persistence, screens: ScreenSocketHub
   db.sessions.onChange((session) => {
     if (session) stats.startSession(session.id, session.startedAt);
     feed.reset();
+    streak.reset();
     publisher.refreshAll();
   });
   const rotators = new RotatorService(db.settings);

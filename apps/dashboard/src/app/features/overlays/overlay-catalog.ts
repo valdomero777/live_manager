@@ -348,6 +348,29 @@ export const OVERLAY_TYPES: readonly OverlayType[] = [
     ],
   },
   {
+    id: 'streak',
+    label: $localize`Racha más larga`,
+    path: '/overlay/streak/',
+    help: $localize`Tarjeta con la racha de regalos más larga de la sesión (mínimo 2 seguidos del mismo regalo); sin rachas completadas no muestra ninguna.`,
+    params: [
+      { key: 'title', label: $localize`Título (opcional)`, kind: 'text', default: '' },
+      {
+        key: 'name',
+        label: $localize`Mostrar`,
+        kind: 'select',
+        default: '',
+        options: [
+          { value: '', label: $localize`Apodo` },
+          { value: 'alias', label: '@usuario' },
+        ],
+      },
+      THEME,
+      SCALE,
+      FONT,
+      DEBUG,
+    ],
+  },
+  {
     id: 'audio',
     label: $localize`Pestaña de audio`,
     path: '/screen/audio/',
@@ -465,6 +488,13 @@ export const OVERLAY_PRESETS: readonly OverlayPreset[] = [
     description: $localize`Solo los 5 regalos más recientes.`,
     type: 'feed',
     params: { types: 'gift', limit: '5', title: 'Últimos regalos' },
+  },
+  {
+    id: 'top-streak',
+    label: $localize`Racha más larga`,
+    description: $localize`Quién envió más unidades seguidas de un mismo regalo en esta sesión.`,
+    type: 'streak',
+    params: {},
   },
   {
     id: 'ticker',

@@ -146,6 +146,30 @@ export const FeedSnapshotSchema = z.object({
 });
 export type FeedSnapshot = z.infer<typeof FeedSnapshotSchema>;
 
+// ---------- Top streak ----------
+
+/** A gift streak is a consolidated gift of at least this many units sent in a row. */
+export const MIN_STREAK_COUNT = 2;
+
+export const StreakEntrySchema = z.object({
+  nickname: z.string(),
+  uniqueId: z.string(),
+  avatarUrl: z.string().optional(),
+  giftName: z.string(),
+  giftImageUrl: z.string().optional(),
+  /** Units of the gift sent in one uninterrupted streak. */
+  count: z.number().int().min(MIN_STREAK_COUNT),
+  achievedAt: z.number().int().nonnegative(),
+});
+export type StreakEntry = z.infer<typeof StreakEntrySchema>;
+
+export const StreakSnapshotSchema = z.object({
+  seq: z.number().int().nonnegative(),
+  /** The longest streak of the session; null while nobody has completed one. */
+  leader: StreakEntrySchema.nullable(),
+});
+export type StreakSnapshot = z.infer<typeof StreakSnapshotSchema>;
+
 // ---------- Subscriptions (overlay -> server, inside client.hello) ----------
 
 export const SubscriptionSchema = z.discriminatedUnion('kind', [
@@ -153,6 +177,7 @@ export const SubscriptionSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('goal'), goalId: z.number().int().positive() }),
   z.object({ kind: z.literal('stats') }),
   z.object({ kind: z.literal('feed') }),
+  z.object({ kind: z.literal('streak') }),
 ]);
 export type Subscription = z.infer<typeof SubscriptionSchema>;
 
@@ -161,6 +186,7 @@ export function channelOf(s: Subscription): string {
   if (s.kind === 'leaderboard') return `leaderboard:${s.metric}:${s.scope}`;
   if (s.kind === 'goal') return `goal:${s.goalId}`;
   if (s.kind === 'feed') return 'feed';
+  if (s.kind === 'streak') return 'streak';
   return 'stats';
 }
 

@@ -95,8 +95,11 @@ en el navegador):
   predefinidas en la página Overlays (catálogo en el panel, editable y guardable como plantilla propia).
   Overlay `/overlay/feed` (últimos eventos): canal `feed` del servidor (`FeedProjection`, últimos 30
   regalos consolidados, seguidores, compartidos y entradas de la sesión, sin duplicados por id).
-  Pendientes de la especificación de overlays que necesitan proyecciones nuevas en el servidor: racha
-  más larga, desafíos de regalos con filtro por regalo y guía regalo→acción;
+  Overlay `/overlay/streak` (racha más larga): canal `streak` (`StreakProjection`). El pipeline solo
+  entrega una racha al cerrarse, así que «racha» = regalo consolidado de 2 o más unidades y la «activa»
+  es la mejor de la sesión; sin rachas el overlay muestra el estado vacío (no se infiere nada).
+  Pendientes de la especificación de overlays que necesitan proyecciones nuevas en el servidor:
+  desafíos de regalos con filtro por regalo y guía regalo→acción;
   y los que necesitan integración o motor propio: Spotify, subasta y ruleta.
 - API: `GET /leaderboards/:metric`, `POST /leaderboards/reset`, `GET|PUT /settings/leaderboard`,
   CRUD `/goals`, `GET /stats`, `GET|PUT /rotators/:id` y `GET /overlay-data/rotators/:id?key=`.

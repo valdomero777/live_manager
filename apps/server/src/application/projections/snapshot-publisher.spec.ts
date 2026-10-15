@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { aCommentEvent, aGiftEvent } from '../../../test/support/builders.js';
 import { FakeScheduler } from '../../../test/support/fakes.js';
 import { FeedProjection } from '../../domain/projections/feed-projection.js';
+import { StreakProjection } from '../../domain/projections/streak-projection.js';
 import { StatsProjection } from '../../domain/projections/stats-projection.js';
 import type { ChannelGateway } from '../ports/channel-gateway.js';
 import { silentLogger } from '../ports/logger.js';
@@ -50,6 +51,7 @@ function setup(subscribed: string[]) {
     goals,
     stats: new StatsProjection(),
     feed: new FeedProjection(),
+    streak: new StreakProjection(),
     scheduler,
     clock: scheduler.clock,
     logger: silentLogger,
@@ -125,6 +127,21 @@ describe('SnapshotPublisher', () => {
     ]);
   });
 
+  it('publishes the top streak only when a streak completes', async () => {
+    const t = setup(['streak']);
+    await t.publisher.handle(aGiftEvent({ quantity: 1 }));
+    t.scheduler.advance(SNAPSHOT_DEBOUNCE_MS);
+    await settle();
+    expect(t.published).toEqual([]);
+
+    await t.publisher.handle(aGiftEvent({ id: 'g2', quantity: 6 }));
+    t.scheduler.advance(SNAPSHOT_DEBOUNCE_MS);
+    await settle();
+    const message = t.published.find((p) => p.channel === 'streak')?.message;
+    expect(message?.type).toBe('streak.snapshot');
+    expect((message?.payload as { leader: { count: number } }).leader.count).toBe(6);
+  });
+
   it('sends a full snapshot for each requested channel on hello', async () => {
     const t = setup([]);
     const sent: string[] = [];
@@ -133,6 +150,7 @@ describe('SnapshotPublisher', () => {
       'goal:7',
       'stats',
       'feed',
+      'streak',
       'leaderboard:bogus:week',
     ]);
     expect(sent.map((d) => (JSON.parse(d) as { type: string }).type)).toEqual([
@@ -140,6 +158,7 @@ describe('SnapshotPublisher', () => {
       'goal.progress',
       'stats.snapshot',
       'feed.snapshot',
+      'streak.snapshot',
     ]);
   });
 });

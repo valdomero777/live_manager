@@ -11,6 +11,7 @@ export const OVERLAY_TEMPLATE_TYPES = [
   'ticker',
   'social',
   'feed',
+  'streak',
 ] as const;
 export const OverlayTemplateTypeSchema = z.enum(OVERLAY_TEMPLATE_TYPES);
 export type OverlayTemplateType = z.infer<typeof OverlayTemplateTypeSchema>;
