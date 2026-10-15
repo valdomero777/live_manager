@@ -44,7 +44,7 @@ export interface AutomationActionView {
         <div class="flex min-w-0 flex-wrap items-center gap-2">
           <h2 class="truncate type-card-title" [id]="id() + '-name'">{{ name() }}</h2>
           @if (!enabled()) {
-            <span uiBadge variant="outline">Pausada</span>
+            <span i18n uiBadge variant="outline">Pausada</span>
           }
           @for (b of badges(); track b) {
             <span uiBadge variant="secondary">{{ b }}</span>
@@ -52,11 +52,15 @@ export interface AutomationActionView {
         </div>
         <div uiCardAction>
           <label class="type-caption hidden sm:inline" [for]="id() + '-switch'">
-            {{ enabled() ? 'Activa' : 'Inactiva' }}
+            @if (enabled()) {
+              <ng-container i18n>Activa</ng-container>
+            } @else {
+              <ng-container i18n>Inactiva</ng-container>
+            }
           </label>
           <ui-switch
             [inputId]="id() + '-switch'"
-            [ariaLabel]="'Activar ' + name()"
+            [ariaLabel]="toggleLabel()"
             [checked]="enabled()"
             [disabled]="busy()"
             [controlled]="true"
@@ -70,7 +74,7 @@ export interface AutomationActionView {
           class="grid gap-2 lg:grid-cols-[minmax(0,0.8fr)_auto_minmax(0,1fr)_auto_minmax(0,1.2fr)] lg:items-start lg:gap-3"
         >
           <li class="grid gap-1.5">
-            <span class="type-overline text-muted-foreground">Cuando</span>
+            <span i18n class="type-overline text-muted-foreground">Cuando</span>
             <span class="inline-flex w-fit items-center gap-2 text-sm font-medium">
               <span [class]="trigger().tone" class="grid size-6 place-items-center rounded-md">
                 <svg [lucideIcon]="trigger().icon" class="size-3.5" />
@@ -82,7 +86,7 @@ export interface AutomationActionView {
             <svg lucideArrowRight class="size-4" />
           </li>
           <li class="grid gap-1.5">
-            <span class="type-overline text-muted-foreground">Si</span>
+            <span i18n class="type-overline text-muted-foreground">Si</span>
             @if (conditions().length) {
               <ul class="grid gap-1">
                 @for (c of conditions(); track $index) {
@@ -97,14 +101,14 @@ export interface AutomationActionView {
                 }
               </ul>
             } @else {
-              <span class="type-secondary">Siempre</span>
+              <span i18n class="type-secondary">Siempre</span>
             }
           </li>
           <li class="hidden pt-6 text-muted-foreground lg:block" aria-hidden="true">
             <svg lucideArrowRight class="size-4" />
           </li>
           <li class="grid gap-1.5">
-            <span class="type-overline text-muted-foreground">Entonces</span>
+            <span i18n class="type-overline text-muted-foreground">Entonces</span>
             <ul class="grid gap-1.5">
               @for (a of actions(); track $index) {
                 <li class="flex items-start gap-2 text-sm">
@@ -118,7 +122,7 @@ export interface AutomationActionView {
                   <span class="min-w-0 pt-0.5 break-words">{{ a.text }}</span>
                 </li>
               } @empty {
-                <li class="type-secondary">Sin acciones</li>
+                <li i18n class="type-secondary">Sin acciones</li>
               }
             </ul>
           </li>
@@ -153,6 +157,7 @@ export class AutomationCard {
   readonly toggle = output<boolean>();
 
   protected readonly trigger = computed(() => EVENT_META[this.event()]);
+  protected readonly toggleLabel = computed(() => $localize`Activar ${this.name()}`);
   protected readonly cardClass = computed(() =>
     cn('transition-opacity', !this.enabled() && 'opacity-70'),
   );

@@ -30,7 +30,8 @@
     "restore": "tsx --conditions=development apps/server/src/main/restore.ts",
     "phase0": "tsx --conditions=development tools/phase0-check.ts",
     "watch-events": "tsx --conditions=development tools/watch-events.ts",
-    "dev:dashboard": "npm run start -w @tiklive/dashboard"
+    "dev:dashboard": "npm run start -w @tiklive/dashboard",
+    "i18n:extract": "npm run extract-i18n -w @tiklive/dashboard"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",

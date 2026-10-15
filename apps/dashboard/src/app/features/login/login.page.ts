@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LucideKeyRound, LucideRadio } from '@lucide/angular';
@@ -41,8 +41,8 @@ import { UiInput } from '../../components/ui/input';
           <svg lucideRadio class="size-6" />
         </span>
         <div class="grid gap-1">
-          <h1 class="type-page-title">TikLive</h1>
-          <p class="type-secondary">Automatización para tu TikTok LIVE</p>
+          <h1 i18n class="type-page-title">TikLive</h1>
+          <p i18n class="type-secondary">Automatización para tu TikTok LIVE</p>
         </div>
       </div>
 
@@ -55,22 +55,30 @@ import { UiInput } from '../../components/ui/input';
       >
         <header uiCardHeader>
           <h2 uiCardTitle id="login-title">
-            {{ setupRequired() ? 'Crea la contraseña del panel' : 'Inicia sesión' }}
+            @if (setupRequired()) {
+              <ng-container i18n>Crea la contraseña del panel</ng-container>
+            } @else {
+              <ng-container i18n>Inicia sesión</ng-container>
+            }
           </h2>
           <p uiCardDescription>
-            {{ setupRequired() ? 'Solo la primera vez.' : 'Con la contraseña del panel.' }}
+            @if (setupRequired()) {
+              <ng-container i18n>Solo la primera vez.</ng-container>
+            } @else {
+              <ng-container i18n>Con la contraseña del panel.</ng-container>
+            }
           </p>
         </header>
         <div uiCardContent class="grid gap-4">
           @if (setupRequired()) {
             <div uiAlert variant="info">
               <svg lucideKeyRound />
-              <p uiAlertDescription>
+              <p i18n uiAlertDescription>
                 Copia el <strong>código de configuración</strong> que aparece en la consola donde
                 corre el servidor.
               </p>
             </div>
-            <ui-form-field label="Código de configuración" for="code">
+            <ui-form-field i18n-label label="Código de configuración" for="code">
               <input
                 uiInput
                 id="code"
@@ -83,9 +91,9 @@ import { UiInput } from '../../components/ui/input';
             </ui-form-field>
           }
           <ui-form-field
-            [label]="setupRequired() ? 'Nueva contraseña' : 'Contraseña'"
+            [label]="passwordLabel()"
             for="password"
-            [description]="setupRequired() ? 'Mínimo ' + minLength + ' caracteres.' : undefined"
+            [description]="passwordHint()"
             [error]="error()"
           >
             <input
@@ -104,7 +112,11 @@ import { UiInput } from '../../components/ui/input';
             @if (busy()) {
               <ui-spinner />
             }
-            {{ setupRequired() ? 'Crear contraseña y entrar' : 'Entrar' }}
+            @if (setupRequired()) {
+              <ng-container i18n>Crear contraseña y entrar</ng-container>
+            } @else {
+              <ng-container i18n>Entrar</ng-container>
+            }
           </button>
         </div>
       </form>
@@ -120,6 +132,12 @@ export class LoginPage {
   protected readonly minLength = MIN_PASSWORD_LENGTH;
   protected readonly describedBy = describedBy;
   protected readonly setupRequired = signal(false);
+  protected readonly passwordLabel = computed(() =>
+    this.setupRequired() ? $localize`Nueva contraseña` : $localize`Contraseña`,
+  );
+  protected readonly passwordHint = computed(() =>
+    this.setupRequired() ? $localize`Mínimo ${this.minLength} caracteres.` : undefined,
+  );
   protected readonly busy = signal(false);
   protected readonly error = signal<string | undefined>(undefined);
   protected readonly form = new FormGroup({
@@ -140,7 +158,9 @@ export class LoginPage {
   protected async submit(): Promise<void> {
     const { code, password } = this.form.getRawValue();
     if (this.setupRequired() && password.length < MIN_PASSWORD_LENGTH) {
-      this.error.set(`La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`);
+      this.error.set(
+        $localize`La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`,
+      );
       return;
     }
     this.busy.set(true);
@@ -150,7 +170,7 @@ export class LoginPage {
       else await this.auth.login(password);
       await this.goBack();
     } catch (e) {
-      this.error.set(e instanceof ApiError ? e.message : 'No se pudo iniciar sesión');
+      this.error.set(e instanceof ApiError ? e.message : $localize`No se pudo iniciar sesión`);
       this.form.controls.password.reset();
     } finally {
       this.busy.set(false);

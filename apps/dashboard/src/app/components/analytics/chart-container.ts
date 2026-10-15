@@ -35,7 +35,7 @@ export interface ChartSeries {
       }
     </div>
     @if (series().length) {
-      <ul class="flex flex-wrap gap-x-4 gap-y-1" aria-label="Leyenda">
+      <ul i18n-aria-label class="flex flex-wrap gap-x-4 gap-y-1" aria-label="Leyenda">
         @for (s of series(); track s.key) {
           <li class="flex items-center gap-1.5 type-caption">
             <span [class]="s.color" class="size-2.5 rounded-sm" aria-hidden="true"></span>
@@ -51,7 +51,7 @@ export class ChartContainer {
   readonly series = input<readonly ChartSeries[]>([]);
   readonly loading = input(false);
   readonly empty = input(false);
-  readonly emptyTitle = input('Sin datos en este período');
+  readonly emptyTitle = input($localize`Sin datos en este período`);
   readonly emptyDescription = input('');
   protected readonly emptyIcon = LucideChartColumn;
 }

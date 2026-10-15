@@ -16,12 +16,12 @@ export interface LiveStateView {
 }
 
 const VIEWS: Readonly<Record<LiveState, Omit<LiveStateView, 'state' | 'hint'>>> = {
-  unknown: { label: 'Comprobando…', tone: 'neutral', pulse: false },
-  disconnected: { label: 'Desconectado', tone: 'neutral', pulse: false },
-  connecting: { label: 'Conectando', tone: 'info', pulse: true },
-  connected: { label: 'Conectado', tone: 'success', pulse: false },
+  unknown: { label: $localize`Comprobando…`, tone: 'neutral', pulse: false },
+  disconnected: { label: $localize`Desconectado`, tone: 'neutral', pulse: false },
+  connecting: { label: $localize`Conectando`, tone: 'info', pulse: true },
+  connected: { label: $localize`Conectado`, tone: 'success', pulse: false },
   live: { label: 'LIVE', tone: 'live', pulse: true },
-  reconnecting: { label: 'Reconectando', tone: 'warning', pulse: true },
+  reconnecting: { label: $localize`Reconectando`, tone: 'warning', pulse: true },
   error: { label: 'Error', tone: 'danger', pulse: false },
 };
 
@@ -48,13 +48,14 @@ function stateOf(status: ConnectorStatus | undefined): LiveState {
 type HintFn = (target: string, status: ConnectorStatus | undefined) => string;
 
 const HINTS: Readonly<Record<LiveState, HintFn>> = {
-  unknown: () => 'Leyendo el estado del conector',
-  disconnected: (t) => (t ? `Último usuario: ${t}` : 'Sin cuenta conectada'),
-  connecting: (t) => (t ? `Conectando con ${t}…` : 'Abriendo la conexión…'),
-  connected: () => 'Esperando a que inicies el live',
-  live: (t) => (t ? `Recibiendo eventos de ${t}` : 'Recibiendo eventos'),
-  reconnecting: (_, s) => (s?.lastError ? `Reintentando · ${s.lastError}` : 'Reintentando…'),
-  error: (_, s) => s?.lastError ?? 'La conexión se detuvo',
+  unknown: () => $localize`Leyendo el estado del conector`,
+  disconnected: (t) => (t ? $localize`Último usuario: ${t}` : $localize`Sin cuenta conectada`),
+  connecting: (t) => (t ? $localize`Conectando con ${t}…` : $localize`Abriendo la conexión…`),
+  connected: () => $localize`Esperando a que inicies el live`,
+  live: (t) => (t ? $localize`Recibiendo eventos de ${t}` : $localize`Recibiendo eventos`),
+  reconnecting: (_, s) =>
+    s?.lastError ? $localize`Reintentando · ${s.lastError}` : $localize`Reintentando…`,
+  error: (_, s) => s?.lastError ?? $localize`La conexión se detuvo`,
 };
 
 function hintOf(state: LiveState, status: ConnectorStatus | undefined): string {

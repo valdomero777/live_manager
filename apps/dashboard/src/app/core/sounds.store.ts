@@ -3,7 +3,7 @@ import type { Sound, SoundSearchResult, SoundSource } from '@tiklive/contracts';
 import { ApiClient, ApiError } from './api-client';
 
 export const SEARCH_DEBOUNCE_MS = 400;
-export const SEARCH_ERROR = 'No se pudieron cargar los sonidos. Intenta nuevamente.';
+export const SEARCH_ERROR = $localize`No se pudieron cargar los sonidos. Intenta nuevamente.`;
 
 /**
  * Sound search state. The browser only ever talks to our API, never to MyInstants or Freesound

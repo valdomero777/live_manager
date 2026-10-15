@@ -51,7 +51,7 @@ export class TriggerSelector {
   readonly value = model.required<LiveEventType>();
   readonly types = input<readonly LiveEventType[]>(LIVE_EVENT_TYPES);
   readonly name = input('trigger');
-  readonly label = input('Evento que lo activa');
+  readonly label = input($localize`Evento que lo activa`);
   readonly disabled = input(false);
   protected readonly eventMeta = EVENT_META;
 }

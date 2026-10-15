@@ -3,14 +3,15 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import type { ActivityBucket } from '../live/event-format';
 import { UiTooltip } from '../ui/tooltip';
 import type { ChartSeries } from './chart-container';
+import { numberLocale } from '../../core/locale';
 
 type SeriesKey = 'gifts' | 'likes' | 'comments' | 'social';
 
 export const ACTIVITY_SERIES: readonly (ChartSeries & { key: SeriesKey })[] = [
-  { key: 'gifts', label: 'Regalos', color: 'bg-gift' },
-  { key: 'comments', label: 'Comentarios', color: 'bg-comment' },
-  { key: 'likes', label: 'Likes', color: 'bg-live' },
-  { key: 'social', label: 'Seguidores, entradas y compartidos', color: 'bg-follow' },
+  { key: 'gifts', label: $localize`Regalos`, color: 'bg-gift' },
+  { key: 'comments', label: $localize`Comentarios`, color: 'bg-comment' },
+  { key: 'likes', label: $localize`Likes`, color: 'bg-live' },
+  { key: 'social', label: $localize`Seguidores, entradas y compartidos`, color: 'bg-follow' },
 ];
 
 function total(b: ActivityBucket): number {
@@ -49,15 +50,15 @@ function total(b: ActivityBucket): number {
     </div>
     <div class="flex justify-between pt-1.5 type-caption tabular-nums" aria-hidden="true">
       <span>{{ buckets()[0]?.start | date: 'HH:mm' }}</span>
-      <span>ahora</span>
+      <span i18n>ahora</span>
     </div>
     <table class="sr-only">
-      <caption>
+      <caption i18n>
         Interacciones por minuto
       </caption>
       <thead>
         <tr>
-          <th scope="col">Minuto</th>
+          <th i18n scope="col">Minuto</th>
           @for (s of series; track s.key) {
             <th scope="col">{{ s.label }}</th>
           }
@@ -83,10 +84,13 @@ export class ActivityChart {
   protected readonly max = computed(() => Math.max(1, ...this.buckets().map(total)));
 
   protected tooltip(b: ActivityBucket): string {
-    const time = new Date(b.start).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+    const time = new Date(b.start).toLocaleTimeString(numberLocale(), {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
     const parts = ACTIVITY_SERIES.filter((s) => b[s.key] > 0).map(
       (s) => `${b[s.key]} ${s.label.toLowerCase()}`,
     );
-    return `${time} · ${parts.length ? parts.join(', ') : 'sin actividad'}`;
+    return `${time} · ${parts.length ? parts.join(', ') : $localize`sin actividad`}`;
   }
 }

@@ -20,7 +20,7 @@ import { absoluteSoundUrl } from './sound-url';
       type="button"
       [variant]="variant()"
       [size]="showLabel() ? 'sm' : 'icon-sm'"
-      [attr.aria-label]="(playing() ? 'Detener ' : 'Reproducir ') + title()"
+      [attr.aria-label]="ariaLabel()"
       [attr.aria-pressed]="playing()"
       [disabled]="disabled()"
       (click)="toggle()"
@@ -33,7 +33,11 @@ import { absoluteSoundUrl } from './sound-url';
         <svg lucidePlay class="fill-current" />
       }
       @if (showLabel()) {
-        {{ playing() ? 'Detener' : label() }}
+        @if (playing()) {
+          <ng-container i18n>Detener</ng-container>
+        } @else {
+          {{ label() }}
+        }
       }
     </button>
   `,
@@ -42,8 +46,11 @@ export class SoundPreview {
   private readonly audio = inject(AudioService);
   readonly url = input.required<string>();
   readonly title = input('sonido');
+  protected readonly ariaLabel = computed(() =>
+    this.playing() ? $localize`Detener ${this.title()}` : $localize`Reproducir ${this.title()}`,
+  );
   readonly volume = input<number | undefined>(undefined);
-  readonly label = input('Probar');
+  readonly label = input($localize`Probar`);
   readonly showLabel = input(false);
   readonly disabled = input(false);
   readonly variant = input<ButtonVariants['variant']>('outline');

@@ -51,46 +51,46 @@ function splitActions(actions: readonly ActionConfig[]) {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <form class="grid gap-4" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <ui-form-field label="Nombre" for="g-name">
+      <ui-form-field i18n-label label="Nombre" for="g-name">
         <input uiInput id="g-name" type="text" formControlName="name" />
       </ui-form-field>
       <div class="grid grid-cols-2 gap-4">
-        <ui-form-field label="Cuenta" for="g-metric">
+        <ui-form-field i18n-label label="Cuenta" for="g-metric">
           <select uiNativeSelect id="g-metric" formControlName="metric">
             @for (m of metrics; track m) {
               <option [value]="m">{{ metricLabels[m] }}</option>
             }
           </select>
         </ui-form-field>
-        <ui-form-field label="Objetivo" for="g-target">
+        <ui-form-field i18n-label label="Objetivo" for="g-target">
           <input uiInput id="g-target" type="number" min="1" formControlName="target" />
         </ui-form-field>
-        <ui-form-field label="Período" for="g-scope">
+        <ui-form-field i18n-label label="Período" for="g-scope">
           <select uiNativeSelect id="g-scope" formControlName="scope">
-            <option value="session">Cada live</option>
-            <option value="total">Acumulado histórico</option>
+            <option i18n value="session">Cada live</option>
+            <option i18n value="total">Acumulado histórico</option>
           </select>
         </ui-form-field>
-        <ui-form-field label="Al cumplirse" for="g-repeat">
+        <ui-form-field i18n-label label="Al cumplirse" for="g-repeat">
           <select uiNativeSelect id="g-repeat" formControlName="repeat">
-            <option value="">Termina</option>
-            <option value="1.5">Siguiente nivel ×1,5</option>
-            <option value="2">Siguiente nivel ×2</option>
-            <option value="3">Siguiente nivel ×3</option>
+            <option i18n value="">Termina</option>
+            <option i18n value="1.5">Siguiente nivel ×1,5</option>
+            <option i18n value="2">Siguiente nivel ×2</option>
+            <option i18n value="3">Siguiente nivel ×3</option>
           </select>
         </ui-form-field>
       </div>
       <fieldset class="m-0 grid gap-4 rounded-lg border p-4">
-        <legend class="px-1 type-label">Celebración al cumplirla</legend>
-        <ui-form-field label="Sonido" for="g-sound">
+        <legend i18n class="px-1 type-label">Celebración al cumplirla</legend>
+        <ui-form-field i18n-label label="Sonido" for="g-sound">
           <select uiNativeSelect id="g-sound" formControlName="soundId">
-            <option value="">Sin sonido</option>
+            <option i18n value="">Sin sonido</option>
             @for (a of assets.sounds(); track a.id) {
               <option [value]="a.id">{{ a.originalName }}</option>
             }
           </select>
           @if (!assets.sounds().length) {
-            <p uiFieldDescription class="type-caption">
+            <p i18n uiFieldDescription class="type-caption">
               Sube sonidos en
               <a routerLink="/assets" class="font-medium text-primary hover:underline"
                 >Sonidos e imágenes</a
@@ -98,7 +98,13 @@ function splitActions(actions: readonly ActionConfig[]) {
             </p>
           }
         </ui-form-field>
-        <ui-form-field label="Texto de la alerta" for="g-alert" description="Vacío = sin alerta.">
+        <ui-form-field
+          i18n-description
+          i18n-label
+          label="Texto de la alerta"
+          for="g-alert"
+          description="Vacío = sin alerta."
+        >
           <input
             uiInput
             id="g-alert"
@@ -108,6 +114,8 @@ function splitActions(actions: readonly ActionConfig[]) {
           />
         </ui-form-field>
         <ui-form-field
+          i18n-description
+          i18n-label
           label="Texto a leer en voz alta"
           for="g-speak"
           description="Vacío = sin voz."
@@ -120,7 +128,7 @@ function splitActions(actions: readonly ActionConfig[]) {
             aria-describedby="g-speak-description"
           />
         </ui-form-field>
-        <p class="type-caption">
+        <p i18n class="type-caption">
           Variables:
           <code class="rounded bg-muted px-1 py-0.5 text-[0.6875rem] text-foreground">{{
             '{goalName} {cycle} {current}'
@@ -129,18 +137,26 @@ function splitActions(actions: readonly ActionConfig[]) {
       </fieldset>
       <div class="flex items-center gap-3">
         <ui-switch inputId="g-active" formControlName="active" />
-        <label for="g-active" class="type-label">Meta activa</label>
+        <label i18n for="g-active" class="type-label">Meta activa</label>
       </div>
       @if (error()) {
         <div uiAlert variant="destructive" role="alert">
           <svg lucideCircleAlert />
-          <p uiAlertTitle>Revisa la meta</p>
+          <p i18n uiAlertTitle>Revisa la meta</p>
           <p uiAlertDescription>{{ error() }}</p>
         </div>
       }
       <div class="flex justify-end gap-2">
-        <button uiButton variant="ghost" type="button" (click)="cancelled.emit()">Cancelar</button>
-        <button uiButton type="submit">{{ goal() ? 'Guardar meta' : 'Crear meta' }}</button>
+        <button i18n uiButton variant="ghost" type="button" (click)="cancelled.emit()">
+          Cancelar
+        </button>
+        <button uiButton type="submit">
+          @if (goal()) {
+            <ng-container i18n>Guardar meta</ng-container>
+          } @else {
+            <ng-container i18n>Crear meta</ng-container>
+          }
+        </button>
       </div>
     </form>
   `,
@@ -155,7 +171,7 @@ export class GoalForm {
   protected readonly metricLabels = GOAL_METRIC_LABELS;
   protected readonly error = signal<string | undefined>(undefined);
   protected readonly form = new FormGroup({
-    name: new FormControl('Meta de diamantes', { nonNullable: true }),
+    name: new FormControl($localize`Meta de diamantes`, { nonNullable: true }),
     metric: new FormControl<(typeof GOAL_METRICS)[number]>('diamonds', { nonNullable: true }),
     target: new FormControl(100, { nonNullable: true }),
     scope: new FormControl<'session' | 'total'>('session', { nonNullable: true }),

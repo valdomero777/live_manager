@@ -45,7 +45,7 @@ export class RulesStore {
   async duplicate(rule: Rule): Promise<Rule> {
     return this.save(undefined, {
       ...definitionOf(rule),
-      name: `${rule.name} (copia)`,
+      name: $localize`${rule.name} (copia)`,
       enabled: false,
     });
   }

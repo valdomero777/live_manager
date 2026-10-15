@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { LucideCheck, LucideCopy } from '@lucide/angular';
 import { UiButton } from '../ui/button';
 
@@ -17,21 +17,26 @@ const FEEDBACK_MS = 1_500;
       size="sm"
       type="button"
       (click)="copy()"
-      [attr.aria-label]="label() + ': copiar'"
+      [attr.aria-label]="copyLabel()"
     >
       @if (copied()) {
-        <svg lucideCheck class="text-success-text" /> Copiado
+        <svg lucideCheck class="text-success-text" /> <ng-container i18n>Copiado</ng-container>
       } @else {
-        <svg lucideCopy /> Copiar
+        <svg lucideCopy /> <ng-container i18n>Copiar</ng-container>
       }
     </button>
-    <span class="sr-only" role="status">{{ copied() ? 'Copiado al portapapeles' : '' }}</span>
+    <span class="sr-only" role="status">
+      @if (copied()) {
+        <ng-container i18n>Copiado al portapapeles</ng-container>
+      }
+    </span>
   `,
 })
 export class CopyButton {
   readonly value = input.required<string>();
-  readonly label = input('Valor');
+  readonly label = input($localize`Valor`);
   protected readonly copied = signal(false);
+  protected readonly copyLabel = computed(() => $localize`${this.label()}\: copiar`);
 
   protected async copy(): Promise<void> {
     await navigator.clipboard.writeText(this.value());

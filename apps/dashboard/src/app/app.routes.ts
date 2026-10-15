@@ -4,7 +4,7 @@ import { authGuard } from './core/auth.guard';
 export const routes: Routes = [
   {
     path: 'login',
-    title: 'Iniciar sesión · TikLive',
+    title: $localize`Iniciar sesión · TikLive`,
     loadComponent: () => import('./features/login/login.page').then((m) => m.LoginPage),
   },
   {
@@ -15,69 +15,69 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'inicio' },
       {
         path: 'inicio',
-        title: 'Dashboard · TikLive',
+        title: $localize`Dashboard · TikLive`,
         loadComponent: () =>
           import('./features/dashboard/dashboard.page').then((m) => m.DashboardPage),
       },
       {
         path: 'estado',
-        title: 'Conexión y estado · TikLive',
+        title: $localize`Conexión y estado · TikLive`,
         loadComponent: () => import('./features/status/status.page').then((m) => m.StatusPage),
       },
       {
         path: 'eventos',
-        title: 'Eventos · TikLive',
+        title: $localize`Eventos · TikLive`,
         loadComponent: () => import('./features/events/events.page').then((m) => m.EventsPage),
       },
       {
         path: 'reglas',
-        title: 'Reglas · TikLive',
+        title: $localize`Reglas · TikLive`,
         loadComponent: () => import('./features/rules/rule-list.page').then((m) => m.RuleListPage),
       },
       {
         path: 'reglas/nueva',
-        title: 'Nueva regla · TikLive',
+        title: $localize`Nueva regla · TikLive`,
         loadComponent: () =>
           import('./features/rules/rule-editor.page').then((m) => m.RuleEditorPage),
       },
       {
         path: 'reglas/:id',
-        title: 'Editar regla · TikLive',
+        title: $localize`Editar regla · TikLive`,
         loadComponent: () =>
           import('./features/rules/rule-editor.page').then((m) => m.RuleEditorPage),
       },
       {
         path: 'triggers',
-        title: 'Triggers de sonido · TikLive',
+        title: $localize`Triggers de sonido · TikLive`,
         loadComponent: () =>
           import('./features/triggers/triggers.page').then((m) => m.TriggersPage),
       },
       {
         path: 'rankings',
-        title: 'Rankings y metas · TikLive',
+        title: $localize`Rankings y metas · TikLive`,
         loadComponent: () =>
           import('./features/rankings/rankings.page').then((m) => m.RankingsPage),
       },
       {
         path: 'assets',
-        title: 'Sonidos e imágenes · TikLive',
+        title: $localize`Sonidos e imágenes · TikLive`,
         loadComponent: () => import('./features/assets/assets.page').then((m) => m.AssetsPage),
       },
       {
         path: 'overlays',
-        title: 'Overlays · TikLive',
+        title: $localize`Overlays · TikLive`,
         loadComponent: () =>
           import('./features/overlays/overlays.page').then((m) => m.OverlaysPage),
       },
       {
         path: 'simulador',
-        title: 'Simulador · TikLive',
+        title: $localize`Simulador · TikLive`,
         loadComponent: () =>
           import('./features/simulator/simulator.page').then((m) => m.SimulatorPage),
       },
       {
         path: 'ajustes',
-        title: 'Ajustes · TikLive',
+        title: $localize`Ajustes · TikLive`,
         loadComponent: () =>
           import('./features/settings/settings.page').then((m) => m.SettingsPage),
       },

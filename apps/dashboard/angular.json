@@ -50,9 +50,15 @@
                 "input": "public"
               }
             ],
-            "styles": ["@angular/cdk/overlay-prebuilt.css", "src/styles.css"],
+            "styles": [
+              "@angular/cdk/overlay-prebuilt.css",
+              "src/styles.css"
+            ],
             "baseHref": "/admin/",
-            "outputPath": "dist/dashboard"
+            "outputPath": "dist/dashboard",
+            "polyfills": [
+              "@angular/localize/init"
+            ]
           },
           "configurations": {
             "production": {
@@ -100,7 +106,18 @@
           "options": {
             "proxyConfig": "proxy.conf.json"
           }
+        },
+        "extract-i18n": {
+          "builder": "@angular/build:extract-i18n",
+          "options": {
+            "buildTarget": "dashboard:build:development",
+            "format": "json",
+            "outputPath": "src/locale"
+          }
         }
+      },
+      "i18n": {
+        "sourceLocale": "es"
       }
     }
   }

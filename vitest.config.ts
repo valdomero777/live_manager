@@ -6,6 +6,8 @@ export default defineConfig({
   test: {
     include: ['apps/**/*.spec.ts', 'packages/**/*.spec.ts'],
     environment: 'node',
+    // The dashboard marks its texts with `$localize`; unit tests run them in the source language.
+    setupFiles: ['@angular/localize/init'],
     // e2e tests hash passwords with argon2 and boot the full app; dev machines may be busy.
     testTimeout: 20_000,
     hookTimeout: 30_000,

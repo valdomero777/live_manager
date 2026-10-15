@@ -8,7 +8,11 @@
     <svg [lucideIcon]="icon()" class="size-3.5" />
   </span>
   <label class="sr-only" [for]="idPrefix() + '-type'">
-    Tipo de {{ kind() === 'condition' ? 'condición' : 'acción' }} {{ index() + 1 }}
+    @if (kind() === 'condition') {
+    <ng-container i18n>Tipo de condición {{ index() + 1 }}</ng-container>
+    } @else {
+    <ng-container i18n>Tipo de acción {{ index() + 1 }}</ng-container>
+    }
   </label>
   <select
     uiNativeSelect
@@ -23,6 +27,8 @@
   <span class="hidden flex-1 sm:block"></span>
   <div class="flex shrink-0 items-center">
     <button
+      i18n-uiTooltip
+      i18n-aria-label
       uiButton
       variant="ghost"
       size="icon-sm"
@@ -35,6 +41,8 @@
       <svg lucideArrowUp />
     </button>
     <button
+      i18n-uiTooltip
+      i18n-aria-label
       uiButton
       variant="ghost"
       size="icon-sm"
@@ -47,6 +55,8 @@
       <svg lucideArrowDown />
     </button>
     <button
+      i18n-uiTooltip
+      i18n-aria-label
       uiButton
       variant="ghost-destructive"
       size="icon-sm"
@@ -98,17 +108,17 @@
           [id]="fieldId"
           (change)="set(p, $any($event.target).value)"
         >
-          <option value="" [selected]="current === ''">— Elige un sonido —</option>
+          <option i18n value="" [selected]="current === ''">— Elige un sonido —</option>
           @for (a of assets.sounds(); track a.id) {
           <option [value]="a.id" [selected]="a.id + '' === current">{{ a.originalName }}</option>
           }
         </select>
         @if (soundUrl(current); as url) {
-        <app-sound-preview [url]="url" title="el sonido elegido" />
+        <app-sound-preview i18n-title [url]="url" title="el sonido elegido" />
         }
       </div>
       @if (!assets.sounds().length) {
-      <p uiFieldDescription class="type-caption">
+      <p i18n uiFieldDescription class="type-caption">
         Sube sonidos en
         <a routerLink="/assets" class="font-medium text-primary hover:underline"
           >Sonidos e imágenes</a
@@ -119,7 +129,7 @@
     } @case ('visual') {
     <ui-form-field [label]="p.label" [for]="fieldId">
       <select uiNativeSelect [id]="fieldId" (change)="set(p, $any($event.target).value)">
-        <option value="" [selected]="display(item(), p) === ''">Sin imagen</option>
+        <option i18n value="" [selected]="display(item(), p) === ''">Sin imagen</option>
         @for (a of assets.visuals(); track a.id) {
         <option [value]="a.id" [selected]="a.id + '' === display(item(), p)">
           {{ a.originalName }}
@@ -169,6 +179,7 @@
   } @if (isGiftCondition()) {
   <details class="group rounded-lg border bg-muted/40" open>
     <summary
+      i18n
       class="flex cursor-pointer list-none items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium outline-none select-none hover:bg-surface-hover focus-visible:ring-[3px] focus-visible:ring-ring/40 [&::-webkit-details-marker]:hidden"
     >
       <svg lucideChevronRight class="size-4 transition-transform group-open:rotate-90" />

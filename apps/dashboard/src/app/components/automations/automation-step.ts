@@ -5,9 +5,9 @@ import { cn } from '../../lib/utils';
 export type StepKind = 'when' | 'if' | 'then';
 
 const STEPS: Readonly<Record<StepKind, { overline: string; tone: string }>> = {
-  when: { overline: 'Cuando', tone: 'bg-live-soft text-live-text' },
+  when: { overline: $localize`Cuando`, tone: 'bg-live-soft text-live-text' },
   if: { overline: 'Si', tone: 'bg-info-soft text-info-text' },
-  then: { overline: 'Entonces', tone: 'bg-automation-soft text-automation-text' },
+  then: { overline: $localize`Entonces`, tone: 'bg-automation-soft text-automation-text' },
 };
 
 /**

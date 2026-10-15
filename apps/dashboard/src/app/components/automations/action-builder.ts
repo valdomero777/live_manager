@@ -39,6 +39,8 @@ import { toRuleOp, type RuleOp } from './rule-ops';
       />
     } @empty {
       <app-empty-state
+        i18n-description
+        i18n-title
         title="Sin acciones"
         description="Agrega al menos una: reproducir un sonido, leer en voz alta, mostrar una alerta o llamar a un webhook."
         class="py-6"
@@ -46,11 +48,11 @@ import { toRuleOp, type RuleOp } from './rule-ops';
     }
 
     <div class="flex flex-wrap items-center gap-3">
-      <button uiButton variant="outline" size="sm" type="button" [cdkMenuTriggerFor]="menu">
+      <button i18n uiButton variant="outline" size="sm" type="button" [cdkMenuTriggerFor]="menu">
         <svg lucidePlus /> Añadir acción
       </button>
       @if (variables().length) {
-        <p class="type-caption">
+        <p i18n class="type-caption">
           Variables para textos:
           @for (v of variables(); track v) {
             <code class="mx-0.5 rounded bg-muted px-1 py-0.5 text-[0.6875rem] text-foreground">{{
@@ -79,7 +81,7 @@ import { toRuleOp, type RuleOp } from './rule-ops';
               <span class="type-caption">{{ k.description }}</span>
             </span>
             @if (!k.available) {
-              <span uiBadge variant="outline">Próximamente</span>
+              <span i18n uiBadge variant="outline">Próximamente</span>
             }
           </button>
         }
