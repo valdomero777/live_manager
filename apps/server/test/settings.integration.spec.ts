@@ -9,6 +9,7 @@ import {
   AuthError,
   AuthService,
   MAX_FAILED_LOGINS,
+  MAX_SETUP_FAILURES,
   SESSION_IDLE_MS,
 } from '../src/application/auth/auth-service.js';
 import type { ConfigStore, StoredConfig } from '../src/application/ports/config-store.js';
@@ -131,13 +132,54 @@ describe('AuthService', () => {
     await expect(auth.login('secreto', 'b')).resolves.toBeTypeOf('string');
   });
 
+  describe('setup code', () => {
+    let codes = 0;
+    const freshCodes = { token: () => `t${++n}`, code: () => `CODE000${++codes}` };
+
+    function fresh() {
+      codes = 0;
+      const auth = new AuthService({
+        store: new MemoryStore(),
+        envPasswordHash: undefined,
+        hasher,
+        secrets: freshCodes,
+        clock: new FakeClock(0),
+        logger: silentLogger,
+      });
+      return { auth, code: auth.prepareSetup()! };
+    }
+
+    it('locks the IP that keeps sending wrong codes, and only that IP', async () => {
+      const { auth, code } = fresh();
+      for (let i = 0; i < MAX_FAILED_LOGINS; i++) {
+        await expect(auth.setup('MAL', 'nueva-clave', 'a')).rejects.toMatchObject({
+          code: 'invalid_code',
+        });
+      }
+      await expect(auth.setup(code, 'nueva-clave', 'a')).rejects.toMatchObject({ code: 'locked' });
+      await expect(auth.setup(code, 'nueva-clave', 'b')).resolves.toBeTypeOf('string');
+    });
+
+    it('replaces the code after too many wrong ones from different addresses', async () => {
+      const { auth, code } = fresh();
+      for (let i = 0; i < MAX_SETUP_FAILURES; i++) {
+        await expect(auth.setup('MAL', 'nueva-clave', `ip${i}`)).rejects.toThrow(AuthError);
+      }
+      await expect(auth.setup(code, 'nueva-clave', 'owner')).rejects.toMatchObject({
+        code: 'invalid_code',
+      });
+      expect(auth.prepareSetup()).toBe('CODE0002');
+      await expect(auth.setup('CODE0002', 'nueva-clave', 'owner')).resolves.toBeTypeOf('string');
+    });
+  });
+
   it('a UI-saved password hash takes precedence and setup is offered only without one', async () => {
     const { auth } = setup(new MemoryStore());
     expect(auth.status(undefined)).toEqual({ authenticated: false, setupRequired: true });
-    const token = await auth.setup(auth.prepareSetup()!, 'nueva-clave');
+    const token = await auth.setup(auth.prepareSetup()!, 'nueva-clave', 'ip');
     expect(auth.validate(token)).toBe(true);
     expect(auth.prepareSetup()).toBeUndefined();
-    await expect(auth.setup('ABCD2345', 'x-y-z-123')).rejects.toMatchObject({
+    await expect(auth.setup('ABCD2345', 'x-y-z-123', 'ip')).rejects.toMatchObject({
       code: 'already_set',
     });
   });

@@ -46,6 +46,22 @@ describe('dashboard authentication (RNF-07)', () => {
     expect(res.statusCode).toBe(403);
   });
 
+  it('first run: repeated wrong setup codes end in 429 for that client', async () => {
+    t = await startTestApp({ ADMIN_PASSWORD_HASH: '' });
+    const { http, auth } = t.app;
+    const code = auth.prepareSetup()!;
+    const setup = (value: string) =>
+      http.inject({
+        method: 'POST',
+        url: `${API_PREFIX}/auth/setup`,
+        payload: { code: value, password: 'nueva-clave-1' },
+      });
+
+    for (let i = 0; i < 5; i++) expect((await setup('WRONGCODE')).statusCode).toBe(401);
+
+    expect((await setup(code)).statusCode).toBe(429);
+  });
+
   it('first run: the password is created with the one-time setup code', async () => {
     t = await startTestApp({ ADMIN_PASSWORD_HASH: '' });
     const { http, auth } = t.app;

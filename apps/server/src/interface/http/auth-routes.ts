@@ -92,7 +92,7 @@ export function registerAuthRoutes(app: FastifyInstance, auth: AuthService): voi
   app.post('/auth/setup', async (req, reply) => {
     const { code, password } = SetupRequestSchema.parse(req.body);
     try {
-      setSession(reply, await auth.setup(code, password));
+      setSession(reply, await auth.setup(code, password, req.ip));
       return { authenticated: true, setupRequired: false };
     } catch (error) {
       return sendAuthError(reply, error);
