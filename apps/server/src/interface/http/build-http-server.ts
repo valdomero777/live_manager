@@ -3,7 +3,13 @@ import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
 import { API_PREFIX } from '@tiklive/contracts';
-import Fastify, { LogController, type FastifyBaseLogger, type FastifyInstance } from 'fastify';
+import Fastify, {
+  LogController,
+  type FastifyBaseLogger,
+  type FastifyInstance,
+  type FastifyReply,
+  type FastifyRequest,
+} from 'fastify';
 import { registerSocketRoutes } from '../ws/socket-routes.js';
 import { registerAssetRoutes } from './asset-routes.js';
 import { registerAuthGuard, registerAuthRoutes } from './auth-routes.js';
@@ -14,13 +20,22 @@ import type { HttpOptions, HttpServices } from './services.js';
 import { registerSettingsRoutes } from './settings-routes.js';
 import { registerTriggerRoutes } from './trigger-routes.js';
 
+/**
+ * Who may put a page in a frame: nobody for the panel, and only this same origin for the overlays,
+ * because the panel previews them in iframes. OBS and LIVE Studio load them as top-level pages.
+ */
+type Framing = 'none' | 'self';
+
 const SAFE_HOSTNAME = /^(?:[a-z0-9.-]+|\[[0-9a-f:]+\])$/i;
 
 /**
  * Pages only load from this origin; avatars come from TikTok's CDN over https. connect-src also
  * allows this same host on any port, so the panel can follow the server after a port change.
  */
-export function contentSecurityPolicy(hostHeader: string | undefined): string {
+export function contentSecurityPolicy(
+  hostHeader: string | undefined,
+  framing: Framing = 'self',
+): string {
   const hostname = (hostHeader ?? '').replace(/:\d+$/, '');
   const sameHostAnyPort = SAFE_HOSTNAME.test(hostname)
     ? ` http://${hostname}:* https://${hostname}:*`
@@ -31,6 +46,7 @@ export function contentSecurityPolicy(hostHeader: string | undefined): string {
     "media-src 'self' blob: https://*.myinstants.com https://*.freesound.org",
     `connect-src 'self' ws: wss:${sameHostAnyPort}`,
     "style-src 'self' 'unsafe-inline'",
+    `frame-ancestors '${framing}'`,
   ].join('; ');
 }
 
@@ -45,6 +61,15 @@ function cacheHeaders(hashed: RegExp) {
     const immutable = hashed.test(path);
     reply.header('Cache-Control', immutable ? 'public, max-age=31536000, immutable' : 'no-cache');
   };
+}
+
+/** Headers every response gets, plus the CSP and framing rules for HTML pages. */
+function addSecurityHeaders(req: FastifyRequest, reply: FastifyReply): void {
+  reply.header('X-Content-Type-Options', 'nosniff');
+  if (!String(reply.getHeader('content-type') ?? '').startsWith('text/html')) return;
+  const framing: Framing = req.url.startsWith(DASHBOARD_PREFIX) ? 'none' : 'self';
+  reply.header('Content-Security-Policy', contentSecurityPolicy(req.headers.host, framing));
+  reply.header('X-Frame-Options', framing === 'none' ? 'DENY' : 'SAMEORIGIN');
 }
 
 export async function buildHttpServer(
@@ -62,10 +87,7 @@ export async function buildHttpServer(
   });
   app.setErrorHandler(problemErrorHandler);
   app.addHook('onSend', (req, reply, payload, done) => {
-    reply.header('X-Content-Type-Options', 'nosniff');
-    if (String(reply.getHeader('content-type') ?? '').startsWith('text/html')) {
-      reply.header('Content-Security-Policy', contentSecurityPolicy(req.headers.host));
-    }
+    addSecurityHeaders(req, reply);
     done(null, payload);
   });
 
