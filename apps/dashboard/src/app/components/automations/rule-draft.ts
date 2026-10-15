@@ -113,11 +113,11 @@ export interface DraftValidation {
 }
 
 const PATH_LABELS: Readonly<Record<string, string>> = {
-  name: 'Nombre',
-  conditions: 'Condición',
-  actions: 'Acción',
-  priority: 'Prioridad',
-  probability: 'Probabilidad',
+  name: $localize`Nombre`,
+  conditions: $localize`Condición`,
+  actions: $localize`Acción`,
+  priority: $localize`Prioridad`,
+  probability: $localize`Probabilidad`,
 };
 
 /** Converts the editor model and validates it with the same schema the server uses. */

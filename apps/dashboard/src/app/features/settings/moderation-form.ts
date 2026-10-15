@@ -52,14 +52,14 @@ function parsePronunciations(text: string): Record<string, string> {
   template: `
     <form uiCard [formGroup]="form" (ngSubmit)="save()" aria-labelledby="mod-title" novalidate>
       <header uiCardHeader>
-        <h2 uiCardTitle id="mod-title">Moderación de la voz (TTS)</h2>
-        <p uiCardDescription>
+        <h2 i18n uiCardTitle id="mod-title">Moderación de la voz (TTS)</h2>
+        <p i18n uiCardDescription>
           Filtros que pasa cada comentario antes de leerse en voz alta. Se aplican al instante.
         </p>
       </header>
       <div uiCardContent class="grid gap-5">
         <div class="form-grid">
-          <ui-form-field label="Largo máximo (caracteres)" for="m-max">
+          <ui-form-field i18n-label label="Largo máximo (caracteres)" for="m-max">
             <input
               uiInput
               id="m-max"
@@ -69,7 +69,7 @@ function parsePronunciations(text: string): Record<string, string> {
               formControlName="maxLength"
             />
           </ui-form-field>
-          <ui-form-field label="Lecturas por usuario por minuto" for="m-rate">
+          <ui-form-field i18n-label label="Lecturas por usuario por minuto" for="m-rate">
             <input
               uiInput
               id="m-rate"
@@ -79,7 +79,7 @@ function parsePronunciations(text: string): Record<string, string> {
               formControlName="maxPerUserPerMinute"
             />
           </ui-form-field>
-          <ui-form-field label="Ignorar repetidos durante (s)" for="m-dup">
+          <ui-form-field i18n-label label="Ignorar repetidos durante (s)" for="m-dup">
             <input
               uiInput
               id="m-dup"
@@ -89,21 +89,21 @@ function parsePronunciations(text: string): Record<string, string> {
               formControlName="duplicateWindowS"
             />
           </ui-form-field>
-          <ui-form-field label="Palabras bloqueadas" for="m-mode">
+          <ui-form-field i18n-label label="Palabras bloqueadas" for="m-mode">
             <select uiNativeSelect id="m-mode" formControlName="blockMode">
-              <option value="drop">No leer el comentario</option>
-              <option value="mask">Leerlo ocultando la palabra</option>
+              <option i18n value="drop">No leer el comentario</option>
+              <option i18n value="mask">Leerlo ocultando la palabra</option>
             </select>
           </ui-form-field>
         </div>
         <div class="flex flex-wrap gap-x-8 gap-y-3">
           <div class="flex items-center gap-3">
             <ui-switch inputId="m-emoji" formControlName="stripEmojis" />
-            <label for="m-emoji" class="type-label">Quitar emojis</label>
+            <label i18n for="m-emoji" class="type-label">Quitar emojis</label>
           </div>
           <div class="flex items-center gap-3">
             <ui-switch inputId="m-mentions" formControlName="readMentions" />
-            <label for="m-mentions" class="type-label">Leer &#64;menciones</label>
+            <label i18n for="m-mentions" class="type-label">Leer &#64;menciones</label>
           </div>
           <div class="flex items-center gap-3">
             <ui-switch inputId="m-fancy" formControlName="normalizeFancyText" />
@@ -112,6 +112,8 @@ function parsePronunciations(text: string): Record<string, string> {
         </div>
         <div class="grid gap-4 md:grid-cols-2">
           <ui-form-field
+            i18n-description
+            i18n-label
             label="Lista de bloqueo"
             for="m-block"
             description="Una palabra o frase por línea."
@@ -125,6 +127,8 @@ function parsePronunciations(text: string): Record<string, string> {
             ></textarea>
           </ui-form-field>
           <ui-form-field
+            i18n-description
+            i18n-label
             label="Diccionario de pronunciación"
             for="m-pron"
             description="Una por línea: GG = buena partida"
@@ -156,7 +160,7 @@ function parsePronunciations(text: string): Record<string, string> {
         </div>
       }
       <footer uiCardFooter class="justify-end border-t border-border-subtle pt-4">
-        <button uiButton type="submit" [disabled]="busy()">
+        <button i18n uiButton type="submit" [disabled]="busy()">
           @if (busy()) {
             <ui-spinner />
           }
@@ -202,14 +206,14 @@ export class ModerationForm {
     if (!candidate.success) {
       this.message.set({
         ok: false,
-        text: `Revisa los valores: ${candidate.error.issues[0]?.message ?? ''}`,
+        text: $localize`Revisa los valores: ${candidate.error.issues[0]?.message ?? ''}`,
       });
       return;
     }
     this.busy.set(true);
     try {
       this.fill(await this.api.put<ModerationSettings>('/settings/moderation', candidate.data));
-      this.message.set({ ok: true, text: 'Moderación guardada y aplicada.' });
+      this.message.set({ ok: true, text: $localize`Moderación guardada y aplicada.` });
     } catch (e) {
       this.message.set({ ok: false, text: e instanceof ApiError ? e.message : String(e) });
     } finally {

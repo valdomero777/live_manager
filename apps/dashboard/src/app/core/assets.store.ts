@@ -29,6 +29,6 @@ export class AssetsStore {
 
   nameOf(id: number | undefined): string {
     if (id === undefined) return '—';
-    return this.assets().find((a) => a.id === id)?.originalName ?? `#${id} (no existe)`;
+    return this.assets().find((a) => a.id === id)?.originalName ?? $localize`#${id} (no existe)`;
   }
 }

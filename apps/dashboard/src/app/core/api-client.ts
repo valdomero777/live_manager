@@ -17,7 +17,7 @@ export class ApiError extends Error {
 
 function toApiError(error: unknown): ApiError {
   if (!(error instanceof HttpErrorResponse)) return new ApiError(0, String(error));
-  if (error.status === 0) return new ApiError(0, 'No se pudo contactar al servidor');
+  if (error.status === 0) return new ApiError(0, $localize`No se pudo contactar al servidor`);
   const problem = error.error as Partial<Problem> | null;
   return new ApiError(error.status, problem?.title ?? error.message, problem?.errors ?? []);
 }

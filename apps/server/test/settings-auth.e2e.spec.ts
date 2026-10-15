@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { API_PREFIX } from '@tiklive/contracts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -23,6 +24,21 @@ describe('dashboard authentication (RNF-07)', () => {
     await expect(http.injectWS('/ws/admin')).rejects.toThrow();
   });
 
+  it('only opens the admin socket for the panel origin', async () => {
+    t = await startTestApp();
+    const { http } = t.app;
+    const open = (origin?: string) =>
+      http.injectWS('/ws/admin', {
+        headers: { cookie: t!.cookie, host: 'panel.test', ...(origin ? { origin } : {}) },
+      });
+
+    await expect(open('http://evil.example')).rejects.toThrow();
+    const own = await open('http://panel.test');
+    own.terminate();
+    const cli = await open();
+    cli.terminate();
+  });
+
   it('locks an IP out after 5 wrong passwords', async () => {
     t = await startTestApp();
     const attempt = (password: string) =>
@@ -44,6 +60,22 @@ describe('dashboard authentication (RNF-07)', () => {
       payload: {},
     });
     expect(res.statusCode).toBe(403);
+  });
+
+  it('first run: repeated wrong setup codes end in 429 for that client', async () => {
+    t = await startTestApp({ ADMIN_PASSWORD_HASH: '' });
+    const { http, auth } = t.app;
+    const code = auth.prepareSetup()!;
+    const setup = (value: string) =>
+      http.inject({
+        method: 'POST',
+        url: `${API_PREFIX}/auth/setup`,
+        payload: { code: value, password: 'nueva-clave-1' },
+      });
+
+    for (let i = 0; i < 5; i++) expect((await setup('WRONGCODE')).statusCode).toBe(401);
+
+    expect((await setup(code)).statusCode).toBe(429);
   });
 
   it('first run: the password is created with the one-time setup code', async () => {
@@ -97,6 +129,7 @@ describe('settings from the UI', () => {
       [
         'assetsDir',
         'dbPath',
+        'freesoundApiKey',
         'host',
         'logLevel',
         'overlayKey',
@@ -205,5 +238,38 @@ describe('content security policy', () => {
       "connect-src 'self' ws: wss:;",
     );
     expect(contentSecurityPolicy(undefined)).not.toContain('http://');
+  });
+
+  it('forbids framing the panel and allows only the same origin to frame overlays', async () => {
+    const { contentSecurityPolicy } = await import('../src/interface/http/build-http-server.js');
+    expect(contentSecurityPolicy('h:3000')).toContain("frame-ancestors 'self'");
+    expect(contentSecurityPolicy('h:3000', 'none')).toContain("frame-ancestors 'none'");
+
+    const pages = mkdtempSync(join(tmpdir(), 'tiklive-pages-'));
+    try {
+      mkdirSync(join(pages, 'panel'));
+      mkdirSync(join(pages, 'overlays', 'screen', 'audio'), { recursive: true });
+      writeFileSync(join(pages, 'panel', 'index.html'), '<!doctype html><title>panel</title>');
+      writeFileSync(
+        join(pages, 'overlays', 'screen', 'audio', 'index.html'),
+        '<!doctype html><title>audio</title>',
+      );
+      t = await startTestApp({
+        DASHBOARD_DIR: join(pages, 'panel'),
+        OVERLAYS_DIR: join(pages, 'overlays'),
+      });
+
+      const panel = await t.app.http.inject({ url: '/admin/' });
+      expect(panel.headers['content-security-policy']).toContain("frame-ancestors 'none'");
+      expect(panel.headers['x-frame-options']).toBe('DENY');
+
+      const overlay = await t.app.http.inject({ url: '/screen/audio/' });
+      expect(overlay.headers['content-security-policy']).toContain("frame-ancestors 'self'");
+      expect(overlay.headers['x-frame-options']).toBe('SAMEORIGIN');
+    } finally {
+      await t?.stop();
+      t = undefined;
+      rmSync(pages, { recursive: true, force: true });
+    }
   });
 });

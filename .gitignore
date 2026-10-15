@@ -10,3 +10,6 @@ recordings/
 .angular/
 
 release/
+e2e/.auth/
+test-results/
+playwright-report/

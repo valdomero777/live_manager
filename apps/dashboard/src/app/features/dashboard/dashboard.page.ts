@@ -17,8 +17,10 @@ import {
   LucideGem,
   LucideGift,
   LucideHeart,
+  LucideLayers,
   LucideSparkles,
   LucideUserPlus,
+  LucideVolume2,
   LucideWorkflow,
 } from '@lucide/angular';
 import type { StatsSnapshot } from '@tiklive/contracts';
@@ -26,6 +28,8 @@ import { ActivityChart, ACTIVITY_SERIES } from '../../components/analytics/activ
 import { AnalyticsCard } from '../../components/analytics/analytics-card';
 import { ChartContainer } from '../../components/analytics/chart-container';
 import { MetricCard, formatMetric } from '../../components/analytics/metric-card';
+import { LiveAudioPanel } from '../../components/dashboard/live-audio-panel';
+import { LiveOverlays } from '../../components/dashboard/live-overlays';
 import { LiveSessionCard } from '../../components/dashboard/live-session-card';
 import { RecentAutomations } from '../../components/dashboard/recent-automations';
 import { EventFeed } from '../../components/live/event-feed';
@@ -44,8 +48,9 @@ const FEED_ITEMS = 60;
 const CHART_MINUTES = 15;
 
 /**
- * Operational overview during a LIVE: connection, the numbers that matter, what is happening
- * right now and what the automations did about it. Only real data from /stats and /ws/admin.
+ * Operational overview during a LIVE: connection, the numbers that matter, the overlays and sound
+ * running live in this same page, what is happening right now and what the automations did about
+ * it. Only real data from /stats and /ws/admin.
  */
 @Component({
   selector: 'app-dashboard-page',
@@ -59,6 +64,8 @@ const CHART_MINUTES = 15;
     ActivityChart,
     EventFeed,
     RecentAutomations,
+    LiveAudioPanel,
+    LiveOverlays,
     UiButton,
     ...UI_ALERT,
     LucideArrowRight,
@@ -84,10 +91,16 @@ export class DashboardPage {
     gift: LucideGift,
     crown: LucideCrown,
     sparkles: LucideSparkles,
+    layers: LucideLayers,
+    volume: LucideVolume2,
   };
   protected readonly eventLabels = EVENT_LABELS;
   protected readonly chartSeries = ACTIVITY_SERIES;
   protected readonly formatMetric = formatMetric;
+  protected readonly followerHint = computed(() => {
+    const last = this.stats()?.lastFollower;
+    return last ? $localize`Último: @${last.uniqueId}` : $localize`En este live`;
+  });
 
   protected readonly stats = signal<StatsSnapshot | undefined>(undefined);
   protected readonly statsLoading = signal(true);

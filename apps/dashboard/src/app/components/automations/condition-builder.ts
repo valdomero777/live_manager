@@ -17,6 +17,7 @@ import { toRuleOp, type RuleOp } from './rule-ops';
     @for (item of items(); track $index; let i = $index) {
       @if (i > 0) {
         <span
+          i18n
           class="-my-1 justify-self-start rounded-full bg-muted px-2 py-0.5 type-overline text-muted-foreground"
         >
           y además
@@ -33,7 +34,7 @@ import { toRuleOp, type RuleOp } from './rule-ops';
     } @empty {
       <div class="flex items-center gap-3 rounded-lg border border-dashed px-4 py-3">
         <svg lucideInfinity class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        <p class="type-secondary">
+        <p i18n class="type-secondary">
           <span class="font-medium text-foreground">Siempre.</span>
           Sin condiciones, la automatización se ejecuta con cada evento de este tipo.
         </p>
@@ -41,7 +42,7 @@ import { toRuleOp, type RuleOp } from './rule-ops';
     }
 
     <div>
-      <button uiButton variant="outline" size="sm" type="button" [cdkMenuTriggerFor]="menu">
+      <button i18n uiButton variant="outline" size="sm" type="button" [cdkMenuTriggerFor]="menu">
         <svg lucidePlus /> Añadir condición
       </button>
     </div>

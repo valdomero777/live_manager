@@ -17,9 +17,9 @@ import { errorMessage, formatBytes } from '../../lib/labels';
 
 const ACCEPT = '.wav,.mp3,.ogg,.m4a,.png,.jpg,.jpeg,.gif,.webp,.webm';
 const KIND_LABELS: Readonly<Record<Asset['kind'], string>> = {
-  audio: 'Sonido',
-  image: 'Imagen',
-  video: 'Video',
+  audio: $localize`Sonido`,
+  image: $localize`Imagen`,
+  video: $localize`Video`,
 };
 
 /** Upload, preview and delete sounds and images (RF-19). */
@@ -45,6 +45,8 @@ const KIND_LABELS: Readonly<Record<Asset['kind'], string>> = {
   host: { class: 'page' },
   template: `
     <app-page-header
+      i18n-description
+      i18n-title
       title="Sonidos e imágenes"
       description="Archivos propios para tus reglas y metas: sonidos para «Reproducir sonido» e imágenes o GIF para las alertas."
     />
@@ -69,14 +71,19 @@ const KIND_LABELS: Readonly<Record<Asset['kind'], string>> = {
         }
       </span>
       <div class="grid gap-1">
-        <h2 id="up-title" class="type-card-title">Arrastra archivos aquí o elígelos</h2>
-        <p class="max-w-xl type-secondary">
+        <h2 i18n id="up-title" class="type-card-title">Arrastra archivos aquí o elígelos</h2>
+        <p i18n class="max-w-xl type-secondary">
           Sonidos: WAV, MP3, OGG, M4A (máx. {{ maxAudio }}). Imágenes: PNG, JPG, GIF, WebP; videos
           WebM (máx. {{ maxImage }}). El tipo se comprueba por el contenido del archivo.
         </p>
       </div>
       <label uiButton for="file" [attr.aria-disabled]="busy()">
-        <svg lucideUpload /> {{ busy() ? 'Subiendo…' : 'Elegir archivos' }}
+        <svg lucideUpload />
+        @if (busy()) {
+          <ng-container i18n>Subiendo…</ng-container>
+        } @else {
+          <ng-container i18n>Elegir archivos</ng-container>
+        }
       </label>
       <input
         id="file"
@@ -91,7 +98,7 @@ const KIND_LABELS: Readonly<Record<Asset['kind'], string>> = {
     @if (failures().length) {
       <div uiAlert variant="destructive" role="alert">
         <svg lucideCircleAlert />
-        <p uiAlertTitle>Algunos archivos no se pudieron procesar</p>
+        <p i18n uiAlertTitle>Algunos archivos no se pudieron procesar</p>
         <ul uiAlertDescription class="list-disc pl-4">
           @for (m of failures(); track $index) {
             <li>{{ m }}</li>
@@ -102,6 +109,7 @@ const KIND_LABELS: Readonly<Record<Asset['kind'], string>> = {
 
     @if (loading()) {
       <div
+        i18n-aria-label
         class="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-4"
         aria-busy="true"
         aria-label="Cargando archivos"
@@ -127,6 +135,7 @@ const KIND_LABELS: Readonly<Record<Asset['kind'], string>> = {
                       <svg lucideAudioLines class="size-6" />
                     </span>
                     <app-sound-preview
+                      i18n-label
                       [url]="a.url"
                       [title]="a.originalName"
                       [showLabel]="true"
@@ -163,7 +172,7 @@ const KIND_LABELS: Readonly<Record<Asset['kind'], string>> = {
                 <span uiBadge [variant]="a.kind === 'audio' ? 'sound' : 'analytics'">{{
                   kindLabels[a.kind]
                 }}</span>
-                <span class="type-caption"
+                <span i18n class="type-caption"
                   >{{ size(a.sizeBytes) }} · ID {{ a.id }} ·
                   {{ a.createdAt | date: 'dd/MM/yy' }}</span
                 >
@@ -171,6 +180,7 @@ const KIND_LABELS: Readonly<Record<Asset['kind'], string>> = {
             </div>
             <footer uiCardFooter class="mt-auto">
               <button
+                i18n
                 uiButton
                 variant="ghost-destructive"
                 size="sm"
@@ -184,6 +194,8 @@ const KIND_LABELS: Readonly<Record<Asset['kind'], string>> = {
           </article>
         } @empty {
           <app-empty-state
+            i18n-description
+            i18n-title
             class="col-span-full"
             title="Aún no hay archivos"
             description="Sube un sonido para usarlo en tus reglas."
@@ -210,7 +222,9 @@ export class AssetsPage {
   constructor() {
     void this.store
       .load()
-      .catch((e: unknown) => this.failures.set([`No se pudo cargar la lista: ${errorMessage(e)}`]))
+      .catch((e: unknown) =>
+        this.failures.set([$localize`No se pudo cargar la lista: ${errorMessage(e)}`]),
+      )
       .finally(() => this.loading.set(false));
   }
 
@@ -233,9 +247,9 @@ export class AssetsPage {
 
   protected async remove(asset: Asset): Promise<void> {
     const ok = await this.confirm.confirm({
-      title: `¿Eliminar «${asset.originalName}»?`,
-      description: 'Las reglas o metas que lo usan dejarán de reproducirlo o mostrarlo.',
-      confirmLabel: 'Eliminar',
+      title: $localize`¿Eliminar «${asset.originalName}»?`,
+      description: $localize`Las reglas o metas que lo usan dejarán de reproducirlo o mostrarlo.`,
+      confirmLabel: $localize`Eliminar`,
       destructive: true,
     });
     if (!ok) return;
@@ -243,9 +257,9 @@ export class AssetsPage {
     this.failures.set([]);
     try {
       await this.store.delete(asset.id);
-      this.toast.success('Archivo eliminado', asset.originalName);
+      this.toast.success($localize`Archivo eliminado`, asset.originalName);
     } catch (e) {
-      this.failures.set([`No se pudo eliminar: ${errorMessage(e)}`]);
+      this.failures.set([$localize`No se pudo eliminar: ${errorMessage(e)}`]);
     } finally {
       this.busy.set(false);
     }
@@ -266,7 +280,9 @@ export class AssetsPage {
     }
     this.failures.set(failures);
     if (uploaded)
-      this.toast.success(uploaded === 1 ? 'Archivo subido' : `${uploaded} archivos subidos`);
+      this.toast.success(
+        uploaded === 1 ? $localize`Archivo subido` : $localize`${uploaded} archivos subidos`,
+      );
     this.busy.set(false);
   }
 }

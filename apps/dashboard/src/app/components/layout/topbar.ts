@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, output } from '@angular/cor
 import { RouterLink } from '@angular/router';
 import {
   LucideCheck,
+  LucideLanguages,
   LucideLogOut,
   LucideMenu,
   LucideMonitor,
@@ -11,19 +12,22 @@ import {
   LucideUnplug,
 } from '@lucide/angular';
 import { AdminSocketService } from '../../core/admin-socket.service';
+import { LOCALES, changeLocale, currentLocale, type LocaleCode } from '../../core/locale';
 import { ThemeService, type ThemePreference } from '../../core/theme.service';
+import { LiveAudioToggle } from '../live/live-audio-toggle';
 import { LiveStatus } from '../live/live-status';
 import { UiBadge } from '../ui/badge';
 import { UiButton } from '../ui/button';
 import { UI_DROPDOWN_MENU } from '../ui/dropdown-menu';
 import { UiTooltip } from '../ui/tooltip';
 
-/** Always-visible bar: TikTok connection, panel connectivity, theme and session. */
+/** Always-visible bar: TikTok connection, panel connectivity, LIVE sound, theme and session. */
 @Component({
   selector: 'app-topbar',
   imports: [
     RouterLink,
     LiveStatus,
+    LiveAudioToggle,
     UiBadge,
     UiButton,
     UiTooltip,
@@ -33,6 +37,7 @@ import { UiTooltip } from '../ui/tooltip';
     LucideMoon,
     LucideMonitor,
     LucideCheck,
+    LucideLanguages,
     LucideLogOut,
     LucideSettings,
     LucideUnplug,
@@ -44,6 +49,7 @@ import { UiTooltip } from '../ui/tooltip';
   },
   template: `
     <button
+      i18n-aria-label
       uiButton
       variant="ghost"
       size="icon-sm"
@@ -56,6 +62,7 @@ import { UiTooltip } from '../ui/tooltip';
     </button>
 
     <a
+      i18n-uiTooltip
       routerLink="/estado"
       class="min-w-0 rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
       uiTooltip="Ver conexión con TikTok"
@@ -65,14 +72,50 @@ import { UiTooltip } from '../ui/tooltip';
     </a>
 
     @if (socket.lostConnection()) {
-      <span uiBadge variant="warning" class="hidden sm:inline-flex" role="status">
+      <span i18n uiBadge variant="warning" class="hidden sm:inline-flex" role="status">
         <svg lucideUnplug /> Panel reconectando…
       </span>
     }
 
     <span class="flex-1"></span>
 
+    <app-live-audio-toggle />
+
     <button
+      i18n-uiTooltip
+      i18n-aria-label
+      uiButton
+      variant="ghost"
+      size="icon-sm"
+      type="button"
+      aria-label="Idioma"
+      uiTooltip="Idioma"
+      tooltipSide="bottom"
+      [cdkMenuTriggerFor]="languageMenu"
+    >
+      <svg lucideLanguages />
+    </button>
+    <ng-template #languageMenu>
+      <div cdkMenu uiDropdownMenu>
+        @for (option of locales; track option.code) {
+          <button
+            cdkMenuItemRadio
+            uiDropdownMenuItem
+            [cdkMenuItemChecked]="locale === option.code"
+            (cdkMenuItemTriggered)="setLocale(option.code)"
+          >
+            <span class="flex-1">{{ option.label }}</span>
+            @if (locale === option.code) {
+              <svg lucideCheck class="!text-foreground" />
+            }
+          </button>
+        }
+      </div>
+    </ng-template>
+
+    <button
+      i18n-uiTooltip
+      i18n-aria-label
       uiButton
       variant="ghost"
       size="icon-sm"
@@ -118,6 +161,7 @@ import { UiTooltip } from '../ui/tooltip';
     </ng-template>
 
     <button
+      i18n-aria-label
       uiButton
       variant="ghost"
       size="icon-sm"
@@ -129,15 +173,18 @@ import { UiTooltip } from '../ui/tooltip';
       <span
         class="grid size-7 place-items-center rounded-full bg-primary/15 text-xs font-semibold text-primary"
         aria-hidden="true"
-        >TL</span
+        ><ng-container i18n>TL</ng-container></span
       >
     </button>
     <ng-template #accountMenu>
       <div cdkMenu uiDropdownMenu class="min-w-48">
-        <p uiDropdownMenuLabel>Panel de TikLive</p>
-        <a cdkMenuItem uiDropdownMenuItem routerLink="/ajustes"><svg lucideSettings /> Ajustes</a>
+        <p i18n uiDropdownMenuLabel>Panel de TikLive</p>
+        <a i18n cdkMenuItem uiDropdownMenuItem routerLink="/ajustes"
+          ><svg lucideSettings /> Ajustes</a
+        >
         <div uiDropdownMenuSeparator></div>
         <button
+          i18n
           cdkMenuItem
           uiDropdownMenuItem
           variant="destructive"
@@ -156,10 +203,17 @@ export class Topbar {
   readonly logout = output();
 
   protected readonly themes: readonly { value: ThemePreference; label: string }[] = [
-    { value: 'light', label: 'Claro' },
-    { value: 'dark', label: 'Oscuro' },
-    { value: 'system', label: 'Según el sistema' },
+    { value: 'light', label: $localize`Claro` },
+    { value: 'dark', label: $localize`Oscuro` },
+    { value: 'system', label: $localize`Según el sistema` },
   ];
+
+  protected readonly locales = LOCALES;
+  protected readonly locale = currentLocale();
+
+  protected setLocale(code: LocaleCode): void {
+    if (code !== this.locale) changeLocale(code);
+  }
 
   protected setTheme(value: ThemePreference): void {
     this.theme.set(value);

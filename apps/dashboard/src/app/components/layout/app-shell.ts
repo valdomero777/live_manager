@@ -10,6 +10,7 @@ import {
 import { Router, RouterOutlet } from '@angular/router';
 import { AdminSocketService } from '../../core/admin-socket.service';
 import { AuthStore } from '../../core/auth.store';
+import { LiveAudioService } from '../../core/live-audio.service';
 import { UiDialogService } from '../ui/dialog';
 import { UiToaster } from '../ui/toast';
 import { Sidebar } from './sidebar';
@@ -27,7 +28,7 @@ function readCollapsed(): boolean {
 
 /**
  * Frame for signed-in pages: sidebar (rail on desktop, sheet on mobile), top bar with the LIVE
- * state, and the page. Opens the admin websocket for every page below it.
+ * state, and the page. Opens the admin websocket and the LIVE audio for every page below it.
  */
 @Component({
   selector: 'app-shell',
@@ -36,6 +37,7 @@ function readCollapsed(): boolean {
   host: { class: 'flex min-h-dvh' },
   template: `
     <a
+      i18n
       href="#contenido"
       class="fixed top-2 left-2 z-50 -translate-y-20 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-transform focus:translate-y-0"
       >Saltar al contenido</a
@@ -74,6 +76,7 @@ function readCollapsed(): boolean {
 export class AppShell {
   protected readonly socket = inject(AdminSocketService);
   private readonly auth = inject(AuthStore);
+  private readonly liveAudio = inject(LiveAudioService);
   private readonly router = inject(Router);
   private readonly dialogs = inject(UiDialogService);
   private readonly mobileNav = viewChild.required<TemplateRef<unknown>>('mobileNav');
@@ -83,6 +86,7 @@ export class AppShell {
 
   constructor() {
     this.socket.connect();
+    this.liveAudio.restore();
   }
 
   protected toggleCollapsed(): void {
@@ -95,7 +99,7 @@ export class AppShell {
   }
 
   protected openMobileNav(): void {
-    this.sheet = this.dialogs.openSheet(this.mobileNav(), 'Menú principal');
+    this.sheet = this.dialogs.openSheet(this.mobileNav(), $localize`Menú principal`);
   }
 
   protected closeMobileNav(): void {
@@ -104,6 +108,7 @@ export class AppShell {
 
   protected async logout(): Promise<void> {
     this.socket.disconnect();
+    this.liveAudio.stop();
     await this.auth.logout();
     await this.router.navigate(['/login']);
   }

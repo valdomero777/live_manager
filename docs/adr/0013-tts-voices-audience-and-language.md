@@ -1,4 +1,4 @@
-# ADR 0012 — TTS: voces de Edge, audiencia y protección de idioma
+# ADR 0013 — TTS: voces de Edge, audiencia y protección de idioma
 
 Fecha: 2026-10-14 · Estado: aceptada
 

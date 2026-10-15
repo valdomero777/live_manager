@@ -9,9 +9,9 @@ import { UiBadge, type BadgeVariant } from '../ui/badge';
 import { UiButton } from '../ui/button';
 
 const RESULTS: Readonly<Record<RuleExecution['result'], { label: string; badge: BadgeVariant }>> = {
-  executed: { label: 'Ejecutada', badge: 'success' },
-  limited: { label: 'Limitada', badge: 'warning' },
-  failed: { label: 'Falló', badge: 'danger' },
+  executed: { label: $localize`Ejecutada`, badge: 'success' },
+  limited: { label: $localize`Limitada`, badge: 'warning' },
+  failed: { label: $localize`Falló`, badge: 'danger' },
 };
 
 const VISIBLE = 8;
@@ -54,16 +54,13 @@ const VISIBLE = 8;
       </ul>
     } @else {
       <app-empty-state
+        i18n-title
         [icon]="emptyIcon"
         title="Ninguna automatización se ha ejecutado aún"
-        [description]="
-          activeRules()
-            ? 'Cuando un evento cumpla una regla activa aparecerá aquí, en tiempo real.'
-            : 'No tienes reglas activas. Crea una para reaccionar a regalos, follows o comentarios.'
-        "
+        [description]="emptyDescription()"
       >
         @if (!activeRules()) {
-          <a uiButton size="sm" routerLink="/reglas/nueva"><svg lucidePlus /> Nueva regla</a>
+          <a i18n uiButton size="sm" routerLink="/reglas/nueva"><svg lucidePlus /> Nueva regla</a>
         }
       </app-empty-state>
     }
@@ -76,6 +73,11 @@ export class RecentAutomations {
 
   protected readonly emptyIcon = LucideWorkflow;
   protected readonly activeRules = computed(() => this.rules().filter((r) => r.enabled).length);
+  protected readonly emptyDescription = computed(() =>
+    this.activeRules()
+      ? $localize`Cuando un evento cumpla una regla activa aparecerá aquí, en tiempo real.`
+      : $localize`No tienes reglas activas. Crea una para reaccionar a regalos, follows o comentarios.`,
+  );
   protected readonly rows = computed(() => {
     const byId = new Map(this.rules().map((r) => [r.id, r]));
     return this.executions()
@@ -86,8 +88,10 @@ export class RecentAutomations {
           ...e,
           ...RESULTS[e.result],
           rule,
-          name: rule?.name ?? `Regla #${e.ruleId}`,
-          trigger: rule ? `Cuando: ${this.triggerLabels()[rule.trigger] ?? rule.trigger}` : '',
+          name: rule?.name ?? $localize`Regla #${e.ruleId}`,
+          trigger: rule
+            ? $localize`Cuando: ${this.triggerLabels()[rule.trigger] ?? rule.trigger}`
+            : '',
         };
       });
   });

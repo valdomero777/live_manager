@@ -21,12 +21,12 @@ Los IDs (RF/RNF) refieren a la sección 2 de la especificación.
 
 | Fase | Contenido | Estado |
 | --- | --- | --- |
-| 0 | Laptop, SO, firewall, verificación de supuestos (sección 18) | Manual — checklist en [fase-0.md](fase-0.md) y `npm run phase0`; pendiente de ejecutar |
-| 1 | Monorepo + CI, `contracts`, dominio, `LiveEventSource` (conector + simulador), normalizador, SQLite + migraciones, pestaña de audio | **Hecha** (falta validar con un live real) |
+| 0 | Laptop, SO, firewall, verificación de supuestos (sección 18) | Manual — checklist en [fase-0.md](fase-0.md) y `npm run phase0`. Hecha en parte con un live real (2026-10-14); falta anotar en el checklist qué supuestos se comprobaron y las mediciones (CPU, `load-test`) |
+| 1 | Monorepo + CI, `contracts`, dominio, `LiveEventSource` (conector + simulador), normalizador, SQLite + migraciones, pestaña de audio | **Hecha y probada en un live real** (2026-10-14). Pendiente: grabar un live y convertirlo en prueba de regresión del mapeo; probar la reconexión tras cortar la red 60 s |
 | 2 | Motor de reglas, condiciones/acciones, cola con prioridad, limitadores, TTS + filtros, assets, overlay de alertas | **Hecha** (acciones `webhook` y `updateGoal` el 2026-10-08) |
 | 3 | Proyecciones, leaderboards, metas, stats, rotator | **Hecha** (ver abajo) |
-| 4 | Dashboard Angular, auth, respaldos, `/health` completo, métricas, runbook, despliegue | **En curso**: hechos respaldos, restauración, retención, `/health`, `/metrics`, alertas y despliegue en Windows (ver `docs/operacion.md`, `docs/despliegue-windows.md`); falta ensayo en la laptop y de 4 h |
-| 5 | v2/v3 | Pendiente |
+| 4 | Dashboard Angular, auth, respaldos, `/health` completo, métricas, runbook, despliegue | **Casi cerrada**: hechos dashboard completo (español e inglés, pruebas e2e), auth, respaldos, restauración, retención, `/health`, `/metrics`, alertas, runbook y despliegue en Windows (ver `docs/operacion.md`, `docs/runbook.md`, `docs/despliegue-windows.md`). Falta el ensayo del despliegue en la laptop y el ensayo de 4 h |
+| 5 | v2/v3 | Pendiente: sin alcance definido en este plan; se define al cerrar el ensayo de la fase 4 |
 
 ## Fase 1 — tareas
 
@@ -63,14 +63,14 @@ dominio > 90 %):
 
 Pendiente, en orden propuesto:
 
-1. **Fase 0 (manual):** verificar los supuestos de la sección 18 con un live real
-   (`SIMULATE=false`, `TIKTOK_USERNAME=…`), LIVE Studio con fuente Link y transparencia.
+1. ~~**Fase 0 (manual):** verificar los supuestos de la sección 18 con un live real~~ hecho en
+   parte (2026-10-14); falta registrar el resultado de cada casilla de [fase-0.md](fase-0.md).
 2. ~~Modo `record`~~ hecho: `RECORD_PATH=data/live.jsonl` graba cada evento crudo del conector real
    (no del simulador) y `npm run simulate -- replay data/live.jsonl` lo reproduce. Pendiente: grabar
    un live real y convertir un fragmento en prueba de regresión del mapeo.
 3. ~~Resto de fase 2~~ hecho (ver abajo).
-4. Fase 3: proyecciones, leaderboards, metas, stats y rotator.
-5. Fase 4: dashboard Angular, autenticación (argon2id + cookie), respaldos, `/metrics`, systemd.
+4. ~~Fase 3: proyecciones, leaderboards, metas, stats y rotator~~ hecha.
+5. ~~Fase 4: dashboard Angular, autenticación, respaldos, `/metrics`, despliegue~~ casi cerrada (ver abajo).
 
 ## Fase 3 — estado al 2026-10-06
 
@@ -99,8 +99,7 @@ Pendiente o diferido:
 - Ejecutar `npm run load-test -- --rate 1000` con la máquina libre. En la prueba local la CPU
   estaba al 100 % por otras aplicaciones: 200 eventos dieron 234 ms de desfase, pero la tasa real
   solo llegó a 99/s.
-- Acción `updateGoal` (sumar progreso manual) y `webhook`: necesitan un ejecutor de acciones del
-  lado del servidor; quedan junto con el resto de la fase 2.
+- ~~Acciones `updateGoal` y `webhook`~~: hechas el 2026-10-08 (ver «Acciones de servidor»).
 - Métrica `top_gift` como ranking: hoy solo existe como "mejor regalo" en stats.
 - ~~Retención de 90 días de `live_event`~~: hecha en la fase 4 (limpieza diaria en bloques).
 
@@ -125,7 +124,8 @@ Pendiente o diferido:
   con vista previa en vivo y URL para copiar; editor del rotator), Simulador (cada tipo de evento
   y «prueba completa») y Ajustes. Backend nuevo: `POST/DELETE /assets`, `POST /rules/:id/test`,
   `GET /events/recent`.
-- Pendiente del dashboard: textos en archivos de traducción y pruebas e2e con Playwright.
+- Textos del dashboard en archivos de traducción (español e inglés, 2026-10-15): ver [i18n.md](i18n.md).
+- Pruebas e2e del dashboard con Playwright (2026-10-15): ver [e2e.md](e2e.md).
 
 ## Criterios de salida de fase 1 (verificables)
 
@@ -163,11 +163,34 @@ Pendiente o diferido:
   copia previa de la base y rollback automático. El paquete se probó en Linux (extraer, `npm ci
   --omit=dev`, arrancar, `/health`, panel y overlays); **los scripts de PowerShell no se han
   podido ejecutar** y hay que ensayarlos (lista al final de `despliegue-windows.md`).
-- Pendiente: runbook de incidentes completo, textos i18n, e2e con Playwright y el ensayo de 4 h.
+- Runbook de incidentes completo en [runbook.md](runbook.md) (2026-10-15).
+- Pendiente: el ensayo de 4 h.
+
+## Pendiente actual (2026-10-15)
+
+Manual, en la laptop o con un live real:
+
+1. Ensayar `deploy/windows` (lista al final de `despliegue-windows.md`): tarea de arranque,
+   reinicio < 10 s tras `taskkill`, reinicio de Windows, despliegue con paquete roto y rollback,
+   restauración de un respaldo.
+2. Ensayo de 4 h continuas con simulador y pestaña de audio abierta, sin intervención.
+3. `npm run load-test -- --rate 1000` con la máquina libre (desfase < 500 ms) y `npm run phase0 -- cpu`.
+4. Grabar un live (`RECORD_PATH`) y convertir un fragmento en prueba de regresión del mapeo;
+   probar la reconexión tras cortar la red 60 s.
+5. Anotar en [fase-0.md](fase-0.md) el resultado de cada casilla ya comprobada con el live real.
+
+De código, sin urgencia:
+
+- Métrica `top_gift` como ranking.
+- Hallazgos abiertos de [DOCUMENTACION_TECNICA.md](DOCUMENTACION_TECNICA.md): reinicio en proceso
+  que puede dejar la app sin servidor HTTP (F-02), `config.json` corrupto que impide arrancar
+  (F-07), `Origin` en `/ws/admin` (SEC-05), intentos de `setup` sin límite (SEC-06),
+  `frame-ancestors` (SEC-04), mensajes del servidor sin traducir.
+- Fase 5 (v2/v3): definir su alcance.
 
 ## TTS: voces, audiencia e idioma — 2026-10-14
 
-Decisiones en [ADR 0012](adr/0012-tts-voices-audience-and-language.md).
+Decisiones en [ADR 0013](adr/0013-tts-voices-audience-and-language.md).
 
 - Ajustes → **Voz (TTS)**: motor (navegador o voces neuronales de Microsoft Edge), idioma, género,
   voz concreta, velocidad, tono y «Probar voz». Con Edge la pantalla de audio pide el MP3 a

@@ -36,7 +36,7 @@ export interface ConfirmOptions {
       </div>
       <div uiDialogFooter>
         <button uiButton variant="outline" type="button" (click)="ref.close(false)" cdkFocusInitial>
-          {{ data.cancelLabel ?? 'Cancelar' }}
+          {{ data.cancelLabel ?? cancelLabel }}
         </button>
         <button
           uiButton
@@ -44,7 +44,7 @@ export interface ConfirmOptions {
           [variant]="data.destructive ? 'destructive' : 'default'"
           (click)="ref.close(true)"
         >
-          {{ data.confirmLabel ?? 'Continuar' }}
+          {{ data.confirmLabel ?? continueLabel }}
         </button>
       </div>
     </ui-dialog-content>
@@ -53,6 +53,8 @@ export interface ConfirmOptions {
 export class UiConfirmDialog {
   protected readonly ref = inject<DialogRef<boolean>>(DialogRef);
   protected readonly data = inject<ConfirmOptions>(DIALOG_DATA);
+  protected readonly cancelLabel = $localize`Cancelar`;
+  protected readonly continueLabel = $localize`Continuar`;
 }
 
 /** Accessible replacement for window.confirm(). Resolves false when dismissed. */

@@ -83,6 +83,12 @@ export class SettingsPage {
   protected readonly applyLabels = APPLY_LABELS;
   protected readonly sourceLabel = sourceLabel;
 
+  protected secretPlaceholder(isSet: boolean): string {
+    return isSet
+      ? $localize`•••••••• (definida; escribe para reemplazarla)`
+      : $localize`Sin definir`;
+  }
+
   protected readonly form: SettingsForm = new FormGroup(
     Object.fromEntries(
       SETTING_KEYS.map((k) => [k, new FormControl<FieldValue>('', { nonNullable: true })]),
@@ -138,7 +144,7 @@ export class SettingsPage {
     if (keys.length === 0) return;
     const invalid = keys.find((k) => validateField(k, this.form.controls[k].value));
     if (invalid) {
-      this.error.set(`Revisa el campo «${LABELS.get(invalid) ?? invalid}».`);
+      this.error.set($localize`Revisa el campo «${LABELS.get(invalid) ?? invalid}».`);
       return;
     }
     const patch = Object.fromEntries(keys.map((k) => [k, this.form.controls[k].value]));
@@ -152,10 +158,9 @@ export class SettingsPage {
 
   protected async rotateOverlayKey(): Promise<void> {
     const ok = await this.confirm.confirm({
-      title: '¿Generar una clave nueva?',
-      description:
-        'Las URLs actuales de los overlays dejarán de funcionar y tendrás que pegar las nuevas en LIVE Studio u OBS.',
-      confirmLabel: 'Generar clave',
+      title: $localize`¿Generar una clave nueva?`,
+      description: $localize`Las URLs actuales de los overlays dejarán de funcionar y tendrás que pegar las nuevas en LIVE Studio u OBS.`,
+      confirmLabel: $localize`Generar clave`,
       destructive: true,
     });
     if (ok) await this.run(() => this.store.rotateOverlayKey());
@@ -163,16 +168,16 @@ export class SettingsPage {
 
   protected async restart(): Promise<void> {
     const ok = await this.confirm.confirm({
-      title: '¿Reiniciar el servidor?',
-      description: 'Tarda unos segundos. Los overlays y el conector se reconectan solos.',
-      confirmLabel: 'Reiniciar ahora',
+      title: $localize`¿Reiniciar el servidor?`,
+      description: $localize`Tarda unos segundos. Los overlays y el conector se reconectan solos.`,
+      confirmLabel: $localize`Reiniciar ahora`,
     });
     if (!ok) return;
     await this.run(async () => {
       const outcome = await this.store.restart();
       if (outcome === 'reverted') {
         this.error.set(
-          'El servidor no pudo arrancar con el puerto nuevo y volvió a la configuración anterior.',
+          $localize`El servidor no pudo arrancar con el puerto nuevo y volvió a la configuración anterior.`,
         );
       }
     });

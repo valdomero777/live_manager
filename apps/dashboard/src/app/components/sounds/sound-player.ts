@@ -14,6 +14,7 @@ import { UiButton } from '../ui/button';
 import { UiSpinner } from '../ui/feedback';
 import { UiSlider } from '../ui/input';
 import { absoluteSoundUrl } from './sound-url';
+import { playbackLabel } from '../../lib/accessible-labels';
 
 /**
  * The chosen sound: play / pause / stop and the volume it will have on stream. Changing the
@@ -53,13 +54,10 @@ import { absoluteSoundUrl } from './sound-url';
     </div>
 
     <div class="flex flex-wrap items-center gap-3">
-      <div
-        class="flex items-center gap-1"
-        role="group"
-        [attr.aria-label]="'Reproducción de ' + title()"
-      >
+      <div class="flex items-center gap-1" role="group" [attr.aria-label]="playbackLabel(title())">
         @if (loading()) {
           <button
+            i18n-aria-label
             uiButton
             variant="outline"
             size="icon-sm"
@@ -71,6 +69,7 @@ import { absoluteSoundUrl } from './sound-url';
           </button>
         } @else if (playing()) {
           <button
+            i18n-aria-label
             uiButton
             variant="outline"
             size="icon-sm"
@@ -86,13 +85,14 @@ import { absoluteSoundUrl } from './sound-url';
             variant="outline"
             size="icon-sm"
             type="button"
-            [attr.aria-label]="paused() ? 'Reanudar' : 'Reproducir'"
+            [attr.aria-label]="playLabel()"
             (click)="play()"
           >
             <svg lucidePlay class="fill-current" />
           </button>
         }
         <button
+          i18n-aria-label
           uiButton
           variant="ghost"
           size="icon-sm"
@@ -112,6 +112,7 @@ import { absoluteSoundUrl } from './sound-url';
           <svg lucideVolume2 class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         }
         <input
+          i18n-aria-label
           uiSlider
           type="range"
           min="0"
@@ -119,7 +120,8 @@ import { absoluteSoundUrl } from './sound-url';
           step="0.05"
           [id]="volumeId()"
           [value]="volume()"
-          [attr.aria-label]="'Volumen'"
+          aria-label="Volumen"
+          i18n-aria-label
           [attr.aria-valuetext]="percent() + '%'"
           (input)="setVolume($any($event.target).valueAsNumber)"
         />
@@ -138,6 +140,7 @@ import { absoluteSoundUrl } from './sound-url';
   `,
 })
 export class SoundPlayer {
+  protected readonly playbackLabel = playbackLabel;
   protected readonly audio = inject(AudioService);
   readonly url = input.required<string>();
   readonly title = input.required<string>();
@@ -151,6 +154,9 @@ export class SoundPlayer {
   protected readonly paused = computed(() => this.audio.pausedUrl() === this.src());
   protected readonly loading = computed(() => this.audio.loadingUrl() === this.src());
   protected readonly percent = computed(() => Math.round(this.volume() * 100));
+  protected readonly playLabel = computed(() =>
+    this.paused() ? $localize`Reanudar` : $localize`Reproducir`,
+  );
 
   protected play(): void {
     if (!this.paused()) {

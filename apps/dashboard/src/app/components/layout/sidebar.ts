@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import {
   LucideDynamicIcon,
@@ -42,13 +42,14 @@ import { NAVIGATION } from './navigation';
       </span>
       @if (!collapsed()) {
         <span class="grid leading-tight">
-          <span class="text-sm font-semibold tracking-tight">TikLive</span>
-          <span class="type-caption">Automatización LIVE</span>
+          <span i18n class="text-sm font-semibold tracking-tight">TikLive</span>
+          <span i18n class="type-caption">Automatización LIVE</span>
         </span>
       }
     </div>
 
     <nav
+      i18n-aria-label
       aria-label="Principal"
       class="flex-1 overflow-y-auto py-4 scrollbar-thin"
       [class.px-3]="!collapsed()"
@@ -108,15 +109,15 @@ import { NAVIGATION } from './navigation';
               : 'w-full justify-start text-muted-foreground'
           "
           [attr.aria-expanded]="!collapsed()"
-          [attr.aria-label]="collapsed() ? 'Expandir menú' : 'Contraer menú'"
-          [uiTooltip]="collapsed() ? 'Expandir menú' : ''"
+          [attr.aria-label]="toggleLabel()"
+          [uiTooltip]="collapsed() ? expandLabel : ''"
           tooltipSide="right"
           (click)="toggle.emit()"
         >
           @if (collapsed()) {
             <svg lucidePanelLeftOpen />
           } @else {
-            <svg lucidePanelLeftClose /> Contraer
+            <svg lucidePanelLeftClose /> <ng-container i18n>Contraer</ng-container>
           }
         </button>
       </div>
@@ -130,4 +131,8 @@ export class Sidebar {
   /** A link was followed (closes the mobile sheet). */
   readonly navigate = output();
   protected readonly navigation = NAVIGATION;
+  protected readonly expandLabel = $localize`Expandir menú`;
+  protected readonly toggleLabel = computed(() =>
+    this.collapsed() ? this.expandLabel : $localize`Contraer menú`,
+  );
 }

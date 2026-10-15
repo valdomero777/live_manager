@@ -1,4 +1,6 @@
 <app-page-header
+  i18n-description
+  i18n-title
   title="Rankings y metas"
   description="Quién más aporta a tu LIVE y las metas que muestran los overlays. Se actualiza cada 5 segundos."
 />
@@ -6,7 +8,7 @@
 @if (error()) {
 <div uiAlert variant="destructive" role="alert">
   <svg lucideCircleAlert />
-  <p uiAlertTitle>No se pudo completar la acción</p>
+  <p i18n uiAlertTitle>No se pudo completar la acción</p>
   <p uiAlertDescription>{{ error() }}</p>
 </div>
 }
@@ -14,10 +16,11 @@
 <div class="grid items-start gap-4 xl:grid-cols-5">
   <section uiCard class="xl:col-span-3" aria-labelledby="lb-title">
     <header uiCardHeader>
-      <h2 uiCardTitle id="lb-title"><svg lucideTrophy /> Rankings</h2>
+      <h2 i18n uiCardTitle id="lb-title"><svg lucideTrophy /> Rankings</h2>
       <p uiCardDescription>{{ metricLabels[metric()] }} · {{ scopeLabels[scope()] }}</p>
       <div uiCardAction>
         <button
+          i18n
           uiButton
           variant="ghost"
           size="sm"
@@ -30,14 +33,14 @@
       </div>
     </header>
     <div uiCardContent class="flex flex-wrap gap-2">
-      <div uiToggleGroup aria-label="Métrica">
+      <div i18n-aria-label uiToggleGroup aria-label="Métrica">
         @for (m of metrics; track m) {
         <button uiToggleGroupItem [pressed]="metric() === m" (click)="select(m, scope())">
           {{ metricLabels[m] }}
         </button>
         }
       </div>
-      <div uiToggleGroup aria-label="Período">
+      <div i18n-aria-label uiToggleGroup aria-label="Período">
         @for (s of scopes; track s) {
         <button uiToggleGroupItem [pressed]="scope() === s" (click)="select(metric(), s)">
           {{ scopeLabels[s] }}
@@ -47,7 +50,7 @@
     </div>
     <div uiCardContent>
       @if (loading()) {
-      <div class="grid gap-2" aria-busy="true" aria-label="Cargando ranking">
+      <div i18n-aria-label class="grid gap-2" aria-busy="true" aria-label="Cargando ranking">
         @for (i of [0, 1, 2, 3, 4]; track i) {
         <div uiSkeleton class="h-9"></div>
         }
@@ -61,7 +64,7 @@
           <thead uiTableHeader class="bg-muted/50">
             <tr uiTableRow class="hover:bg-transparent">
               <th uiTableHead scope="col" class="w-12">#</th>
-              <th uiTableHead scope="col">Usuario</th>
+              <th i18n uiTableHead scope="col">Usuario</th>
               <th uiTableHead scope="col" class="text-right">{{ metricLabels[metric()] }}</th>
             </tr>
           </thead>
@@ -71,7 +74,7 @@
               <td uiTableCell class="font-medium tabular-nums">
                 @if (r.rank === 1) {
                 <span class="inline-flex items-center gap-1 text-gift-text"
-                  ><svg lucideCrown class="size-4" /><span class="sr-only">Primero</span></span
+                  ><svg lucideCrown class="size-4" /><span i18n class="sr-only">Primero</span></span
                 >
                 } @else { {{ r.rank }} }
               </td>
@@ -80,12 +83,12 @@
                 <span class="ml-1.5 type-caption">&#64;{{ r.uniqueId }}</span>
               </td>
               <td uiTableCell class="text-right font-semibold tabular-nums">
-                {{ r.value.toLocaleString('es-MX') }}
+                {{ r.value.toLocaleString(numberLocale('es-MX')) }}
               </td>
             </tr>
             } @empty {
             <tr>
-              <td colspan="3" class="px-3 py-10 text-center type-secondary">
+              <td i18n colspan="3" class="px-3 py-10 text-center type-secondary">
                 Sin datos en este período.
               </td>
             </tr>
@@ -99,11 +102,11 @@
 
   <section uiCard class="xl:col-span-2" aria-labelledby="goals-title">
     <header uiCardHeader>
-      <h2 uiCardTitle id="goals-title"><svg lucideTarget /> Metas</h2>
-      <p uiCardDescription>Barras de progreso para los overlays.</p>
+      <h2 i18n uiCardTitle id="goals-title"><svg lucideTarget /> Metas</h2>
+      <p i18n uiCardDescription>Barras de progreso para los overlays.</p>
       @if (!editing()) {
       <div uiCardAction>
-        <button uiButton size="sm" type="button" (click)="editing.set('new')">
+        <button i18n uiButton size="sm" type="button" (click)="editing.set('new')">
           <svg lucidePlus /> Nueva meta
         </button>
       </div>
@@ -125,14 +128,15 @@
             <div class="flex flex-wrap gap-1.5">
               <span uiBadge variant="gift">{{ goalMetricLabels[g.metric] }}</span>
               <span uiBadge variant="secondary"
-                >{{ g.scope === 'session' ? 'Cada live' : 'Histórico' }}</span
+                >@if (g.scope === 'session') {<ng-container i18n>Cada live</ng-container>} @else
+                {<ng-container i18n>Histórico</ng-container>}</span
               >
               @if (g.repeatFactor) {
-              <span uiBadge variant="secondary">Niveles ×{{ g.repeatFactor }}</span>
+              <span i18n uiBadge variant="secondary">Niveles ×{{ g.repeatFactor }}</span>
               } @if (!g.active) {
-              <span uiBadge variant="warning">Inactiva</span>
+              <span i18n uiBadge variant="warning">Inactiva</span>
               }
-              <span uiBadge variant="outline">ID {{ g.id }}</span>
+              <span i18n uiBadge variant="outline">ID {{ g.id }}</span>
             </div>
           </div>
           <button
@@ -140,7 +144,7 @@
             variant="ghost"
             size="icon-sm"
             type="button"
-            [attr.aria-label]="'Editar ' + g.name"
+            [attr.aria-label]="editLabel(g.name)"
             (click)="editing.set(g)"
           >
             <svg lucidePencil />
@@ -150,7 +154,7 @@
             variant="ghost-destructive"
             size="icon-sm"
             type="button"
-            [attr.aria-label]="'Eliminar ' + g.name"
+            [attr.aria-label]="deleteLabel(g.name)"
             (click)="deleteGoal(g)"
             [disabled]="busy()"
           >
@@ -166,9 +170,10 @@
           />
           <p class="flex justify-between type-caption tabular-nums">
             <span>
-              {{ p.current.toLocaleString('es-MX') }} / {{ p.target.toLocaleString('es-MX') }} @if
-              (p.cycle > 1) { · nivel {{ p.cycle }} } @if (p.reached) { ·
-              <span class="font-medium text-success-text">cumplida</span>
+              {{ p.current.toLocaleString(numberLocale('es-MX')) }} / {{
+              p.target.toLocaleString(numberLocale('es-MX')) }} @if (p.cycle > 1) {
+              <ng-container i18n>· nivel {{ p.cycle }}</ng-container> } @if (p.reached) { ·
+              <span i18n class="font-medium text-success-text">cumplida</span>
               }
             </span>
             <span class="font-medium text-foreground">{{ percent(g) }}%</span>
@@ -178,6 +183,8 @@
       </article>
       } @empty { @if (editing() !== 'new') {
       <app-empty-state
+        i18n-description
+        i18n-title
         [icon]="icons.goals"
         title="Aún no hay metas"
         description="Por ejemplo: 1.000 diamantes en este live."
@@ -189,13 +196,13 @@
 
 <section uiCard aria-labelledby="priv-title">
   <header uiCardHeader>
-    <h2 uiCardTitle id="priv-title"><svg lucideEyeOff /> Usuarios ocultos en los rankings</h2>
-    <p uiCardDescription>
+    <h2 i18n uiCardTitle id="priv-title"><svg lucideEyeOff /> Usuarios ocultos en los rankings</h2>
+    <p i18n uiCardDescription>
       Un usuario (sin &#64;) por línea; por ejemplo, tus moderadores o cuentas de prueba.
     </p>
   </header>
   <div uiCardContent>
-    <label class="sr-only" for="excluded">Usuarios ocultos</label>
+    <label i18n class="sr-only" for="excluded">Usuarios ocultos</label>
     <textarea
       uiTextarea
       id="excluded"
@@ -205,7 +212,14 @@
     ></textarea>
   </div>
   <footer uiCardFooter>
-    <button uiButton variant="outline" type="button" (click)="saveExclusions()" [disabled]="busy()">
+    <button
+      i18n
+      uiButton
+      variant="outline"
+      type="button"
+      (click)="saveExclusions()"
+      [disabled]="busy()"
+    >
       Guardar lista
     </button>
   </footer>
@@ -213,7 +227,7 @@
 
 <ng-template #resetMenu>
   <div cdkMenu uiDropdownMenu>
-    <p uiDropdownMenuLabel>Reiniciar ranking</p>
+    <p i18n uiDropdownMenuLabel>Reiniciar ranking</p>
     @for (s of scopes; track s) {
     <button
       cdkMenuItem

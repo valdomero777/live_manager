@@ -1,8 +1,10 @@
 <app-page-header
-  [title]="isNew() ? 'Nueva regla' : draft().name || 'Editar regla'"
+  i18n-description
+  [title]="pageTitle()"
   description="Cuando ocurre un evento y se cumplen las condiciones, se ejecutan las acciones en orden."
 >
   <a
+    i18n
     pageHeaderLead
     routerLink="/reglas"
     class="inline-flex w-fit items-center gap-1.5 type-caption hover:text-foreground"
@@ -11,7 +13,11 @@
   </a>
   @if (!isNew()) {
   <span uiBadge [variant]="dirty() ? 'warning' : 'success'" aria-live="polite">
-    {{ dirty() ? 'Cambios sin guardar' : 'Guardada' }}
+    @if (dirty()) {
+    <ng-container i18n>Cambios sin guardar</ng-container>
+    } @else {
+    <ng-container i18n>Guardada</ng-container>
+    }
   </span>
   }
 </app-page-header>
@@ -19,7 +25,7 @@
 @if (error()) {
 <div uiAlert variant="destructive" role="alert">
   <svg lucideCircleAlert />
-  <p uiAlertTitle>No se pudo completar la acción</p>
+  <p i18n uiAlertTitle>No se pudo completar la acción</p>
   <p uiAlertDescription>{{ error() }}</p>
 </div>
 }
@@ -28,11 +34,12 @@
   <div class="grid min-w-0 gap-6">
     <section uiCard aria-labelledby="general-title">
       <header uiCardHeader>
-        <h2 uiCardTitle id="general-title">General</h2>
+        <h2 i18n uiCardTitle id="general-title">General</h2>
       </header>
       <div uiCardContent class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-        <ui-form-field label="Nombre" for="r-name" [error]="nameError()">
+        <ui-form-field i18n-label label="Nombre" for="r-name" [error]="nameError()">
           <input
+            i18n-placeholder
             uiInput
             id="r-name"
             type="text"
@@ -49,12 +56,12 @@
             [checked]="draft().enabled"
             (checkedChange)="update('enabled', $event)"
           />
-          <label for="r-enabled" class="type-label">Regla activa</label>
+          <label i18n for="r-enabled" class="type-label">Regla activa</label>
         </div>
       </div>
     </section>
 
-    <section uiCard aria-label="Automatización">
+    <section i18n-aria-label uiCard aria-label="Automatización">
       <div uiCardContent>
         <app-automation-builder
           [trigger]="draft().trigger"
@@ -71,24 +78,25 @@
 
     <section uiCard id="probar" aria-labelledby="test-title" class="scroll-mt-20">
       <header uiCardHeader>
-        <h2 uiCardTitle id="test-title"><svg lucideFlaskConical /> Probar</h2>
-        <p uiCardDescription>
+        <h2 i18n uiCardTitle id="test-title"><svg lucideFlaskConical /> Probar</h2>
+        <p i18n uiCardDescription>
           Ejecuta la regla guardada con un evento de ejemplo. Ignora la espera y la probabilidad;
           sus acciones se ven y oyen en los overlays.
         </p>
       </header>
       <div uiCardContent class="grid gap-4">
         @if (isNew()) {
-        <p class="type-secondary">Guarda la regla para poder probarla.</p>
+        <p i18n class="type-secondary">Guarda la regla para poder probarla.</p>
         } @else { @if (dirty()) {
         <div uiAlert variant="warning">
           <svg lucideTriangleAlert />
-          <p uiAlertDescription>Hay cambios sin guardar: se probará la versión guardada.</p>
+          <p i18n uiAlertDescription>Hay cambios sin guardar: se probará la versión guardada.</p>
         </div>
         }
         <div class="form-grid">
-          <ui-form-field label="Usuario" for="t-user">
+          <ui-form-field i18n-label label="Usuario" for="t-user">
             <input
+              i18n-placeholder
               uiInput
               id="t-user"
               type="text"
@@ -97,8 +105,9 @@
             />
           </ui-form-field>
           @switch (draft().trigger) { @case ('gift') {
-          <ui-form-field label="Regalo" for="t-gift">
+          <ui-form-field i18n-label label="Regalo" for="t-gift">
             <input
+              i18n-placeholder
               uiInput
               id="t-gift"
               type="text"
@@ -107,7 +116,7 @@
               (input)="setTest('giftName', $any($event.target).value)"
             />
           </ui-form-field>
-          <ui-form-field label="Cantidad" for="t-qty">
+          <ui-form-field i18n-label label="Cantidad" for="t-qty">
             <input
               uiInput
               id="t-qty"
@@ -117,7 +126,7 @@
               (input)="setTest('quantity', $any($event.target).value)"
             />
           </ui-form-field>
-          <ui-form-field label="Diamantes c/u" for="t-diamonds">
+          <ui-form-field i18n-label label="Diamantes c/u" for="t-diamonds">
             <input
               uiInput
               id="t-diamonds"
@@ -129,8 +138,9 @@
             />
           </ui-form-field>
           } @case ('comment') {
-          <ui-form-field label="Comentario" for="t-text" class="col-span-full">
+          <ui-form-field i18n-label label="Comentario" for="t-text" class="col-span-full">
             <input
+              i18n-placeholder
               uiInput
               id="t-text"
               type="text"
@@ -139,7 +149,7 @@
             />
           </ui-form-field>
           } @case ('like') {
-          <ui-form-field label="Likes" for="t-likes">
+          <ui-form-field i18n-label label="Likes" for="t-likes">
             <input
               uiInput
               id="t-likes"
@@ -154,6 +164,7 @@
         @if (draft().trigger === 'gift') {
         <details class="group rounded-lg border bg-muted/40">
           <summary
+            i18n
             class="flex cursor-pointer list-none items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium outline-none select-none hover:bg-surface-hover focus-visible:ring-[3px] focus-visible:ring-ring/40 [&::-webkit-details-marker]:hidden"
           >
             <svg lucideChevronRight class="size-4 transition-transform group-open:rotate-90" />
@@ -161,6 +172,7 @@
           </summary>
           <div class="p-3 pt-1">
             <app-gift-grid
+              i18n-label
               label="Regalo de prueba"
               [selected]="testInput().giftName"
               (pick)="pickTestGift($event)"
@@ -169,7 +181,14 @@
         </details>
         }
         <div>
-          <button uiButton variant="outline" type="button" (click)="test()" [disabled]="busy()">
+          <button
+            i18n
+            uiButton
+            variant="outline"
+            type="button"
+            (click)="test()"
+            [disabled]="busy()"
+          >
             @if (busy()) {
             <ui-spinner />
             } @else {
@@ -184,7 +203,13 @@
           } @else {
           <svg lucideCircleX />
           }
-          <p uiAlertTitle>{{ r.matched ? 'La regla se activó' : 'La regla no se activó' }}</p>
+          <p uiAlertTitle>
+            @if (r.matched) {
+            <ng-container i18n>La regla se activó</ng-container>
+            } @else {
+            <ng-container i18n>La regla no se activó</ng-container>
+            }
+          </p>
           <div uiAlertDescription>
             @if (r.conditions.length) {
             <ul class="grid gap-0.5">
@@ -199,7 +224,7 @@
               }
             </ul>
             } @if (r.matched) {
-            <p>
+            <p i18n>
               Acciones enviadas: {{ r.actionsQueued }} @if (r.actionsSkipped) { · no enviadas: {{
               r.actionsSkipped }} (revisa sonidos o textos vacíos) }
             </p>
@@ -214,11 +239,13 @@
   <aside class="grid gap-6 xl:sticky xl:top-20">
     <section uiCard aria-labelledby="limits-title">
       <header uiCardHeader>
-        <h2 uiCardTitle id="limits-title">Límites y prioridad</h2>
-        <p uiCardDescription>Evitan que una regla se dispare de más.</p>
+        <h2 i18n uiCardTitle id="limits-title">Límites y prioridad</h2>
+        <p i18n uiCardDescription>Evitan que una regla se dispare de más.</p>
       </header>
       <div uiCardContent class="grid gap-4">
         <ui-form-field
+          i18n-description
+          i18n-label
           label="Prioridad (0–100)"
           for="r-priority"
           description="Mayor prioridad se ejecuta antes en la cola."
@@ -234,7 +261,7 @@
             (input)="update('priority', +$any($event.target).value)"
           />
         </ui-form-field>
-        <ui-form-field label="Espera entre ejecuciones (s)" for="r-cooldown">
+        <ui-form-field i18n-label label="Espera entre ejecuciones (s)" for="r-cooldown">
           <input
             uiInput
             id="r-cooldown"
@@ -245,7 +272,7 @@
             (input)="update('cooldownS', +$any($event.target).value)"
           />
         </ui-form-field>
-        <ui-form-field label="Espera por usuario (s)" for="r-ucooldown">
+        <ui-form-field i18n-label label="Espera por usuario (s)" for="r-ucooldown">
           <input
             uiInput
             id="r-ucooldown"
@@ -256,7 +283,7 @@
             (input)="update('userCooldownS', +$any($event.target).value)"
           />
         </ui-form-field>
-        <ui-form-field label="Probabilidad (%)" for="r-prob">
+        <ui-form-field i18n-label label="Probabilidad (%)" for="r-prob">
           <input
             uiInput
             id="r-prob"
@@ -267,10 +294,10 @@
             (input)="update('probabilityPct', +$any($event.target).value)"
           />
         </ui-form-field>
-        <ui-form-field label="Si hay varias acciones" for="r-mode">
+        <ui-form-field i18n-label label="Si hay varias acciones" for="r-mode">
           <select uiNativeSelect id="r-mode" (change)="update('mode', $any($event.target).value)">
-            <option value="all" [selected]="draft().mode === 'all'">Ejecutar todas</option>
-            <option value="random" [selected]="draft().mode === 'random'">
+            <option i18n value="all" [selected]="draft().mode === 'all'">Ejecutar todas</option>
+            <option i18n value="random" [selected]="draft().mode === 'random'">
               Elegir una al azar
             </option>
           </select>
@@ -280,6 +307,7 @@
 
     <details uiCard class="group gap-0 py-0">
       <summary
+        i18n
         class="flex cursor-pointer list-none items-center gap-2 rounded-xl px-5 py-4 type-label outline-none select-none hover:bg-surface-hover focus-visible:ring-[3px] focus-visible:ring-ring/40 [&::-webkit-details-marker]:hidden"
       >
         <svg lucideChevronRight class="size-4 transition-transform group-open:rotate-90" />
@@ -301,8 +329,11 @@
     @if (showErrors() && validation().errors.length) {
     <p class="flex items-center gap-2 text-sm font-medium text-danger-text">
       <svg lucideCircleAlert class="size-4 shrink-0" />
-      Revisa {{ validation().errors.length === 1 ? 'un campo' : validation().errors.length + '
-      campos' }}
+      @if (validation().errors.length === 1) {
+      <ng-container i18n>Revisa un campo</ng-container>
+      } @else {
+      <ng-container i18n>Revisa {{ validation().errors.length }} campos</ng-container>
+      }
     </p>
     <ul class="mt-1 grid gap-0.5 pl-6 type-caption">
       @for (e of validation().errors; track e) {
@@ -310,18 +341,24 @@
       }
     </ul>
     } @else if (collisionNames().length) {
-    <p class="flex items-center gap-2 text-sm text-warning-text">
+    <p i18n class="flex items-center gap-2 text-sm text-warning-text">
       <svg lucideTriangleAlert class="size-4 shrink-0" />
       Puede dispararse junto con {{ collisionNames().join(', ') }} (mismo evento, pantalla y
       prioridad).
     </p>
     } @else {
-    <p class="type-secondary">{{ dirty() ? 'Tienes cambios sin guardar.' : 'Todo guardado.' }}</p>
+    <p class="type-secondary">
+      @if (dirty()) {
+      <ng-container i18n>Tienes cambios sin guardar.</ng-container>
+      } @else {
+      <ng-container i18n>Todo guardado.</ng-container>
+      }
+    </p>
     }
   </div>
   <div class="flex gap-2">
-    <a uiButton variant="ghost" routerLink="/reglas">Cancelar</a>
-    <button uiButton type="button" (click)="save()" [disabled]="busy()">
+    <a i18n uiButton variant="ghost" routerLink="/reglas">Cancelar</a>
+    <button i18n uiButton type="button" (click)="save()" [disabled]="busy()">
       @if (busy()) {
       <ui-spinner />
       } @else {

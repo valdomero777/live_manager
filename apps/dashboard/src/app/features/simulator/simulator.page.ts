@@ -117,9 +117,9 @@ export class SimulatorPage {
 
   protected async endStream(): Promise<void> {
     const ok = await this.confirm.confirm({
-      title: '¿Terminar el live simulado?',
-      description: 'Se cerrará la sesión actual y los rankings de «Este live» empezarán de cero.',
-      confirmLabel: 'Terminar live',
+      title: $localize`¿Terminar el live simulado?`,
+      description: $localize`Se cerrará la sesión actual y los rankings de «Este live» empezarán de cero.`,
+      confirmLabel: $localize`Terminar live`,
       destructive: true,
     });
     if (ok) await this.emit([{ kind: 'streamEnd' }]);
@@ -139,8 +139,8 @@ export class SimulatorPage {
         emitted += (await this.api.post<{ emitted: number }>('/simulator/emit', t)).emitted;
       }
       this.toast.success(
-        `Enviado: ${emitted} mensaje(s)`,
-        'Míralo en Eventos y en la pestaña de audio.',
+        $localize`Enviado: ${emitted} mensaje(s)`,
+        $localize`Míralo en Eventos y en la pestaña de audio.`,
       );
     } catch (e) {
       this.error.set(errorMessage(e));

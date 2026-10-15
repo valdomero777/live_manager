@@ -32,19 +32,22 @@ import { EVENT_LABELS } from '../../lib/labels';
   host: { class: 'page' },
   template: `
     <app-page-header
+      i18n-description
+      i18n-title
       title="Eventos en vivo"
       description="Todo lo que llega de tu LIVE, en tiempo real. Se guardan los últimos 500 de esta sesión."
     />
 
-    <section uiCard aria-label="Eventos">
+    <section i18n-aria-label uiCard aria-label="Eventos">
       <div uiCardContent class="flex flex-col gap-3 md:flex-row md:items-center">
         <div class="relative min-w-0 flex-1">
           <svg
             lucideSearch
             class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
           />
-          <label class="sr-only" for="q">Buscar por usuario o texto</label>
+          <label i18n class="sr-only" for="q">Buscar por usuario o texto</label>
           <input
+            i18n-placeholder
             uiInput
             id="q"
             type="search"
@@ -54,14 +57,14 @@ import { EVENT_LABELS } from '../../lib/labels';
           />
         </div>
         <div class="flex gap-2">
-          <label class="sr-only" for="type">Tipo de evento</label>
+          <label i18n class="sr-only" for="type">Tipo de evento</label>
           <select
             uiNativeSelect
             id="type"
             class="min-w-0 flex-1 md:w-48"
             (change)="type.set($any($event.target).value)"
           >
-            <option value="">Todos los tipos</option>
+            <option i18n value="">Todos los tipos</option>
             @for (t of types; track t) {
               <option [value]="t">{{ labels[t] }}</option>
             }
@@ -74,19 +77,21 @@ import { EVENT_LABELS } from '../../lib/labels';
             [attr.aria-pressed]="paused()"
           >
             @if (paused()) {
-              <svg lucidePlay /> Reanudar
+              <svg lucidePlay /> <ng-container i18n>Reanudar</ng-container>
             } @else {
-              <svg lucidePause /> Pausar
+              <svg lucidePause /> <ng-container i18n>Pausar</ng-container>
             }
           </button>
         </div>
       </div>
 
       <div uiCardContent class="flex items-center gap-2">
-        <span uiBadge variant="secondary" aria-live="polite">{{ rows().length }} eventos</span>
+        <span i18n uiBadge variant="secondary" aria-live="polite">{{ rows().length }} eventos</span>
         @if (paused()) {
-          <span uiBadge variant="warning">Pausado</span>
-          <span class="type-caption">La lista no se actualiza hasta que pulses «Reanudar».</span>
+          <span i18n uiBadge variant="warning">Pausado</span>
+          <span i18n class="type-caption"
+            >La lista no se actualiza hasta que pulses «Reanudar».</span
+          >
         }
       </div>
 
@@ -96,10 +101,8 @@ import { EVENT_LABELS } from '../../lib/labels';
           [loading]="socket.historyLoading()"
           [realtime]="!socket.lostConnection()"
           height="min(70dvh, 44rem)"
-          [emptyTitle]="filtered() ? 'Sin eventos que coincidan' : 'Aún no llegan eventos'"
-          [emptyDescription]="
-            filtered() ? 'Prueba con otro tipo o búsqueda.' : 'Inicia el live o usa el Simulador.'
-          "
+          [emptyTitle]="emptyTitle()"
+          [emptyDescription]="emptyDescription()"
         />
       </div>
     </section>
@@ -112,6 +115,14 @@ export class EventsPage {
   protected readonly type = signal<string>('');
   protected readonly query = signal('');
   protected readonly paused = signal(false);
+  protected readonly emptyTitle = computed(() =>
+    this.filtered() ? $localize`Sin eventos que coincidan` : $localize`Aún no llegan eventos`,
+  );
+  protected readonly emptyDescription = computed(() =>
+    this.filtered()
+      ? $localize`Prueba con otro tipo o búsqueda.`
+      : $localize`Inicia el live o usa el Simulador.`,
+  );
   private readonly frozen = signal<readonly LiveEvent[]>([]);
 
   protected readonly filtered = computed(() => !!this.type() || !!this.query().trim());

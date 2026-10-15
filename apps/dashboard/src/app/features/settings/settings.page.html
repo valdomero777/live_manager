@@ -1,4 +1,6 @@
 <app-page-header
+  i18n-description
+  i18n-title
   title="Ajustes"
   description="Todo lo que antes eran variables de entorno, editable aquí. Lo guardado en el panel tiene prioridad sobre el archivo .env."
 />
@@ -6,16 +8,16 @@
 @if (store.restarting()) {
 <div uiAlert variant="info" role="status">
   <ui-spinner class="col-start-1" />
-  <p uiAlertTitle>Reiniciando el servidor…</p>
-  <p uiAlertDescription>Esta página se actualizará sola.</p>
+  <p i18n uiAlertTitle>Reiniciando el servidor…</p>
+  <p i18n uiAlertDescription>Esta página se actualizará sola.</p>
 </div>
 } @else if (store.restartPending()) {
 <div uiAlert variant="warning" role="status">
   <svg lucideRefreshCw />
-  <p uiAlertTitle>Cambios pendientes de reinicio</p>
+  <p i18n uiAlertTitle>Cambios pendientes de reinicio</p>
   <div uiAlertDescription>
     <p>{{ pendingRestartLabels().join(', ') }}.</p>
-    <button uiButton size="sm" type="button" (click)="restart()" [disabled]="busy()">
+    <button i18n uiButton size="sm" type="button" (click)="restart()" [disabled]="busy()">
       <svg lucideRotateCcw /> Reiniciar ahora
     </button>
   </div>
@@ -23,33 +25,33 @@
 } @if (resultSummary(); as r) {
 <div uiAlert variant="success" role="status">
   <svg lucideCircleCheck />
-  <p uiAlertTitle>Ajustes guardados</p>
+  <p i18n uiAlertTitle>Ajustes guardados</p>
   <div uiAlertDescription>
     @if (r.applied.length) {
-    <p>Aplicado al instante: {{ r.applied.join(', ') }}.</p>
+    <p i18n>Aplicado al instante: {{ r.applied.join(', ') }}.</p>
     } @if (r.restart.length) {
-    <p>Se aplicará al reiniciar: {{ r.restart.join(', ') }}.</p>
+    <p i18n>Se aplicará al reiniciar: {{ r.restart.join(', ') }}.</p>
     }
   </div>
 </div>
 } @if (error()) {
 <div uiAlert variant="destructive" role="alert">
   <svg lucideCircleAlert />
-  <p uiAlertTitle>No se pudieron guardar los ajustes</p>
+  <p i18n uiAlertTitle>No se pudieron guardar los ajustes</p>
   <p uiAlertDescription>{{ error() }}</p>
 </div>
 }
 
 <ui-tabs [(value)]="tab" name="settings">
-  <div uiTabsList aria-label="Secciones de ajustes">
-    <button uiTabsTrigger="general"><svg lucideSettings /> Configuración</button>
-    <button uiTabsTrigger="voz"><svg lucideMic /> Voz (TTS)</button>
-    <button uiTabsTrigger="seguridad"><svg lucideShield /> Seguridad</button>
+  <div i18n-aria-label uiTabsList aria-label="Secciones de ajustes">
+    <button i18n uiTabsTrigger="general"><svg lucideSettings /> Configuración</button>
+    <button i18n uiTabsTrigger="voz"><svg lucideMic /> Voz (TTS)</button>
+    <button i18n uiTabsTrigger="seguridad"><svg lucideShield /> Seguridad</button>
   </div>
 
   <div uiTabsContent="general">
     @if (!store.view()) {
-    <div class="grid gap-4" aria-busy="true" aria-label="Cargando ajustes">
+    <div i18n-aria-label class="grid gap-4" aria-busy="true" aria-label="Cargando ajustes">
       @for (i of [0, 1, 2]; track i) {
       <div uiSkeleton class="h-40 rounded-xl"></div>
       }
@@ -78,7 +80,7 @@
                 >{{ sourceLabel(view.source, view.env) }}</span
               >
               @if (view.pendingRestart) {
-              <span uiBadge variant="warning">Pendiente de reinicio</span>
+              <span i18n uiBadge variant="warning">Pendiente de reinicio</span>
               }
             </div>
             @switch (def.kind) { @case ('number') {
@@ -111,7 +113,7 @@
               type="password"
               autocomplete="off"
               [formControlName]="def.key"
-              [placeholder]="view.isSet ? '•••••••• (definida; escribe para reemplazarla)' : 'Sin definir'"
+              [placeholder]="secretPlaceholder(view.isSet)"
               [attr.aria-invalid]="!!err"
               [attr.aria-describedby]="'help-' + def.key + (err ? ' err-' + def.key : '')"
             />
@@ -139,6 +141,7 @@
             </p>
             } @if (view.source === 'ui') {
             <button
+              i18n
               uiButton
               variant="link"
               size="sm"
@@ -154,6 +157,7 @@
           } } @if (section.id === 'overlays') {
           <div class="flex flex-wrap items-center gap-3 rounded-lg bg-muted p-3">
             <button
+              i18n
               uiButton
               variant="outline"
               size="sm"
@@ -163,13 +167,13 @@
             >
               <svg lucideKeyRound /> Generar clave nueva
             </button>
-            <span class="type-caption">Útil si alguien obtuvo tus URLs de overlays.</span>
+            <span i18n class="type-caption">Útil si alguien obtuvo tus URLs de overlays.</span>
           </div>
           }
         </div>
       </section>
       } } @if (store.view(); as v) {
-      <p class="type-caption">
+      <p i18n class="type-caption">
         Los valores del panel se guardan en <code class="font-mono">{{ v.configPath }}</code> y
         tienen prioridad sobre el archivo <code class="font-mono">.env</code>.
       </p>
@@ -180,13 +184,14 @@
       >
         <p class="flex-1 type-secondary" aria-live="polite">
           @if (changed().length) {
-          <span class="font-medium text-foreground"
+          <span i18n class="font-medium text-foreground"
             >{{ changed().length }} cambio(s) sin guardar</span
           >
-          } @else { Sin cambios }
+          } @else { <ng-container i18n>Sin cambios</ng-container> }
         </p>
         <div class="flex gap-2">
           <button
+            i18n
             uiButton
             variant="ghost"
             type="button"
@@ -195,7 +200,7 @@
           >
             Descartar
           </button>
-          <button uiButton type="submit" [disabled]="busy() || !changed().length">
+          <button i18n uiButton type="submit" [disabled]="busy() || !changed().length">
             @if (busy()) {
             <ui-spinner />
             } Guardar cambios

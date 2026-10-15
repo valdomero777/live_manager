@@ -11,7 +11,6 @@ import {
 import type { ConfigStore } from '../application/ports/config-store.js';
 import { resolveSettings } from '../application/settings/resolve-settings.js';
 import { parseHostList, type WebhookPolicy } from '../domain/webhook/network-guard.js';
-import { DEFAULT_MYINSTANTS_API_URL } from '../infrastructure/myinstants/myinstants-provider.js';
 import { JsonConfigStore } from '../infrastructure/config/json-config-store.js';
 
 const DEFAULT_OVERLAYS_DIR = fileURLToPath(
@@ -37,6 +36,7 @@ export const DEFAULT_SETTINGS: SettingsValues = {
   tiktokUsername: '',
   simulate: false,
   signApiKey: '',
+  freesoundApiKey: '',
   overlayKey: '',
   logLevel: 'info',
 };
@@ -55,7 +55,8 @@ export interface AppConfig {
   readonly signApiKey: string | undefined;
   readonly version: string;
   /** Base URL of the community MyInstants API; a deployment detail, not a UI setting. */
-  readonly myInstantsApiUrl: string;
+  /** Community MyInstants API; when unset, www.myinstants.com is read directly. */
+  readonly myInstantsApiUrl: string | undefined;
   /** Hosts the webhook action may call (WEBHOOK_ALLOWED_HOSTS); empty = webhooks disabled. */
   readonly webhookPolicy: WebhookPolicy;
   /** BACKUP_DIR: where daily database and weekly assets backups go. */
@@ -101,6 +102,20 @@ function ensureOverlayKey(store: ConfigStore, env: Partial<SettingsValues>): voi
 
 const absolute = (path: string) => (path === IN_MEMORY_DB ? path : resolve(path));
 
+/** The saved-settings file; problems with it become boot warnings instead of failures. */
+function openConfigStore(configPath: string, warnings: string[]): JsonConfigStore {
+  return new JsonConfigStore(
+    configPath,
+    (key) => warnings.push(`${key} guardado en ${configPath} no es válido y se ignora`),
+    ({ movedTo, reason }) =>
+      warnings.push(
+        movedTo
+          ? `${configPath} está dañado (${reason}): se movió a ${movedTo} y se arranca con los valores por defecto; hay que volver a crear la contraseña, revisar Ajustes y copiar las URLs nuevas de los overlays`
+          : `${configPath} está dañado (${reason}) y no se pudo mover: se arranca con los valores por defecto`,
+      ),
+  );
+}
+
 /**
  * Builds the running configuration. Precedence per setting: saved from the UI > environment
  * variable > default. Re-run on every in-process restart so UI changes take effect.
@@ -108,9 +123,7 @@ const absolute = (path: string) => (path === IN_MEMORY_DB ? path : resolve(path)
 export function loadConfig(env: NodeJS.ProcessEnv, version: string): AppConfig {
   const warnings: string[] = [];
   const configPath = absolute(env[CONFIG_PATH_ENV] || DEFAULT_CONFIG_PATH);
-  const store = new JsonConfigStore(configPath, (key) =>
-    warnings.push(`${key} guardado en ${configPath} no es válido y se ignora`),
-  );
+  const store = openConfigStore(configPath, warnings);
   const envValues = readEnv(env, warnings);
   ensureOverlayKey(store, envValues);
   const s = resolveSettings(DEFAULT_SETTINGS, envValues, store.read().settings).values;
@@ -127,7 +140,7 @@ export function loadConfig(env: NodeJS.ProcessEnv, version: string): AppConfig {
     simulate: s.simulate,
     signApiKey: s.signApiKey || undefined,
     version,
-    myInstantsApiUrl: env['MYINSTANTS_API_URL'] || DEFAULT_MYINSTANTS_API_URL,
+    myInstantsApiUrl: env['MYINSTANTS_API_URL'] || undefined,
     backupDir: absolute(env['BACKUP_DIR'] || './data/backups'),
     recordPath: env['RECORD_PATH'] ? absolute(env['RECORD_PATH']) : undefined,
     webhookPolicy: {

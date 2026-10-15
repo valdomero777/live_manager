@@ -31,9 +31,15 @@ listas para copiar, con la IP de la red local.
 Las herramientas de consola (`simulate`, `watch-events`) inician sesión con la contraseña del
 panel: en PowerShell, `$env:TIKLIVE_PASSWORD = "tu-contraseña"`.
 
-Luego, en la PC de stream:
+El panel reproduce el sonido y la voz del LIVE por sí mismo (botón **Sonido** de la barra
+superior; el navegador pide un clic la primera vez) y el **Dashboard** muestra en vivo las alertas
+y los overlays guardados como plantilla con «Mostrar en el dashboard» (página **Overlays**). No
+hace falta abrir otras pestañas.
 
-1. Abre `http://<ip-laptop>:3000/screen/audio/?key=<OVERLAY_KEY>` y pulsa **Iniciar audio**.
+Para llevar el sonido y los overlays a la PC de stream:
+
+1. Solo si el audio debe salir en otra PC: abre
+   `http://<ip-laptop>:3000/screen/audio/?key=<OVERLAY_KEY>` y pulsa **Iniciar audio**.
 2. Agrega `http://<ip-laptop>:3000/screen/alerts/?key=<OVERLAY_KEY>` como fuente Link (LIVE Studio)
    o Browser Source (OBS). Parámetros: `position=top|center|bottom`, `scale`, `debug=1`.
 
@@ -97,10 +103,13 @@ tools/simulate.ts  CLI del simulador
 `GET /api/v1/leaderboards/:metric?scope=&limit=` · `POST /api/v1/leaderboards/reset` ·
 `GET|PUT /api/v1/settings/leaderboard` · `GET|POST /api/v1/goals` · `GET|PUT|DELETE /api/v1/goals/:id` ·
 `GET /api/v1/stats` · `GET|PUT /api/v1/rotators/:id`.
-Triggers de sonido: `GET /api/v1/sounds/search?q=&page=` · `GET|POST /api/v1/triggers` ·
-`GET|PUT|DELETE /api/v1/triggers/:id` · `POST /api/v1/triggers/:id/test`. Solo se guardan metadatos y la
-URL del MP3 de MyInstants; el navegador (pestaña de audio) lo reproduce directamente. La búsqueda usa
-la API comunitaria no oficial `MYINSTANTS_API_URL` (ver `.env.example`).
+Triggers de sonido: `GET /api/v1/sounds/search?q=&page=&source=myinstants|freesound` ·
+`GET|POST /api/v1/triggers` · `GET|PUT|DELETE /api/v1/triggers/:id` · `POST /api/v1/triggers/:id/test`.
+Solo se guardan metadatos y la URL del MP3; el navegador (pestaña de audio) lo reproduce directamente
+desde MyInstants o Freesound. MyInstants se busca leyendo directamente `www.myinstants.com` (sin API
+oficial); si defines `MYINSTANTS_API_URL` (ver `.env.example`) se usa en su lugar una API comunitaria que alojes. Freesound usa su API oficial y necesita una clave gratuita
+(<https://freesound.org/apiv2/apply>) en **Ajustes → Sonidos** o `FREESOUND_API_KEY`; solo se muestran
+sonidos CC0 y CC BY de hasta 30 s (los CC BY requieren mencionar al autor).
 WebSocket: `/ws/screen/:screenId?key=` (overlays) y `/ws/admin` (dashboard).
 
 Autenticación: `GET /api/v1/auth/status` · `POST /api/v1/auth/setup|login|logout|password`.

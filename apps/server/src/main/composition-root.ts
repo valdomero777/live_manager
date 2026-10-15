@@ -1,6 +1,7 @@
 import { dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
+import type { SoundSource } from '@tiklive/contracts';
 import type { FastifyInstance } from 'fastify';
 import { ActionScheduler } from '../application/actions/action-scheduler.js';
 import { AuthService } from '../application/auth/auth-service.js';
@@ -36,6 +37,7 @@ import { JsonlRecorder } from '../infrastructure/recording/jsonl-recorder.js';
 import { HttpWebhookClient } from '../infrastructure/http/http-webhook-client.js';
 import { GoalService } from '../application/projections/goal-service.js';
 import { LeaderboardService } from '../application/projections/leaderboard-service.js';
+import { OverlayTemplateService } from '../application/projections/overlay-template-service.js';
 import { RotatorService } from '../application/projections/rotator-service.js';
 import { SnapshotPublisher } from '../application/projections/snapshot-publisher.js';
 import { RuleEngine } from '../application/rules/rule-engine.js';
@@ -53,6 +55,8 @@ import { createDefaultActionRegistry } from '../domain/rules/actions.js';
 import { createDefaultConditionRegistry } from '../domain/rules/conditions.js';
 import { RuleRateLimiter } from '../domain/rules/rate-limiter.js';
 import { Argon2Hasher } from '../infrastructure/auth/argon2-hasher.js';
+import { FreesoundProvider } from '../infrastructure/freesound/freesound-provider.js';
+import { MyInstantsHtmlProvider } from '../infrastructure/myinstants/myinstants-html-provider.js';
 import { MyInstantsProvider } from '../infrastructure/myinstants/myinstants-provider.js';
 import { SimulatedSource } from '../infrastructure/simulator/simulated-source.adapter.js';
 import { LocalAssetStorage } from '../infrastructure/storage/local-asset-storage.js';
@@ -267,7 +271,8 @@ function buildProjections(rt: Runtime, db: Persistence, screens: ScreenSocketHub
     publisher.refreshAll();
   });
   const rotators = new RotatorService(db.settings);
-  return { leaderboards, goals, stats, publisher, rotators, channels: screens };
+  const overlayTemplates = new OverlayTemplateService(db.settings, rt.ids, rt.clock);
+  return { leaderboards, goals, stats, publisher, rotators, overlayTemplates, channels: screens };
 }
 type Projections = ReturnType<typeof buildProjections>;
 
@@ -330,8 +335,8 @@ export interface AppHooks {
   readonly requestRestart?: () => void;
   /** Tests replace TikTok's gift list with a fake. */
   readonly giftSource?: GiftCatalogSource;
-  /** Tests replace the MyInstants lookup with a fake. */
-  readonly soundProvider?: SoundProvider;
+  /** Tests replace the MyInstants / Freesound lookups with fakes. */
+  readonly soundProviders?: Partial<Record<SoundSource, SoundProvider>>;
   /** Tests replace outbound HTTP for the webhook action. */
   readonly webhookClient?: WebhookClient;
 }
@@ -362,6 +367,8 @@ interface ServiceParts {
   lag: EventLoopLag;
   auth: AuthService;
   overlayAccess: { key: string };
+  /** Read on every Freesound search, so a new key from Settings applies at once. */
+  freesoundAccess: { key: string };
   requestRestart: () => void;
   hooks: AppHooks;
 }
@@ -383,6 +390,9 @@ function buildSettings(p: ServiceParts): SettingsService {
       overlayKey: (key) => {
         p.overlayAccess.key = key;
         p.screens.closeAll(); // old URLs stop working at once; overlays must use the new key
+      },
+      freesoundApiKey: (key) => {
+        p.freesoundAccess.key = key;
       },
       tiktokUsername: (user, all) => {
         if (all.simulate) return;
@@ -418,13 +428,27 @@ function buildGiftService(p: ServiceParts): GiftCatalogService {
   });
 }
 
-/** MyInstants search (cached) and sound-trigger CRUD. */
+/** MyInstants / Freesound search (cached) and sound-trigger CRUD. */
 function buildTriggerServices(p: ServiceParts) {
-  const provider =
-    p.hooks.soundProvider ??
-    new MyInstantsProvider(p.rt.logger.child({ module: 'myinstants' }), p.cfg.myInstantsApiUrl);
+  const fakes = p.hooks.soundProviders ?? {};
+  const providers: Record<SoundSource, SoundProvider> = {
+    myinstants:
+      fakes.myinstants ??
+      (p.cfg.myInstantsApiUrl
+        ? new MyInstantsProvider(
+            p.rt.logger.child({ module: 'myinstants' }),
+            p.cfg.myInstantsApiUrl,
+          )
+        : new MyInstantsHtmlProvider(p.rt.logger.child({ module: 'myinstants' }))),
+    freesound:
+      fakes.freesound ??
+      new FreesoundProvider(
+        p.rt.logger.child({ module: 'freesound' }),
+        () => p.freesoundAccess.key || undefined,
+      ),
+  };
   return {
-    sounds: new SoundSearchService(provider, p.rt.clock),
+    sounds: new SoundSearchService(providers, p.rt.clock),
     triggers: new TriggerService(p.db.triggers, p.reactions.triggers, p.rt.clock),
   };
 }
@@ -564,9 +588,18 @@ export async function buildApp(cfg: AppConfig, hooks: AppHooks = {}): Promise<Ap
   const { rt } = core;
   const auth = hooks.auth ?? createAuthService(cfg, rt.logger);
   const overlayAccess = { key: cfg.overlayKey };
+  const freesoundAccess = { key: cfg.settings.freesoundApiKey };
   const requestRestart =
     hooks.requestRestart ?? (() => rt.logger.warn({}, 'restart is not available in this mode'));
-  const services = buildServices({ cfg, hooks, ...core, auth, overlayAccess, requestRestart });
+  const services = buildServices({
+    cfg,
+    hooks,
+    ...core,
+    auth,
+    overlayAccess,
+    freesoundAccess,
+    requestRestart,
+  });
   const http = await buildHttpServer(services, httpOptions(cfg, overlayAccess), rt.pino);
   return { http, logger: rt.logger, auth, ...appLifecycle({ cfg, ...core, http, auth }) };
 }

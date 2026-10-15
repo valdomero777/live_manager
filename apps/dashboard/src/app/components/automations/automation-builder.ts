@@ -20,7 +20,12 @@ import { TriggerSelector } from './trigger-selector';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
-    <app-automation-step kind="when" title="Ocurre este evento en tu LIVE" [icon]="icons.when">
+    <app-automation-step
+      i18n-title
+      kind="when"
+      title="Ocurre este evento en tu LIVE"
+      [icon]="icons.when"
+    >
       <app-trigger-selector
         name="rule-trigger"
         [value]="trigger()"
@@ -28,9 +33,14 @@ import { TriggerSelector } from './trigger-selector';
       />
     </app-automation-step>
 
-    <app-automation-step kind="if" title="Se cumplen estas condiciones" [icon]="icons.if">
+    <app-automation-step
+      i18n-title
+      kind="if"
+      title="Se cumplen estas condiciones"
+      [icon]="icons.if"
+    >
       @if (conditions().length) {
-        <span stepAction uiBadge variant="info"
+        <span i18n stepAction uiBadge variant="info"
           >{{ conditions().length }} · todas deben cumplirse</span
         >
       }
@@ -42,6 +52,7 @@ import { TriggerSelector } from './trigger-selector';
     </app-automation-step>
 
     <app-automation-step
+      i18n-title
       kind="then"
       title="Ejecutar estas acciones"
       [icon]="icons.then"
@@ -70,7 +81,7 @@ export class AutomationBuilder {
   protected readonly icons = { when: LucideRadio, if: LucideListFilter, then: LucideZap };
   protected readonly modeLabel = computed(() => {
     const n = this.actions().length;
-    if (this.mode() === 'random' && n > 1) return `1 de ${n} al azar`;
-    return n === 1 ? '1 acción' : `${n} acciones en orden`;
+    if (this.mode() === 'random' && n > 1) return $localize`1 de ${n} al azar`;
+    return n === 1 ? $localize`1 acción` : $localize`${n} acciones en orden`;
   });
 }

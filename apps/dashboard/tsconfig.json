@@ -8,12 +8,14 @@
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
     "isolatedModules": true,
+    "resolveJsonModule": true,
     "experimentalDecorators": true,
     "importHelpers": true,
     "target": "ES2022",
     "module": "preserve",
     "paths": {
-      "@tiklive/contracts": ["../../packages/contracts/src/index.ts"]
+      "@tiklive/contracts": ["../../packages/contracts/src/index.ts"],
+      "@tiklive/overlays/embed": ["../../packages/overlays/src/embed.ts"]
     },
     "noUncheckedIndexedAccess": true
   },

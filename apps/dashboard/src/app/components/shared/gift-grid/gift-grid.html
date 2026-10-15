@@ -6,16 +6,18 @@
         class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
       />
       <input
+        i18n-placeholder
         uiInput
         type="search"
         class="pl-9"
         placeholder="Buscar regalo…"
-        [attr.aria-label]="label() + ': buscar'"
+        [attr.aria-label]="searchLabel(label())"
         [value]="query()"
         (input)="search($any($event.target).value)"
       />
     </div>
     <button
+      i18n-uiTooltip
       uiButton
       variant="outline"
       type="button"
@@ -24,17 +26,18 @@
       uiTooltip="Descargar la lista de regalos de TikTok otra vez"
     >
       @if (store.loading()) {
-      <ui-spinner /> Cargando… } @else { <svg lucideRefreshCw /> Actualizar }
+      <ui-spinner /> <ng-container i18n>Cargando…</ng-container> } @else { <svg lucideRefreshCw />
+      <ng-container i18n>Actualizar</ng-container> }
     </button>
   </div>
 
   @if (store.error()) {
   <div uiAlert variant="destructive" role="alert">
     <svg lucideCircleAlert />
-    <p uiAlertDescription>No se pudo cargar la lista de regalos: {{ store.error() }}</p>
+    <p i18n uiAlertDescription>No se pudo cargar la lista de regalos: {{ store.error() }}</p>
   </div>
   } @else if (store.catalog()?.stale) {
-  <p class="type-caption">Sin conexión con TikTok: se muestra la última lista guardada.</p>
+  <p i18n class="type-caption">Sin conexión con TikTok: se muestra la última lista guardada.</p>
   }
 
   <div
@@ -50,8 +53,8 @@
       role="listitem"
       class="grid cursor-pointer justify-items-center gap-1.5 rounded-lg border bg-surface px-1.5 pt-2.5 pb-2 transition-[border-color,background-color,transform] hover:-translate-y-px hover:border-gift focus-visible:ring-[3px] focus-visible:ring-ring/40 focus-visible:outline-none aria-pressed:border-gift aria-pressed:bg-gift-soft"
       [attr.aria-pressed]="isSelected(gift)"
-      [attr.aria-label]="gift.name + ', ' + gift.diamonds + ' monedas'"
-      [title]="gift.name + ' · ID ' + gift.id"
+      [attr.aria-label]="giftLabel(gift.name, gift.diamonds)"
+      [attr.title]="giftTitle(gift.name, gift.id)"
       (click)="pick.emit(gift)"
     >
       <span class="grid size-12 place-items-center rounded-full bg-surface-active">
@@ -71,11 +74,11 @@
         class="inline-flex items-center gap-1 rounded-full bg-gift-soft py-px pr-2 pl-1 text-[0.6875rem] font-semibold text-gift-text tabular-nums"
       >
         <img src="icons/coin.svg" alt="" class="size-3.5" aria-hidden="true" loading="lazy" />
-        {{ gift.diamonds.toLocaleString('es') }}
+        {{ gift.diamonds.toLocaleString(numberLocale()) }}
       </span>
     </button>
     } @empty { @if (!store.loading() && store.catalog()) {
-    <p class="col-span-full py-6 text-center type-secondary">
+    <p i18n class="col-span-full py-6 text-center type-secondary">
       Ningún regalo coincide con «{{ query() }}».
     </p>
     } }
@@ -83,6 +86,7 @@
 
   @if (filtered().length > visible().length) {
   <button
+    i18n
     uiButton
     variant="ghost"
     size="sm"

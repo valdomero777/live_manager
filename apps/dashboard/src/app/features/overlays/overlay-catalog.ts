@@ -25,18 +25,18 @@ export interface OverlayType {
 
 const THEME: OverlayParam = {
   key: 'theme',
-  label: 'Tema',
+  label: $localize`Tema`,
   kind: 'select',
   default: 'card',
   options: [
-    { value: 'card', label: 'Tarjeta oscura' },
-    { value: 'clear', label: 'Sin fondo' },
-    { value: 'light', label: 'Tarjeta clara' },
+    { value: 'card', label: $localize`Tarjeta oscura` },
+    { value: 'clear', label: $localize`Sin fondo` },
+    { value: 'light', label: $localize`Tarjeta clara` },
   ],
 };
 const SCALE: OverlayParam = {
   key: 'scale',
-  label: 'Escala',
+  label: $localize`Escala`,
   kind: 'number',
   default: '1',
   min: 0.25,
@@ -45,65 +45,65 @@ const SCALE: OverlayParam = {
 };
 const FONT: OverlayParam = {
   key: 'font',
-  label: 'Fuente del sistema (opcional)',
+  label: $localize`Fuente del sistema (opcional)`,
   kind: 'text',
   default: '',
 };
 const DEBUG: OverlayParam = {
   key: 'debug',
-  label: 'Mostrar estado de conexión',
+  label: $localize`Mostrar estado de conexión`,
   kind: 'boolean',
   default: '',
 };
 
 const STATS_LABELS: Readonly<Record<(typeof STATS_FIELDS)[number], string>> = {
-  viewers: 'Espectadores',
-  peakViewers: 'Pico',
-  likes: 'Likes',
-  diamonds: 'Diamantes',
-  newFollowers: 'Nuevos seguidores',
-  duration: 'Duración',
+  viewers: $localize`Espectadores`,
+  peakViewers: $localize`Pico`,
+  likes: $localize`Likes`,
+  diamonds: $localize`Diamantes`,
+  newFollowers: $localize`Nuevos seguidores`,
+  duration: $localize`Duración`,
 };
 
 /** Every overlay page and its URL parameters (spec 12). Defaults are omitted from the URL. */
 export const OVERLAY_TYPES: readonly OverlayType[] = [
   {
     id: 'leaderboard',
-    label: 'Ranking',
+    label: $localize`Ranking`,
     path: '/overlay/leaderboard/',
-    help: 'Top de regalos o likes, con animación al cambiar de posición.',
+    help: $localize`Top de regalos o likes, con animación al cambiar de posición.`,
     params: [
       {
         key: 'metric',
-        label: 'Métrica',
+        label: $localize`Métrica`,
         kind: 'select',
         default: 'diamonds',
         options: METRICS.map((m) => ({ value: m, label: METRIC_LABELS[m] })),
       },
       {
         key: 'scope',
-        label: 'Período',
+        label: $localize`Período`,
         kind: 'select',
         default: 'session',
         options: SCOPES.map((s) => ({ value: s, label: SCOPE_LABELS[s] })),
       },
       {
         key: 'limit',
-        label: 'Cuántos mostrar',
+        label: $localize`Cuántos mostrar`,
         kind: 'number',
         default: '5',
         min: 1,
         max: 20,
         step: 1,
       },
-      { key: 'title', label: 'Título (opcional)', kind: 'text', default: '' },
+      { key: 'title', label: $localize`Título (opcional)`, kind: 'text', default: '' },
       {
         key: 'name',
-        label: 'Mostrar',
+        label: $localize`Mostrar`,
         kind: 'select',
         default: '',
         options: [
-          { value: '', label: 'Apodo' },
+          { value: '', label: $localize`Apodo` },
           { value: 'alias', label: '@usuario' },
         ],
       },
@@ -115,19 +115,19 @@ export const OVERLAY_TYPES: readonly OverlayType[] = [
   },
   {
     id: 'goal',
-    label: 'Meta',
+    label: $localize`Meta`,
     path: '/overlay/goal/',
-    help: 'Barra de progreso de una meta.',
+    help: $localize`Barra de progreso de una meta.`,
     params: [
-      { key: 'goalId', label: 'Meta', kind: 'goal', default: '1' },
+      { key: 'goalId', label: $localize`Meta`, kind: 'goal', default: '1' },
       {
         key: 'showNumbers',
-        label: 'Números',
+        label: $localize`Números`,
         kind: 'select',
         default: '',
         options: [
-          { value: '', label: 'Mostrar' },
-          { value: '0', label: 'Ocultar' },
+          { value: '', label: $localize`Mostrar` },
+          { value: '0', label: $localize`Ocultar` },
         ],
       },
       THEME,
@@ -138,25 +138,25 @@ export const OVERLAY_TYPES: readonly OverlayType[] = [
   },
   {
     id: 'stats',
-    label: 'Estadísticas',
+    label: $localize`Estadísticas`,
     path: '/overlay/stats/',
-    help: 'Contadores del live.',
+    help: $localize`Contadores del live.`,
     params: [
       {
         key: 'fields',
-        label: 'Datos',
+        label: $localize`Datos`,
         kind: 'multi',
         default: 'viewers,likes,diamonds',
         options: STATS_FIELDS.map((f) => ({ value: f, label: STATS_LABELS[f] })),
       },
       {
         key: 'layout',
-        label: 'Disposición',
+        label: $localize`Disposición`,
         kind: 'select',
         default: 'row',
         options: [
-          { value: 'row', label: 'En fila' },
-          { value: 'column', label: 'En columna' },
+          { value: 'row', label: $localize`En fila` },
+          { value: 'column', label: $localize`En columna` },
         ],
       },
       THEME,
@@ -167,11 +167,11 @@ export const OVERLAY_TYPES: readonly OverlayType[] = [
   },
   {
     id: 'rotator',
-    label: 'Rotator',
+    label: $localize`Rotator`,
     path: '/overlay/rotator/',
-    help: 'Varios paneles alternándose en una sola fuente (recomendado: menos consumo).',
+    help: $localize`Varios paneles alternándose en una sola fuente (recomendado: menos consumo).`,
     params: [
-      { key: 'config', label: 'Configuración', kind: 'rotator', default: 'main' },
+      { key: 'config', label: $localize`Configuración`, kind: 'rotator', default: 'main' },
       THEME,
       SCALE,
       FONT,
@@ -180,19 +180,19 @@ export const OVERLAY_TYPES: readonly OverlayType[] = [
   },
   {
     id: 'alerts',
-    label: 'Alertas',
+    label: $localize`Alertas`,
     path: '/screen/alerts/',
-    help: 'Alertas de las reglas y metas (imagen + texto).',
+    help: $localize`Alertas de las reglas y metas (imagen + texto).`,
     params: [
       {
         key: 'position',
-        label: 'Posición',
+        label: $localize`Posición`,
         kind: 'select',
         default: 'center',
         options: [
-          { value: 'top', label: 'Arriba' },
-          { value: 'center', label: 'Centro' },
-          { value: 'bottom', label: 'Abajo' },
+          { value: 'top', label: $localize`Arriba` },
+          { value: 'center', label: $localize`Centro` },
+          { value: 'bottom', label: $localize`Abajo` },
         ],
       },
       SCALE,
@@ -201,13 +201,13 @@ export const OVERLAY_TYPES: readonly OverlayType[] = [
   },
   {
     id: 'audio',
-    label: 'Pestaña de audio',
+    label: $localize`Pestaña de audio`,
     path: '/screen/audio/',
-    help: 'Ábrela en un navegador de la PC de stream (no como fuente) y pulsa «Iniciar audio».',
+    help: $localize`Opcional: el panel ya reproduce el sonido. Úsala solo para llevar el audio a otra PC (ábrela en un navegador y pulsa «Iniciar audio»).`,
     params: [
       {
         key: 'master',
-        label: 'Volumen inicial',
+        label: $localize`Volumen inicial`,
         kind: 'number',
         default: '1',
         min: 0,

@@ -24,11 +24,11 @@ export interface TypeDef {
 }
 
 const NUMERIC_OPS = [
-  { value: 'gte', label: 'al menos (≥)' },
-  { value: 'eq', label: 'igual a (=)' },
-  { value: 'lte', label: 'como máximo (≤)' },
-  { value: 'gt', label: 'más de (>)' },
-  { value: 'lt', label: 'menos de (<)' },
+  { value: 'gte', label: $localize`al menos (≥)` },
+  { value: 'eq', label: $localize`igual a (=)` },
+  { value: 'lte', label: $localize`como máximo (≤)` },
+  { value: 'gt', label: $localize`más de (>)` },
+  { value: 'lt', label: $localize`menos de (<)` },
 ];
 
 /**
@@ -38,38 +38,38 @@ const NUMERIC_OPS = [
 export const CONDITION_TYPES: readonly TypeDef[] = [
   {
     type: 'giftName',
-    label: 'Nombre del regalo',
-    help: 'Compara el nombre del regalo, sin distinguir mayúsculas.',
+    label: $localize`Nombre del regalo`,
+    help: $localize`Compara el nombre del regalo, sin distinguir mayúsculas.`,
     appliesTo: ['gift'],
     params: [
       {
         key: 'op',
-        label: 'Comparación',
+        label: $localize`Comparación`,
         kind: 'select',
         default: 'eq',
         options: [
-          { value: 'eq', label: 'es' },
-          { value: 'neq', label: 'no es' },
+          { value: 'eq', label: $localize`es` },
+          { value: 'neq', label: $localize`no es` },
           { value: 'contains', label: 'contiene' },
         ],
       },
-      { key: 'value', label: 'Regalo', kind: 'text', default: 'Rose' },
+      { key: 'value', label: $localize`Regalo`, kind: 'text', default: 'Rose' },
     ],
   },
   {
     type: 'giftId',
-    label: 'ID del regalo',
-    help: 'Útil si el nombre cambia según el idioma.',
+    label: $localize`ID del regalo`,
+    help: $localize`Útil si el nombre cambia según el idioma.`,
     appliesTo: ['gift'],
     params: [
       {
         key: 'op',
-        label: 'Comparación',
+        label: $localize`Comparación`,
         kind: 'select',
         default: 'eq',
         options: [
-          { value: 'eq', label: 'es' },
-          { value: 'neq', label: 'no es' },
+          { value: 'eq', label: $localize`es` },
+          { value: 'neq', label: $localize`no es` },
         ],
       },
       { key: 'value', label: 'ID', kind: 'number', default: 5655 },
@@ -77,51 +77,63 @@ export const CONDITION_TYPES: readonly TypeDef[] = [
   },
   {
     type: 'diamondsTotal',
-    label: 'Diamantes del regalo',
-    help: 'Diamantes por unidad × cantidad de la racha.',
+    label: $localize`Diamantes del regalo`,
+    help: $localize`Diamantes por unidad × cantidad de la racha.`,
     appliesTo: ['gift'],
     params: [
-      { key: 'op', label: 'Comparación', kind: 'select', default: 'gte', options: NUMERIC_OPS },
-      { key: 'value', label: 'Diamantes', kind: 'number', default: 100 },
+      {
+        key: 'op',
+        label: $localize`Comparación`,
+        kind: 'select',
+        default: 'gte',
+        options: NUMERIC_OPS,
+      },
+      { key: 'value', label: $localize`Diamantes`, kind: 'number', default: 100 },
     ],
   },
   {
     type: 'quantity',
-    label: 'Cantidad del regalo',
-    help: 'Cantidad total de la racha consolidada.',
+    label: $localize`Cantidad del regalo`,
+    help: $localize`Cantidad total de la racha consolidada.`,
     appliesTo: ['gift'],
     params: [
-      { key: 'op', label: 'Comparación', kind: 'select', default: 'gte', options: NUMERIC_OPS },
-      { key: 'value', label: 'Cantidad', kind: 'number', default: 10 },
+      {
+        key: 'op',
+        label: $localize`Comparación`,
+        kind: 'select',
+        default: 'gte',
+        options: NUMERIC_OPS,
+      },
+      { key: 'value', label: $localize`Cantidad`, kind: 'number', default: 10 },
     ],
   },
   {
     type: 'likesCumulative',
-    label: 'Likes acumulados del usuario',
-    help: 'Likes del usuario en este live.',
+    label: $localize`Likes acumulados del usuario`,
+    help: $localize`Likes del usuario en este live.`,
     appliesTo: ['like'],
     params: [
       {
         key: 'mode',
-        label: 'Cuándo',
+        label: $localize`Cuándo`,
         kind: 'select',
         default: 'every',
         options: [
-          { value: 'every', label: 'cada vez que suma' },
-          { value: 'threshold', label: 'una vez al llegar a' },
+          { value: 'every', label: $localize`cada vez que suma` },
+          { value: 'threshold', label: $localize`una vez al llegar a` },
         ],
       },
-      { key: 'value', label: 'Likes', kind: 'number', default: 100 },
+      { key: 'value', label: $localize`Likes`, kind: 'number', default: 100 },
     ],
   },
   {
     type: 'userRole',
-    label: 'Tipo de usuario',
-    help: 'Solo para seguidores, suscriptores o moderadores.',
+    label: $localize`Tipo de usuario`,
+    help: $localize`Solo para seguidores, suscriptores o moderadores.`,
     params: [
       {
         key: 'role',
-        label: 'Debe ser',
+        label: $localize`Debe ser`,
         kind: 'select',
         default: 'follower',
         options: [
@@ -134,30 +146,35 @@ export const CONDITION_TYPES: readonly TypeDef[] = [
   },
   {
     type: 'keyword',
-    label: 'Palabra clave en el comentario',
-    help: 'Por ejemplo, un comando como !di o !baile.',
+    label: $localize`Palabra clave en el comentario`,
+    help: $localize`Por ejemplo, un comando como !di o !baile.`,
     appliesTo: ['comment'],
     params: [
       {
         key: 'match',
-        label: 'Cómo',
+        label: $localize`Cómo`,
         kind: 'select',
         default: 'startsWith',
         options: [
-          { value: 'startsWith', label: 'empieza con' },
+          { value: 'startsWith', label: $localize`empieza con` },
           { value: 'contains', label: 'contiene' },
-          { value: 'equals', label: 'es exactamente' },
-          { value: 'regex', label: 'expresión regular' },
+          { value: 'equals', label: $localize`es exactamente` },
+          { value: 'regex', label: $localize`expresión regular` },
         ],
       },
-      { key: 'value', label: 'Texto', kind: 'text', default: '!' },
-      { key: 'caseSensitive', label: 'Distinguir mayúsculas', kind: 'boolean', default: false },
+      { key: 'value', label: $localize`Texto`, kind: 'text', default: '!' },
+      {
+        key: 'caseSensitive',
+        label: $localize`Distinguir mayúsculas`,
+        kind: 'boolean',
+        default: false,
+      },
     ],
   },
   {
     type: 'firstTime',
-    label: 'Primera vez en el live',
-    help: 'Primer regalo o comentario del usuario en esta sesión.',
+    label: $localize`Primera vez en el live`,
+    help: $localize`Primer regalo o comentario del usuario en esta sesión.`,
     appliesTo: ['gift', 'comment'],
     params: [],
   },
@@ -167,93 +184,99 @@ export const CONDITION_TYPES: readonly TypeDef[] = [
 export const ACTION_TYPES: readonly TypeDef[] = [
   {
     type: 'playSound',
-    label: 'Reproducir sonido',
-    help: 'Suena en la pestaña de audio de la PC de stream.',
+    label: $localize`Reproducir sonido`,
+    help: $localize`Suena en la pestaña de audio de la PC de stream.`,
     params: [
-      { key: 'assetId', label: 'Sonido', kind: 'sound', default: null },
-      { key: 'volume', label: 'Volumen', kind: 'percent', default: 0.8 },
+      { key: 'assetId', label: $localize`Sonido`, kind: 'sound', default: null },
+      { key: 'volume', label: $localize`Volumen`, kind: 'percent', default: 0.8 },
       {
         key: 'maxMs',
-        label: 'Duración máxima (s, opcional)',
+        label: $localize`Duración máxima (s, opcional)`,
         kind: 'seconds',
         default: null,
         optional: true,
       },
       {
         key: 'screen',
-        label: 'Pantalla',
+        label: $localize`Pantalla`,
         kind: 'text',
         default: 'audio',
-        help: 'Normalmente «audio».',
+        help: $localize`Normalmente «audio».`,
       },
     ],
   },
   {
     type: 'showAlert',
-    label: 'Mostrar alerta',
-    help: 'Texto (y opcionalmente imagen o GIF) en el overlay de alertas.',
+    label: $localize`Mostrar alerta`,
+    help: $localize`Texto (y opcionalmente imagen o GIF) en el overlay de alertas.`,
     params: [
       {
         key: 'text',
-        label: 'Texto',
+        label: $localize`Texto`,
         kind: 'text',
         default: '{nickname} envió {quantity} {giftName}',
       },
-      { key: 'assetId', label: 'Imagen (opcional)', kind: 'visual', default: null, optional: true },
-      { key: 'durationMs', label: 'Duración (s)', kind: 'seconds', default: 5000 },
+      {
+        key: 'assetId',
+        label: $localize`Imagen (opcional)`,
+        kind: 'visual',
+        default: null,
+        optional: true,
+      },
+      { key: 'durationMs', label: $localize`Duración (s)`, kind: 'seconds', default: 5000 },
       {
         key: 'screen',
-        label: 'Pantalla',
+        label: $localize`Pantalla`,
         kind: 'text',
         default: 'alerts',
-        help: 'Normalmente «alerts».',
+        help: $localize`Normalmente «alerts».`,
       },
     ],
   },
   {
     type: 'speak',
-    label: 'Leer en voz alta',
-    help: 'Texto a voz en la pestaña de audio; {comment} y {commandArgs} pasan por la moderación.',
+    label: $localize`Leer en voz alta`,
+    help: $localize`Texto a voz en la pestaña de audio; {comment} y {commandArgs} pasan por la moderación.`,
     params: [
-      { key: 'text', label: 'Texto', kind: 'text', default: 'Gracias {nickname}' },
+      { key: 'text', label: $localize`Texto`, kind: 'text', default: 'Gracias {nickname}' },
       {
         key: 'voice',
-        label: 'Voz o idioma (opcional)',
+        label: $localize`Voz o idioma (opcional)`,
         kind: 'text',
         default: '',
         optional: true,
         help: 'Ej.: es-MX',
       },
-      { key: 'volume', label: 'Volumen', kind: 'percent', default: 1 },
+      { key: 'volume', label: $localize`Volumen`, kind: 'percent', default: 1 },
       {
         key: 'screen',
-        label: 'Pantalla',
+        label: $localize`Pantalla`,
         kind: 'text',
         default: 'audio',
-        help: 'Normalmente «audio».',
+        help: $localize`Normalmente «audio».`,
       },
     ],
   },
   {
     type: 'updateGoal',
-    label: 'Sumar a una meta',
-    help: 'Suma progreso manual a una meta (negativo para restar). Cuenta como progreso ganado.',
+    label: $localize`Sumar a una meta`,
+    help: $localize`Suma progreso manual a una meta (negativo para restar). Cuenta como progreso ganado.`,
     params: [
-      { key: 'goalId', label: 'ID de la meta', kind: 'number', default: 1 },
-      { key: 'amount', label: 'Cantidad', kind: 'number', default: 1 },
+      { key: 'goalId', label: $localize`ID de la meta`, kind: 'number', default: 1 },
+      { key: 'amount', label: $localize`Cantidad`, kind: 'number', default: 1 },
     ],
   },
   {
     type: 'webhook',
-    label: 'Llamar a un webhook',
+    label: $localize`Llamar a un webhook`,
     help:
-      'Envía JSON a una URL. El host debe estar en WEBHOOK_ALLOWED_HOSTS del servidor; ' +
-      '{comment} y {commandArgs} pasan por la moderación.',
+      $localize`Envía JSON a una URL. El host debe estar en WEBHOOK_ALLOWED_HOSTS del servidor; ` +
+      $localize`{comment} y {commandArgs} pasan por la moderación.`,
     params: [
       { key: 'url', label: 'URL', kind: 'text', default: 'https://' },
       {
         key: 'method',
-        label: 'Método',
+        label: $localize`Método`,
         kind: 'select',
         default: 'POST',
         options: [
@@ -263,10 +286,10 @@ export const ACTION_TYPES: readonly TypeDef[] = [
       },
       {
         key: 'body',
-        label: 'Cuerpo JSON',
+        label: $localize`Cuerpo JSON`,
         kind: 'text',
         default: '{"user":"{nickname}"}',
-        help: 'Las variables se escapan solas dentro de las comillas.',
+        help: $localize`Las variables se escapan solas dentro de las comillas.`,
       },
     ],
   },
@@ -301,7 +324,8 @@ export function describeCondition(c: ConditionConfig): string {
   if (c.type === 'likesCumulative')
     return `${label}: ${optionLabel(def, 'mode', c.mode)} ${c.value}`;
   if (c.type === 'userRole') return `${label}: ${optionLabel(def, 'role', c.role)}`;
-  if (c.type === 'keyword') return `Comentario ${optionLabel(def, 'match', c.match)} «${c.value}»`;
+  if (c.type === 'keyword')
+    return $localize`Comentario ${optionLabel(def, 'match', c.match)} «${c.value}»`;
   return label;
 }
 
@@ -309,11 +333,13 @@ export function describeAction(
   a: ActionConfig,
   assetName: (id: number | undefined) => string,
 ): string {
-  if (a.type === 'playSound') return `Sonido: ${assetName(a.assetId)}`;
-  if (a.type === 'showAlert') return `Alerta: ${a.text}`;
-  if (a.type === 'updateGoal') return `Meta #${a.goalId}: ${a.amount > 0 ? '+' : ''}${a.amount}`;
-  if (a.type === 'webhook') return `Webhook: ${URL.canParse(a.url) ? new URL(a.url).host : a.url}`;
-  return `Voz: ${a.text}`;
+  if (a.type === 'playSound') return $localize`Sonido: ${assetName(a.assetId)}`;
+  if (a.type === 'showAlert') return $localize`Alerta: ${a.text}`;
+  if (a.type === 'updateGoal')
+    return $localize`Meta #${a.goalId}\: ${a.amount > 0 ? '+' : ''}${a.amount}`;
+  if (a.type === 'webhook')
+    return $localize`Webhook: ${URL.canParse(a.url) ? new URL(a.url).host : a.url}`;
+  return $localize`Voz: ${a.text}`;
 }
 
 /** Screens a rule writes to, for the collision warning. */

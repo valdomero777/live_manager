@@ -25,6 +25,7 @@ export const SettingsValuesSchema = z.object({
   tiktokUsername: tiktokUser,
   simulate: z.boolean(),
   signApiKey: z.string().trim().max(200),
+  freesoundApiKey: z.string().trim().max(200),
   overlayKey: z
     .string()
     .trim()
@@ -55,6 +56,7 @@ export const SETTING_FIELDS: Readonly<Record<SettingKey, SettingFieldMeta>> = {
   tiktokUsername: { env: 'TIKTOK_USERNAME', apply: 'reconnect', secret: false },
   simulate: { env: 'SIMULATE', apply: 'restart', secret: false },
   signApiKey: { env: 'TIKTOK_SIGN_API_KEY', apply: 'restart', secret: true },
+  freesoundApiKey: { env: 'FREESOUND_API_KEY', apply: 'live', secret: true },
   overlayKey: { env: 'OVERLAY_KEY', apply: 'live', secret: false },
   logLevel: { env: 'LOG_LEVEL', apply: 'live', secret: false },
 };

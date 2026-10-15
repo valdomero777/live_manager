@@ -37,6 +37,8 @@ export class MyInstantsProvider implements SoundProvider {
   ) {}
 
   async search(query: string, page: number): Promise<SoundSearchResult> {
+    // The community API has no popular list; an empty search simply has nothing to show.
+    if (!query) return { query, page, hasNext: false, results: [] };
     const url = new URL('/search', this.baseUrl);
     url.searchParams.set('q', query);
     url.searchParams.set('page', String(page));
