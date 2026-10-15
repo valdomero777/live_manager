@@ -21,6 +21,7 @@ export default defineConfig({
         ticker: resolve(import.meta.dirname, 'overlay/ticker/index.html'),
         social: resolve(import.meta.dirname, 'overlay/social/index.html'),
         feed: resolve(import.meta.dirname, 'overlay/feed/index.html'),
+        streak: resolve(import.meta.dirname, 'overlay/streak/index.html'),
       },
     },
   },
