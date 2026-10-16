@@ -33,6 +33,8 @@ interface AuthDeps {
   readonly secrets: SecretGenerator;
   readonly clock: Clock;
   readonly logger: Logger;
+  /** Temporary switch: every request counts as signed in and sessions never expire. */
+  readonly disabled?: boolean;
 }
 
 /**
@@ -56,12 +58,13 @@ export class AuthService {
 
   /** Creates (once) the setup code for a fresh install; undefined when a password exists. */
   prepareSetup(): string | undefined {
-    if (this.hasPassword()) return undefined;
+    if (this.deps.disabled || this.hasPassword()) return undefined;
     this.setupCode ??= this.deps.secrets.code();
     return this.setupCode;
   }
 
   status(token: string | undefined): AuthStatus {
+    if (this.deps.disabled) return { authenticated: true, setupRequired: false };
     return { authenticated: this.validate(token), setupRequired: !this.hasPassword() };
   }
 
@@ -106,6 +109,7 @@ export class AuthService {
 
   /** Valid and not expired; each successful check slides the idle timeout. */
   validate(token: string | undefined): boolean {
+    if (this.deps.disabled) return true;
     if (!token) return false;
     const session = this.sessions.get(token);
     if (!session) return false;

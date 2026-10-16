@@ -68,6 +68,8 @@ export interface AppConfig {
   readonly env: Partial<SettingsValues>;
   readonly configStore: ConfigStore;
   readonly envPasswordHash: string | undefined;
+  /** AUTH_DISABLED (default on, temporary): no login and no session expiry; "false"/"0" restores it. */
+  readonly authDisabled: boolean;
   /** Ignored invalid values, reported in the startup log. */
   readonly warnings: readonly string[];
 }
@@ -99,6 +101,10 @@ function ensureOverlayKey(store: ConfigStore, env: Partial<SettingsValues>): voi
   const overlayKey = randomBytes(24).toString('base64url');
   store.write({ ...stored, settings: { ...stored.settings, overlayKey } });
 }
+
+/** On unless explicitly "false" or "0". */
+const isAuthDisabled = (raw: string | undefined): boolean =>
+  !['false', '0'].includes(raw?.toLowerCase() ?? '');
 
 const absolute = (path: string) => (path === IN_MEMORY_DB ? path : resolve(path));
 
@@ -151,6 +157,7 @@ export function loadConfig(env: NodeJS.ProcessEnv, version: string): AppConfig {
     env: envValues,
     configStore: store,
     envPasswordHash: env['ADMIN_PASSWORD_HASH'] || undefined,
+    authDisabled: isAuthDisabled(env['AUTH_DISABLED']),
     warnings,
   };
 }

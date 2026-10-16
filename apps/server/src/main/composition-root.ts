@@ -358,6 +358,7 @@ export function createAuthService(cfg: AppConfig, logger: Logger): AuthService {
     secrets: new CryptoSecrets(),
     clock: new SystemClock(),
     logger: logger.child({ module: 'auth' }),
+    disabled: cfg.authDisabled,
   });
 }
 

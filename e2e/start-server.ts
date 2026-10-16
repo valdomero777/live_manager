@@ -24,6 +24,7 @@ async function main(): Promise<void> {
       LOG_LEVEL: 'warn',
       OVERLAY_KEY: E2E_OVERLAY_KEY,
       ADMIN_PASSWORD_HASH: await hash(E2E_PASSWORD),
+      AUTH_DISABLED: 'false',
       CONFIG_PATH: join(dir, 'config.json'),
       DB_PATH: join(dir, 'app.db'),
       ASSETS_DIR: join(dir, 'assets'),

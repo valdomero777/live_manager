@@ -42,6 +42,7 @@ export async function startTestApp(
       PORT: '0',
       HOST: '127.0.0.1',
       ADMIN_PASSWORD_HASH: await passwordHash(),
+      AUTH_DISABLED: 'false',
       ...env,
     },
     'test',
