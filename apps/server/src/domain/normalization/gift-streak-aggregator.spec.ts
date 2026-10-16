@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { aRawGift, aViewer } from '../../../test/support/builders.js';
 import { FakeClock } from '../shared/time.js';
-import { GiftStreakAggregator, STREAK_IDLE_MS } from './gift-streak-aggregator.js';
+import {
+  GiftStreakAggregator,
+  LATE_END_WINDOW_MS,
+  STREAK_IDLE_MS,
+} from './gift-streak-aggregator.js';
 
 function setup() {
   const clock = new FakeClock(0);
@@ -47,6 +51,40 @@ describe('GiftStreakAggregator', () => {
     aggregator.ingest(1, aRawGift({ quantity: 2 }));
     clock.advance(2_000);
     expect(aggregator.flushIdle()).toEqual([]);
+  });
+
+  it('given a streak closed by idle, when its end signal arrives late, then it is not emitted twice', () => {
+    const { aggregator, clock } = setup();
+    aggregator.ingest(1, aRawGift({ quantity: 4 }));
+    clock.advance(STREAK_IDLE_MS);
+    expect(aggregator.flushIdle().map((g) => g.gift.quantity)).toEqual([4]);
+
+    clock.advance(300);
+    const late = aggregator.ingest(1, aRawGift({ quantity: 4, streakEnded: true }));
+
+    expect(late).toEqual([]);
+    expect(aggregator.openCount).toBe(0);
+  });
+
+  it('given a streak closed by idle, when a new streak ends with another quantity, then it is emitted', () => {
+    const { aggregator, clock } = setup();
+    aggregator.ingest(1, aRawGift({ quantity: 4 }));
+    clock.advance(STREAK_IDLE_MS);
+    aggregator.flushIdle();
+
+    const out = aggregator.ingest(1, aRawGift({ quantity: 1, streakEnded: true }));
+    expect(out.map((g) => g.gift.quantity)).toEqual([1]);
+  });
+
+  it('given an idle-closed streak, when the same quantity ends after the window, then it is a new gift', () => {
+    const { aggregator, clock } = setup();
+    aggregator.ingest(1, aRawGift({ quantity: 1 }));
+    clock.advance(STREAK_IDLE_MS);
+    aggregator.flushIdle();
+
+    clock.advance(LATE_END_WINDOW_MS + 1);
+    const out = aggregator.ingest(1, aRawGift({ quantity: 1, streakEnded: true }));
+    expect(out).toHaveLength(1);
   });
 
   it('given a restarted count for the same gift, when ingested, then closes the previous streak', () => {
