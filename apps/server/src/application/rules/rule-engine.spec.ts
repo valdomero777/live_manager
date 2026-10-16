@@ -163,6 +163,27 @@ describe('RuleEngine', () => {
     ]);
   });
 
+  it('given a comment that moderation drops, when the same viewer writes again inside the cooldown, then that one is read', async () => {
+    const { engine, planned } = setup([
+      aRule({
+        id: 1,
+        trigger: 'comment',
+        userCooldownMs: 10_000,
+        actions: [{ type: 'speak', text: '{comment}' }],
+      }),
+    ]);
+    await engine.reload();
+
+    engine.handle(aCommentEvent({ text: 'eres feo' }));
+    engine.handle(aCommentEvent({ id: 'evt-2', text: 'hola a todos' }));
+    expect(planned.map((p) => p.command.payload)).toEqual([
+      expect.objectContaining({ text: 'hola a todos' }),
+    ]);
+
+    engine.handle(aCommentEvent({ id: 'evt-3', text: 'otro mensaje' }));
+    expect(planned).toHaveLength(1);
+  });
+
   it('given an action that cannot be planned, then reports failed without blocking the others', async () => {
     const { engine, planned, notifier } = setup([
       aRule({

@@ -85,6 +85,9 @@ function usesViewerText(action: ActionConfig): boolean {
   return VIEWER_TEXT_PLACEHOLDERS.some((p) => template.includes(p));
 }
 
+/** What happened to one action: queued, intentionally not run, or failed. */
+type ActionOutcome = 'queued' | 'skipped' | 'failed';
+
 type SpeakConfig = Extract<ScreenActionConfig, { type: 'speak' }>;
 
 interface PreparedAction {
@@ -148,7 +151,7 @@ export class RuleEngine implements LiveEventConsumer {
     const outcomes = compiled
       .selectActions(this.deps.random)
       .map((action) => this.planAction(compiled, event, action, vars, true));
-    const actionsQueued = outcomes.filter(Boolean).length;
+    const actionsQueued = outcomes.filter((o) => o !== 'failed').length;
     return { matched, conditions, actionsQueued, actionsSkipped: outcomes.length - actionsQueued };
   }
 
@@ -168,15 +171,17 @@ export class RuleEngine implements LiveEventConsumer {
   ): void {
     if (!rule.conditionsHold(event, ctx)) return;
     const viewerId = 'viewer' in event ? event.viewer.tiktokUserId : undefined;
-    const decision = this.deps.limiter.tryAcquire({ ...rule.rule, ruleId: rule.id }, viewerId);
-    if (decision !== 'allowed') {
+    const policy = { ...rule.rule, ruleId: rule.id };
+    if (this.deps.limiter.check(policy, viewerId) !== 'allowed') {
       this.report(rule.id, event.id, 'limited');
       return;
     }
-    const failures = rule
+    const outcomes = rule
       .selectActions(this.deps.random)
-      .filter((action) => !this.planAction(rule, event, action, vars)).length;
-    this.report(rule.id, event.id, failures > 0 ? 'failed' : 'executed');
+      .map((action) => this.planAction(rule, event, action, vars));
+    // Cooldowns start only when something was queued: a skipped comment must not use them up.
+    if (outcomes.includes('queued')) this.deps.limiter.commit(policy, viewerId);
+    this.report(rule.id, event.id, outcomes.includes('failed') ? 'failed' : 'executed');
   }
 
   /** Each action is isolated: a failure is logged and never blocks the others. */
@@ -186,13 +191,15 @@ export class RuleEngine implements LiveEventConsumer {
     action: ActionConfig,
     vars: CommentVariables,
     dryRun = false,
-  ): boolean {
+  ): ActionOutcome {
     try {
       const prepared = this.prepare(event, action, vars);
       // Moderated out, or not for the voice (audience, language): intentionally silent.
-      if (prepared === null) return true;
-      if (isServerAction(action))
-        return this.runServerAction(rule, event, action, prepared.vars, dryRun);
+      if (prepared === null) return 'skipped';
+      if (isServerAction(action)) {
+        const ran = this.runServerAction(rule, event, action, prepared.vars, dryRun);
+        return ran ? 'queued' : 'failed';
+      }
       const planned = this.deps.actions.plan(action, {
         actionId: this.deps.ids.next(),
         origin: { kind: 'rule', id: rule.id },
@@ -203,21 +210,18 @@ export class RuleEngine implements LiveEventConsumer {
         ...(prepared.speech ? { speech: prepared.speech } : {}),
       });
       if (!planned) {
-        this.deps.logger.warn(
-          { ruleId: rule.id, action: action.type },
-          'action could not be planned',
-        );
-        return false;
+        this.deps.logger.warn({ ruleId: rule.id, action: action.type }, 'action not planned');
+        return 'failed';
       }
       this.deps.sink.enqueue(planned);
-      return true;
+      return 'queued';
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.deps.logger.error(
         { ruleId: rule.id, eventId: event.id, err: message },
         'rule.action_failed',
       );
-      return false;
+      return 'failed';
     }
   }
 
