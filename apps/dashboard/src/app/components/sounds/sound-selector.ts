@@ -376,14 +376,16 @@ export class SoundSelector {
 
   protected async setOrigin(origin: SoundOrigin, opening = false): Promise<void> {
     if (!opening && origin === this.current()) return;
+    const fromLibrary = this.current() === 'library';
     this.current.set(origin);
     this.audio.stopSound();
     if (origin === 'library') {
       await this.assets.load().catch((e: unknown) => this.uploadError.set(errorMessage(e)));
       return;
     }
-    if (opening) {
-      // A fresh dialog shows the catalogue's popular sounds, not the last search.
+    if (opening || fromLibrary) {
+      // A fresh dialog, or coming back from the library (the store's catalogue may not have
+      // changed, so setSource would skip the search): show the catalogue's popular sounds.
       this.sounds.source.set(origin);
       await this.sounds.search('');
     } else {
