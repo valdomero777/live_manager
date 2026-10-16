@@ -62,6 +62,16 @@ describe('dashboard authentication (RNF-07)', () => {
     expect(res.statusCode).toBe(403);
   });
 
+  it('AUTH_DISABLED: no login is needed and no setup code is created', async () => {
+    t = await startTestApp({ AUTH_DISABLED: 'true', ADMIN_PASSWORD_HASH: '' });
+    const { http, auth } = t.app;
+    const status = await http.inject({ url: `${API_PREFIX}/auth/status` });
+    expect(status.json()).toEqual({ authenticated: true, setupRequired: false });
+    expect(auth.prepareSetup()).toBeUndefined();
+    const api = await http.inject({ url: `${API_PREFIX}/settings` });
+    expect(api.statusCode).toBe(200);
+  });
+
   it('first run: repeated wrong setup codes end in 429 for that client', async () => {
     t = await startTestApp({ ADMIN_PASSWORD_HASH: '' });
     const { http, auth } = t.app;
