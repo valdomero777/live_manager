@@ -12,6 +12,8 @@ export interface ParamDef {
   readonly help?: string;
   /** Empty value is sent as "absent" (e.g. an alert without image). */
   readonly optional?: boolean;
+  /** Stored with the item but not shown as a field: another control fills it (the sound picker). */
+  readonly hidden?: boolean;
 }
 
 export interface TypeDef {
@@ -187,7 +189,41 @@ export const ACTION_TYPES: readonly TypeDef[] = [
     label: $localize`Reproducir sonido`,
     help: $localize`Suena en la pestaña de audio de la PC de stream.`,
     params: [
-      { key: 'assetId', label: $localize`Sonido`, kind: 'sound', default: null },
+      // «Sonido» is the picker (library, MyInstants or Freesound); it fills assetId or the
+      // soundUrl group, never both.
+      { key: 'assetId', label: $localize`Sonido`, kind: 'sound', default: null, optional: true },
+      {
+        key: 'soundUrl',
+        label: 'soundUrl',
+        kind: 'text',
+        default: null,
+        optional: true,
+        hidden: true,
+      },
+      {
+        key: 'soundPageUrl',
+        label: 'soundPageUrl',
+        kind: 'text',
+        default: null,
+        optional: true,
+        hidden: true,
+      },
+      {
+        key: 'soundTitle',
+        label: 'soundTitle',
+        kind: 'text',
+        default: null,
+        optional: true,
+        hidden: true,
+      },
+      {
+        key: 'soundSource',
+        label: 'soundSource',
+        kind: 'text',
+        default: null,
+        optional: true,
+        hidden: true,
+      },
       { key: 'volume', label: $localize`Volumen`, kind: 'percent', default: 0.8 },
       {
         key: 'maxMs',
@@ -333,7 +369,7 @@ export function describeAction(
   a: ActionConfig,
   assetName: (id: number | undefined) => string,
 ): string {
-  if (a.type === 'playSound') return $localize`Sonido: ${assetName(a.assetId)}`;
+  if (a.type === 'playSound') return $localize`Sonido: ${a.soundTitle ?? assetName(a.assetId)}`;
   if (a.type === 'showAlert') return $localize`Alerta: ${a.text}`;
   if (a.type === 'updateGoal')
     return $localize`Meta #${a.goalId}\: ${a.amount > 0 ? '+' : ''}${a.amount}`;

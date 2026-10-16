@@ -18,11 +18,26 @@ const ALLOWED_SOUND_HOSTS: Readonly<Record<SoundSource, readonly string[]>> = {
   freesound: ['freesound.org'],
 };
 
+/** Where a trigger or rule sound lives: a searchable catalogue or the user's uploaded library. */
+export const SOUND_ORIGINS = [...SOUND_SOURCES, 'library'] as const;
+export const SoundOriginSchema = z.enum(SOUND_ORIGINS);
+export type SoundOrigin = z.infer<typeof SoundOriginSchema>;
+
+export const SOUND_ORIGIN_LABELS: Readonly<Record<SoundOrigin, string>> = {
+  ...SOUND_SOURCE_LABELS,
+  library: 'Mis audios',
+};
+
+/** Uploaded assets are served by this server under /media/ with a content-hashed name. */
+const LIBRARY_URL = /^\/media\/[\w.-]+$/;
+
 /**
- * True for an https URL on the hosts of `source` (or a subdomain of them). Without a source, any
- * known sound host is accepted.
+ * True for an https URL on the hosts of `source` (or a subdomain of them), or for a /media/ path
+ * when the source is the uploaded library. Without a source, any known sound location is accepted.
  */
-export function isAllowedSoundUrl(value: string, source?: SoundSource): boolean {
+export function isAllowedSoundUrl(value: string, source?: SoundOrigin): boolean {
+  if (source === 'library') return LIBRARY_URL.test(value);
+  if (source === undefined && LIBRARY_URL.test(value)) return true;
   try {
     const url = new URL(value);
     if (url.protocol !== 'https:') return false;
@@ -69,6 +84,9 @@ export const SOUND_PAGE_MAX = 50;
 
 // ---------- Triggers ----------
 
+export const MAX_SOUND_MS = 60_000;
+export const MAX_COOLDOWN_MS = 3_600_000;
+
 /** A sound bound to a live event type. Only metadata and the remote URL are stored. */
 export const TriggerDefinitionSchema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -77,8 +95,14 @@ export const TriggerDefinitionSchema = z.object({
   soundTitle: z.string().min(1).max(200),
   soundUrl,
   soundPageUrl: soundUrl,
-  source: SoundSourceSchema.default('myinstants'),
+  source: SoundOriginSchema.default('myinstants'),
   volume: z.number().min(0).max(1).default(0.8),
+  /** Cuts the sound after this long; absent plays it in full. */
+  maxMs: z.number().int().positive().max(MAX_SOUND_MS).optional(),
+  /** Minimum time between two plays of this trigger. */
+  cooldownMs: z.number().int().nonnegative().max(MAX_COOLDOWN_MS).default(0),
+  /** Chance (0–1) that an event plays the sound. */
+  probability: z.number().min(0).max(1).default(1),
   enabled: z.boolean().default(true),
 });
 export type TriggerDefinition = z.infer<typeof TriggerDefinitionSchema>;

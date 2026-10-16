@@ -1,4 +1,5 @@
 import type { GiftInfo, LiveEventType } from '@tiklive/contracts';
+import type { PickedSound } from '../sounds/picked-sound';
 import type { ParamDef } from './rule-catalog';
 
 export type RuleList = 'conditions' | 'actions';
@@ -30,7 +31,13 @@ export type RuleOp =
       readonly param: ParamDef;
       readonly raw: string | boolean;
     }
-  | { readonly kind: 'gift'; readonly index: number; readonly gift: GiftInfo };
+  | { readonly kind: 'gift'; readonly index: number; readonly gift: GiftInfo }
+  | {
+      readonly kind: 'sound';
+      readonly list: RuleList;
+      readonly index: number;
+      readonly sound: PickedSound;
+    };
 
 /** What an item editor emits; the list and index are added by its parent builder. */
 export type ItemOp =
@@ -38,7 +45,8 @@ export type ItemOp =
   | { readonly kind: 'move'; readonly delta: number }
   | { readonly kind: 'type'; readonly type: string }
   | { readonly kind: 'param'; readonly param: ParamDef; readonly raw: string | boolean }
-  | { readonly kind: 'gift'; readonly gift: GiftInfo };
+  | { readonly kind: 'gift'; readonly gift: GiftInfo }
+  | { readonly kind: 'sound'; readonly sound: PickedSound };
 
 export function toRuleOp(list: RuleList, index: number, op: ItemOp): RuleOp {
   if (op.kind === 'gift') return { kind: 'gift', index, gift: op.gift };

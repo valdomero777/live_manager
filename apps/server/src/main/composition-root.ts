@@ -229,6 +229,8 @@ function buildReactions(
     repo: db.triggers,
     sink: actions,
     ids: rt.ids,
+    clock: rt.clock,
+    random: rt.random,
     logger: rt.logger.child({ module: 'triggers' }),
   });
   return { actions, engine, handlers, moderation, tts, triggers, goalLink };
@@ -422,6 +424,11 @@ function buildAssetService(p: ServiceParts): AssetService {
         actions: r.actions,
       })),
       ...p.projections.goals.list().map((g) => ({ owner: `meta «${g.name}»`, actions: g.onReach })),
+      ...(await p.db.triggers.listAll()).map((t) => ({
+        owner: `trigger «${t.name}»`,
+        actions: [],
+        urls: [t.soundUrl],
+      })),
     ],
   });
 }

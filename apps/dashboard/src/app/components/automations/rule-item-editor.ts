@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import {
   LucideArrowDown,
   LucideArrowUp,
@@ -7,6 +6,7 @@ import {
   LucideDynamicIcon,
   LucideTrash,
 } from '@lucide/angular';
+import { SOUND_ORIGIN_LABELS, type SoundOrigin } from '@tiklive/contracts';
 import { AssetsStore } from '../../core/assets.store';
 import { GiftGrid } from '../shared/gift-grid/gift-grid';
 import { UiButton } from '../ui/button';
@@ -14,7 +14,10 @@ import { UiFormField, describedBy } from '../ui/form-field';
 import { UiInput, UiNativeSelect, UiSlider } from '../ui/input';
 import { UiSwitch } from '../ui/switch';
 import { UiTooltip } from '../ui/tooltip';
+
+import type { PickedSound } from '../sounds/picked-sound';
 import { SoundPreview } from '../sounds/sound-preview';
+import { SoundSelector } from '../sounds/sound-selector';
 import { CONDITION_ICON, actionKind } from './automation-meta';
 import type { ParamDef, TypeDef } from './rule-catalog';
 import type { ItemDraft } from './rule-draft';
@@ -34,9 +37,9 @@ export function displayParam(item: ItemDraft, param: ParamDef): string {
 @Component({
   selector: 'app-rule-item-editor',
   imports: [
-    RouterLink,
     GiftGrid,
     SoundPreview,
+    SoundSelector,
     UiButton,
     UiFormField,
     UiInput,
@@ -82,8 +85,33 @@ export class RuleItemEditor {
   protected readonly display = displayParam;
   protected readonly describedBy = describedBy;
 
-  protected soundUrl(id: string): string | undefined {
-    return this.assets.sounds().find((a) => String(a.id) === id)?.url;
+  /** The sound this action plays, from the library or from a catalogue, for the picker row. */
+  protected readonly sound = computed(() => {
+    const params = this.item().params;
+    const remote = params['soundUrl'];
+    if (typeof remote === 'string' && remote) {
+      const origin = (params['soundSource'] as SoundOrigin | null) ?? 'myinstants';
+      return {
+        url: remote,
+        title: String(params['soundTitle'] ?? remote),
+        origin,
+        id: undefined,
+      };
+    }
+    const assetId = params['assetId'];
+    if (assetId === null || assetId === undefined || assetId === '') return undefined;
+    const asset = this.assets.assets().find((a) => String(a.id) === String(assetId));
+    return {
+      url: asset?.url,
+      title: this.assets.nameOf(Number(assetId)),
+      origin: 'library' as SoundOrigin,
+      id: String(assetId),
+    };
+  });
+  protected readonly originLabels = SOUND_ORIGIN_LABELS;
+
+  protected pickSound(sound: PickedSound): void {
+    this.op.emit({ kind: 'sound', sound });
   }
 
   protected set(param: ParamDef, raw: string | boolean): void {

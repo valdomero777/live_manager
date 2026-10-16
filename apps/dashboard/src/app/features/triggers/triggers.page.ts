@@ -6,15 +6,17 @@ import {
   LucidePencil,
   LucidePlus,
   LucideRadio,
+  LucideSlidersHorizontal,
   LucideTrash,
   LucideVolume2,
   LucideVolumeX,
   LucideZap,
 } from '@lucide/angular';
 import {
-  SOUND_SOURCE_LABELS,
+  MAX_COOLDOWN_MS,
+  MAX_SOUND_MS,
+  SOUND_ORIGIN_LABELS,
   type LiveEventType,
-  type Sound,
   type Trigger,
   type TriggerDefinitionInput,
 } from '@tiklive/contracts';
@@ -28,6 +30,7 @@ import { EmptyState } from '../../components/shared/empty-state';
 import { PageHeader } from '../../components/shared/page-header';
 import { SoundPlayer } from '../../components/sounds/sound-player';
 import { SoundPreview } from '../../components/sounds/sound-preview';
+import type { PickedSound } from '../../components/sounds/picked-sound';
 import { SoundSelector } from '../../components/sounds/sound-selector';
 import { UI_ALERT } from '../../components/ui/alert';
 import { UiButton } from '../../components/ui/button';
@@ -49,8 +52,12 @@ interface Draft {
   id: number | undefined;
   name: string;
   event: LiveEventType;
-  sound: Pick<Sound, 'id' | 'title' | 'audioUrl' | 'pageUrl' | 'source'> | undefined;
+  sound: PickedSound | undefined;
   volume: number;
+  /** Seconds to cut the sound at; empty plays it in full. */
+  maxS: string;
+  cooldownS: string;
+  probabilityPct: string;
   enabled: boolean;
 }
 
@@ -60,6 +67,9 @@ const blankDraft = (): Draft => ({
   event: 'follow',
   sound: undefined,
   volume: 0.8,
+  maxS: '',
+  cooldownS: '0',
+  probabilityPct: '100',
   enabled: true,
 });
 
@@ -71,6 +81,9 @@ function draftOf(t: Trigger): Draft {
     event: t.event,
     sound: { id: soundId, title: soundTitle, audioUrl: soundUrl, pageUrl: soundPageUrl, source },
     volume: t.volume,
+    maxS: t.maxMs === undefined ? '' : String(t.maxMs / 1000),
+    cooldownS: String(t.cooldownMs / 1000),
+    probabilityPct: String(percent(t.probability)),
     enabled: t.enabled,
   };
 }
@@ -78,6 +91,15 @@ function draftOf(t: Trigger): Draft {
 function percent(volume: number): number {
   return Math.round(volume * 100);
 }
+
+/** A number typed in a field, or undefined when empty or not a number. */
+function numberOf(raw: string): number | undefined {
+  const value = raw.trim() === '' ? Number.NaN : Number(raw);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+/** Longest value each timing field accepts, in seconds. */
+const MAX_SECONDS = { cut: MAX_SOUND_MS / 1000, cooldown: MAX_COOLDOWN_MS / 1000 } as const;
 
 /** Sound triggers: WHEN a LIVE event happens, THEN play a remote sound at a set volume. */
 @Component({
@@ -120,7 +142,8 @@ export class TriggersPage {
   private readonly toast = inject(ToastService);
   protected readonly icons = { when: LucideRadio, then: LucideZap, empty: LucideVolume2 };
   protected readonly percent = percent;
-  protected readonly sourceLabels = SOUND_SOURCE_LABELS;
+  protected readonly sourceLabels = SOUND_ORIGIN_LABELS;
+  protected readonly maxSeconds = MAX_SECONDS;
   protected readonly describedBy = describedBy;
 
   protected readonly draft = signal<Draft | undefined>(undefined);
@@ -137,6 +160,26 @@ export class TriggersPage {
   protected readonly soundError = computed(() =>
     this.showErrors() && !this.draft()?.sound ? $localize`Elige un sonido.` : undefined,
   );
+  protected readonly maxError = computed(() => {
+    const raw = this.draft()?.maxS ?? '';
+    if (raw.trim() === '') return undefined;
+    const value = numberOf(raw);
+    return value === undefined || value <= 0 || value > MAX_SECONDS.cut
+      ? $localize`Escribe entre 0.1 y ${MAX_SECONDS.cut} segundos, o déjalo vacío.`
+      : undefined;
+  });
+  protected readonly cooldownError = computed(() => {
+    const value = numberOf(this.draft()?.cooldownS ?? '');
+    return value === undefined || value < 0 || value > MAX_SECONDS.cooldown
+      ? $localize`Escribe entre 0 y ${MAX_SECONDS.cooldown} segundos.`
+      : undefined;
+  });
+  protected readonly probabilityError = computed(() => {
+    const value = numberOf(this.draft()?.probabilityPct ?? '');
+    return value === undefined || value < 0 || value > 100
+      ? $localize`Escribe un porcentaje entre 0 y 100.`
+      : undefined;
+  });
   protected readonly cards = computed(() =>
     this.store.triggers().map((t) => ({
       trigger: t,
@@ -146,6 +189,11 @@ export class TriggersPage {
           tone: 'bg-sound-soft text-sound-text',
           text: $localize`${t.soundTitle} · volumen ${percent(t.volume)}%`,
         },
+        ...this.paramNotes(t).map((text) => ({
+          icon: LucideSlidersHorizontal,
+          tone: 'bg-surface-active text-muted-foreground',
+          text,
+        })),
       ] satisfies AutomationActionView[],
     })),
   );
@@ -171,7 +219,17 @@ export class TriggersPage {
     this.draft.update((d) => (d ? { ...d, ...change } : d));
   }
 
-  protected pick(sound: Sound): void {
+  /** Only the parameters that differ from the defaults, so a plain trigger stays one line. */
+  private paramNotes(t: Trigger): string[] {
+    const notes: string[] = [];
+    if (t.maxMs !== undefined) notes.push($localize`Corta a los ${t.maxMs / 1000} s`);
+    if (t.cooldownMs > 0) notes.push($localize`Espera ${t.cooldownMs / 1000} s entre sonidos`);
+    if (t.probability < 1)
+      notes.push($localize`Suena en el ${percent(t.probability)}% de los eventos`);
+    return notes;
+  }
+
+  protected pick(sound: PickedSound): void {
     this.patch({ sound, name: this.draft()?.name || sound.title });
   }
 
@@ -179,6 +237,8 @@ export class TriggersPage {
     this.showErrors.set(true);
     const d = this.draft();
     if (!d?.sound || !d.name.trim()) return Promise.resolve();
+    if (this.maxError() || this.cooldownError() || this.probabilityError())
+      return Promise.resolve();
     const definition: TriggerDefinitionInput = {
       name: d.name.trim(),
       event: d.event,
@@ -188,6 +248,9 @@ export class TriggersPage {
       soundPageUrl: d.sound.pageUrl,
       source: d.sound.source,
       volume: d.volume,
+      ...(numberOf(d.maxS) === undefined ? {} : { maxMs: Math.round(Number(d.maxS) * 1000) }),
+      cooldownMs: Math.round(Number(d.cooldownS) * 1000),
+      probability: Number(d.probabilityPct) / 100,
       enabled: d.enabled,
     };
     return this.run(async () => {

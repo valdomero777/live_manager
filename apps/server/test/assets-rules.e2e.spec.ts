@@ -78,6 +78,62 @@ describe('asset library (RF-19)', () => {
   });
 });
 
+describe('sounds from every source', () => {
+  const remote = {
+    type: 'playSound',
+    soundUrl: 'https://www.myinstants.com/media/sounds/vine-boom.mp3',
+    soundPageUrl: 'https://www.myinstants.com/en/instant/vine-boom-sound-70972/',
+    soundTitle: 'VINE BOOM',
+    soundSource: 'myinstants',
+    maxMs: 3000,
+  };
+  const createRule = (action: object) =>
+    t!.api({
+      method: 'POST',
+      url: `${API_PREFIX}/rules`,
+      payload: { name: 'Sonido remoto', trigger: 'follow', actions: [action] },
+    });
+
+  it('lets a playSound action use a MyInstants or Freesound sound instead of an upload', async () => {
+    t = await startTestApp();
+    const res = await createRule(remote);
+    expect(res.statusCode).toBe(201);
+    expect(res.json<{ actions: object[] }>().actions[0]).toMatchObject(remote);
+  });
+
+  it('rejects a playSound with no sound, with two sounds or with a foreign host', async () => {
+    t = await startTestApp();
+    expect((await createRule({ type: 'playSound' })).statusCode).toBe(400);
+    expect((await createRule({ ...remote, assetId: 1 })).statusCode).toBe(400);
+    expect(
+      (await createRule({ ...remote, soundUrl: 'https://evil.example/a.mp3' })).statusCode,
+    ).toBe(400);
+    expect((await createRule({ ...remote, soundSource: 'freesound' })).statusCode).toBe(400);
+  });
+
+  it('refuses to delete an uploaded sound that a trigger plays', async () => {
+    t = await startTestApp();
+    const asset = (await upload(t, 'ding.wav', generateDing())).json<Asset>();
+    const created = await t.api({
+      method: 'POST',
+      url: `${API_PREFIX}/triggers`,
+      payload: {
+        name: 'Ding al seguir',
+        event: 'follow',
+        soundId: String(asset.id),
+        soundTitle: asset.originalName,
+        soundUrl: asset.url,
+        soundPageUrl: asset.url,
+        source: 'library',
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const res = await t.api({ method: 'DELETE', url: `${API_PREFIX}/assets/${asset.id}` });
+    expect(res.statusCode).toBe(409);
+    expect(res.json<{ title: string }>().title).toContain('Ding al seguir');
+  });
+});
+
 describe('rule test (POST /rules/:id/test)', () => {
   it('explains each condition and queues actions only when all hold', async () => {
     t = await startTestApp();
