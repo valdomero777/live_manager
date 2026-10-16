@@ -33,6 +33,7 @@ import { GiftGrid } from '../../components/shared/gift-grid/gift-grid';
 import { PageHeader } from '../../components/shared/page-header';
 import { UI_ALERT } from '../../components/ui/alert';
 import { UiBadge } from '../../components/ui/badge';
+import type { PickedSound } from '../../components/sounds/picked-sound';
 import { UiButton } from '../../components/ui/button';
 import { UI_CARD } from '../../components/ui/card';
 import { UiSpinner } from '../../components/ui/feedback';
@@ -175,6 +176,8 @@ export class RuleEditorPage {
         return this.setParam(op.list, op.index, op.param, op.raw);
       case 'gift':
         return this.pickGift(op.index, op.gift);
+      case 'sound':
+        return this.pickSound(op.list, op.index, op.sound);
     }
   }
 
@@ -243,6 +246,24 @@ export class RuleEditorPage {
     if (!item) return;
     const value = item.type === 'giftId' ? gift.id : gift.name;
     this.replaceItem('conditions', index, { ...item, params: { ...item.params, op: 'eq', value } });
+  }
+
+  /** Sound picked for a playSound action: library sounds store the asset id, others their URL. */
+  protected pickSound(list: RuleList, index: number, sound: PickedSound): void {
+    const item = this.draft()[list][index];
+    if (!item) return;
+    const library = sound.assetId !== undefined;
+    this.replaceItem(list, index, {
+      ...item,
+      params: {
+        ...item.params,
+        assetId: sound.assetId ?? null,
+        soundUrl: library ? null : sound.audioUrl,
+        soundPageUrl: library ? null : sound.pageUrl,
+        soundTitle: library ? null : sound.title,
+        soundSource: library ? null : sound.source,
+      },
+    });
   }
 
   protected pickTestGift(gift: GiftInfo): void {

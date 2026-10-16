@@ -15,6 +15,9 @@ function toRow(def: TriggerDefinition) {
     sound_page_url: def.soundPageUrl,
     source: def.source,
     volume: def.volume,
+    max_ms: def.maxMs ?? null,
+    cooldown_ms: def.cooldownMs,
+    probability: def.probability,
     enabled: def.enabled ? 1 : 0,
   };
 }
@@ -31,6 +34,9 @@ function fromRow(row: TriggerRow): Trigger {
     soundPageUrl: row.sound_page_url,
     source: row.source,
     volume: row.volume,
+    maxMs: row.max_ms ?? undefined,
+    cooldownMs: row.cooldown_ms,
+    probability: row.probability,
     enabled: row.enabled === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

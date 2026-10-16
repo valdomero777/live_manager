@@ -184,6 +184,50 @@ describe('sound triggers (MyInstants, remote URL only)', () => {
     ).toBe(404);
   });
 
+  it('stores per-trigger parameters and defaults them for older payloads', async () => {
+    const plain = (await create()).json<Trigger>();
+    expect(plain).toMatchObject({ cooldownMs: 0, probability: 1 });
+    expect(plain.maxMs).toBeUndefined();
+
+    const tuned = await create({
+      ...DEFINITION,
+      maxMs: 2500,
+      cooldownMs: 30_000,
+      probability: 0.25,
+    });
+    expect(tuned.statusCode).toBe(201);
+    expect(tuned.json<Trigger>()).toMatchObject({
+      maxMs: 2500,
+      cooldownMs: 30_000,
+      probability: 0.25,
+    });
+    const stored = await t.api({ url: `${API_PREFIX}/triggers/${tuned.json<Trigger>().id}` });
+    expect(stored.json<Trigger>()).toMatchObject({
+      maxMs: 2500,
+      cooldownMs: 30_000,
+      probability: 0.25,
+    });
+
+    expect((await create({ ...DEFINITION, probability: 1.5 })).statusCode).toBe(400);
+    expect((await create({ ...DEFINITION, cooldownMs: -1 })).statusCode).toBe(400);
+    expect((await create({ ...DEFINITION, maxMs: 0 })).statusCode).toBe(400);
+    expect((await create({ ...DEFINITION, maxMs: 600_000 })).statusCode).toBe(400);
+  });
+
+  it('accepts an uploaded library sound only as a /media/ path of this server', async () => {
+    const library = {
+      ...DEFINITION,
+      source: 'library',
+      soundUrl: '/media/0123456789abcdef.wav',
+      soundPageUrl: '/media/0123456789abcdef.wav',
+    };
+    expect((await create(library)).statusCode).toBe(201);
+    expect((await create({ ...library, soundUrl: '/etc/passwd' })).statusCode).toBe(400);
+    expect(
+      (await create({ ...library, soundUrl: 'https://evil.example/media/a.wav' })).statusCode,
+    ).toBe(400);
+  });
+
   it('validates the payload: volume range, required fields and allowed sound hosts', async () => {
     expect((await create({ ...DEFINITION, volume: 1.5 })).statusCode).toBe(400);
     expect((await create({ ...DEFINITION, volume: -0.1 })).statusCode).toBe(400);

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { LIVE_EVENT_TYPES } from './events.js';
+import { SoundSourceSchema, isAllowedSoundUrl } from './sounds.js';
 
 export const RULE_SCHEMA_VERSION = 1;
 
@@ -41,13 +42,34 @@ const volume = z.number().min(0).max(1);
 
 /** Actions that run on a screen (audio, alerts) and wait for its action.done. */
 export const ScreenActionConfigSchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('playSound'),
-    screen: z.string().default('audio'),
-    assetId: z.number().int().positive(),
-    volume: volume.default(0.8),
-    maxMs: z.number().int().positive().optional(),
-  }),
+  z
+    .object({
+      type: z.literal('playSound'),
+      screen: z.string().default('audio'),
+      /** An uploaded sound; or, instead, a MyInstants/Freesound one by the fields below. */
+      assetId: z.number().int().positive().optional(),
+      soundUrl: z.string().max(2000).optional(),
+      soundPageUrl: z.string().max(2000).optional(),
+      soundTitle: z.string().min(1).max(200).optional(),
+      soundSource: SoundSourceSchema.optional(),
+      volume: volume.default(0.8),
+      maxMs: z.number().int().positive().optional(),
+    })
+    .superRefine((a, ctx) => {
+      if (a.soundUrl === undefined) {
+        if (a.assetId === undefined)
+          ctx.addIssue({ code: 'custom', path: ['assetId'], message: 'Elige un sonido' });
+        return;
+      }
+      if (a.assetId !== undefined)
+        ctx.addIssue({ code: 'custom', path: ['assetId'], message: 'Elige solo un sonido' });
+      if (!a.soundSource || !isAllowedSoundUrl(a.soundUrl, a.soundSource))
+        ctx.addIssue({
+          code: 'custom',
+          path: ['soundUrl'],
+          message: 'La URL del sonido no es de una fuente permitida',
+        });
+    }),
   z.object({
     type: z.literal('showAlert'),
     screen: z.string().default('alerts'),

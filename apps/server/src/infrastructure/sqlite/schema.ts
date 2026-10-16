@@ -63,6 +63,9 @@ export interface Database {
     sound_page_url: string;
     source: string;
     volume: number;
+    max_ms: number | null;
+    cooldown_ms: Generated<number>;
+    probability: Generated<number>;
     enabled: number;
     created_at: number;
     updated_at: number;

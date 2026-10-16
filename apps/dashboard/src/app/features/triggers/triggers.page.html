@@ -2,7 +2,7 @@
   i18n-description
   i18n-title
   title="Triggers de sonido"
-  description="Un sonido de MyInstants o Freesound para cada tipo de evento. Suena en la pantalla de audio (fuente de navegador de OBS) directamente desde su sitio, sin descargarse. Para condiciones y varias acciones usa «Reglas»."
+  description="Un sonido para cada tipo de evento: de tus audios, de MyInstants o de Freesound, con su volumen, corte, espera y probabilidad. Suena en la pantalla de audio (fuente de navegador de OBS). Para condiciones y varias acciones usa «Reglas»."
 >
   @if (!draft()) {
   <button i18n uiButton type="button" (click)="startNew()"><svg lucidePlus /> Nuevo trigger</button>
@@ -100,16 +100,87 @@
             variant="ghost"
             size="sm"
             [selectedId]="s.id"
+            [initialOrigin]="s.source"
             (picked)="pick($event)"
           />
         </app-sound-player>
+        <div class="form-grid mt-4">
+          <ui-form-field
+            i18n-label
+            i18n-description
+            label="Cortar a los (s)"
+            for="t-max"
+            description="Vacío = suena completo."
+            [error]="maxError()"
+          >
+            <input
+              uiInput
+              id="t-max"
+              type="number"
+              min="0.1"
+              step="0.5"
+              [max]="maxSeconds.cut"
+              [value]="d.maxS"
+              [attr.aria-invalid]="!!maxError()"
+              [attr.aria-describedby]="describedBy('t-max', { description: true, error: maxError() })"
+              (input)="patch({ maxS: $any($event.target).value })"
+            />
+          </ui-form-field>
+          <ui-form-field
+            i18n-label
+            i18n-description
+            label="Espera entre sonidos (s)"
+            for="t-cooldown"
+            description="0 = sin espera."
+            [error]="cooldownError()"
+          >
+            <input
+              uiInput
+              id="t-cooldown"
+              type="number"
+              min="0"
+              step="1"
+              [max]="maxSeconds.cooldown"
+              [value]="d.cooldownS"
+              [attr.aria-invalid]="!!cooldownError()"
+              [attr.aria-describedby]="
+                describedBy('t-cooldown', { description: true, error: cooldownError() })
+              "
+              (input)="patch({ cooldownS: $any($event.target).value })"
+            />
+          </ui-form-field>
+          <ui-form-field
+            i18n-label
+            i18n-description
+            label="Probabilidad (%)"
+            for="t-probability"
+            description="100 = suena en cada evento."
+            [error]="probabilityError()"
+          >
+            <input
+              uiInput
+              id="t-probability"
+              type="number"
+              min="0"
+              max="100"
+              step="5"
+              [value]="d.probabilityPct"
+              [attr.aria-invalid]="!!probabilityError()"
+              [attr.aria-describedby]="
+                describedBy('t-probability', { description: true, error: probabilityError() })
+              "
+              (input)="patch({ probabilityPct: $any($event.target).value })"
+            />
+          </ui-form-field>
+        </div>
         } @else {
         <div
           class="flex flex-col items-start gap-3 rounded-lg border border-dashed p-4 sm:flex-row sm:items-center"
           [class.border-danger]="!!soundError()"
         >
           <p i18n class="flex-1 type-secondary">
-            Aún no eliges un sonido. Busca en MyInstants o Freesound y escúchalo antes de elegirlo.
+            Aún no eliges un sonido. Usa uno de tus audios, importa uno nuevo o busca en MyInstants
+            o Freesound y escúchalo antes de elegirlo.
           </p>
           <app-sound-selector variant="default" (picked)="pick($event)" />
         </div>

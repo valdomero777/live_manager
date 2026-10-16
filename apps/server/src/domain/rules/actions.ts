@@ -89,7 +89,9 @@ type Cfg<K extends ScreenActionConfig['type']> = Extract<ScreenActionConfig, { t
 export const playSoundHandler: ActionHandler<Cfg<'playSound'>> = {
   type: 'playSound',
   plan(config, ctx) {
-    const url = ctx.assets.urlFor(config.assetId);
+    const url =
+      config.soundUrl ??
+      (config.assetId === undefined ? undefined : ctx.assets.urlFor(config.assetId));
     if (!url) return null;
     const payload = { actionId: ctx.actionId, url, volume: config.volume };
     return {

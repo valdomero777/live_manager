@@ -20,6 +20,8 @@ export class AssetError extends Error {
 export interface AssetReference {
   readonly owner: string;
   readonly actions: readonly ActionConfig[];
+  /** Media URLs referenced directly (a sound trigger stores the URL, not the asset id). */
+  readonly urls?: readonly string[];
 }
 
 interface AssetServiceDeps {
@@ -45,8 +47,11 @@ export function toAssetView(a: AssetRecord): Asset {
   };
 }
 
-function usesAsset(actions: readonly ActionConfig[], assetId: number): boolean {
-  return actions.some((a) => 'assetId' in a && a.assetId === assetId);
+function usesAsset(ref: AssetReference, asset: AssetRecord): boolean {
+  return (
+    ref.actions.some((a) => 'assetId' in a && a.assetId === asset.id) ||
+    (ref.urls ?? []).includes(`${ASSET_URL_PREFIX}${asset.filename}`)
+  );
 }
 
 /**
@@ -97,7 +102,7 @@ export class AssetService {
     const asset = await this.deps.repo.findById(id);
     if (!asset) throw new AssetError('not_found', `No existe el asset ${id}`);
     const owners = (await this.deps.references())
-      .filter((r) => usesAsset(r.actions, id))
+      .filter((r) => usesAsset(r, asset))
       .map((r) => r.owner);
     if (owners.length > 0) {
       throw new AssetError('in_use', `Está en uso por: ${owners.join(', ')}`);

@@ -76,8 +76,8 @@
   <p class="type-caption -mt-1">{{ d.help }}</p>
   } @if (d.params.length) {
   <div class="form-grid">
-    @for (p of d.params; track p.key) { @let fieldId = idPrefix() + '-' + p.key; @switch (p.kind) {
-    @case ('boolean') {
+    @for (p of d.params; track p.key) { @if (!p.hidden) { @let fieldId = idPrefix() + '-' + p.key;
+    @switch (p.kind) { @case ('boolean') {
     <div class="flex items-center gap-3 self-end py-2">
       <ui-switch
         [inputId]="fieldId"
@@ -99,32 +99,29 @@
         }
       </select>
     </ui-form-field>
-    } @case ('sound') { @let current = display(item(), p);
-    <ui-form-field [label]="p.label" [for]="fieldId" class="col-span-full sm:col-span-1">
-      <div class="flex gap-2">
-        <select
-          uiNativeSelect
-          class="min-w-0 flex-1"
-          [id]="fieldId"
-          (change)="set(p, $any($event.target).value)"
-        >
-          <option i18n value="" [selected]="current === ''">— Elige un sonido —</option>
-          @for (a of assets.sounds(); track a.id) {
-          <option [value]="a.id" [selected]="a.id + '' === current">{{ a.originalName }}</option>
-          }
-        </select>
-        @if (soundUrl(current); as url) {
-        <app-sound-preview i18n-title [url]="url" title="el sonido elegido" />
+    } @case ('sound') { @let chosen = sound();
+    <ui-form-field [label]="p.label" class="col-span-full">
+      <div class="flex flex-wrap items-center gap-2">
+        @if (chosen; as c) { @if (c.url) {
+        <app-sound-preview i18n-title [url]="c.url" title="el sonido elegido" />
         }
+        <span class="min-w-0 flex-1 truncate text-sm font-medium" [title]="c.title"
+          >{{ c.title }}</span
+        >
+        <span class="type-caption">{{ originLabels[c.origin] }}</span>
+        } @else {
+        <span i18n class="min-w-0 flex-1 text-sm text-muted-foreground">— Elige un sonido —</span>
+        }
+        <app-sound-selector
+          i18n-buttonLabel
+          buttonLabel="Cambiar"
+          [variant]="chosen ? 'ghost' : 'default'"
+          size="sm"
+          [selectedId]="chosen?.id"
+          [initialOrigin]="chosen?.origin ?? 'library'"
+          (picked)="pickSound($event)"
+        />
       </div>
-      @if (!assets.sounds().length) {
-      <p i18n uiFieldDescription class="type-caption">
-        Sube sonidos en
-        <a routerLink="/assets" class="font-medium text-primary hover:underline"
-          >Sonidos e imágenes</a
-        >.
-      </p>
-      }
     </ui-form-field>
     } @case ('visual') {
     <ui-form-field [label]="p.label" [for]="fieldId">
@@ -174,7 +171,7 @@
         (input)="set(p, $any($event.target).value)"
       />
     </ui-form-field>
-    } } }
+    } } } }
   </div>
   } @if (isGiftCondition()) {
   <details class="group rounded-lg border bg-muted/40" open>

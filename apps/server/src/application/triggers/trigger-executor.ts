@@ -13,6 +13,7 @@ import {
 import type { ActionSink } from '../actions/action-scheduler.js';
 import type { LiveEventConsumer } from '../ingest/ingest-live-event.js';
 import type { Logger } from '../ports/logger.js';
+import type { Clock, Random } from '../../domain/shared/time.js';
 import type { IdGenerator } from '../ports/scheduler.js';
 import type { TriggerRepository } from '../ports/trigger-repository.js';
 
@@ -29,6 +30,8 @@ interface ExecutorDeps {
   readonly repo: TriggerRepository;
   readonly sink: ActionSink;
   readonly ids: IdGenerator;
+  readonly clock: Clock;
+  readonly random: Random;
   readonly logger: Logger;
 }
 
@@ -38,6 +41,8 @@ interface ExecutorDeps {
  */
 export class TriggerExecutor implements LiveEventConsumer {
   private byEvent = new Map<LiveEventType, Trigger[]>();
+  /** When each trigger last played, for its cooldown. Cleared by reload(): an edit starts fresh. */
+  private lastPlayed = new Map<number, number>();
 
   constructor(private readonly deps: ExecutorDeps) {}
 
@@ -48,12 +53,22 @@ export class TriggerExecutor implements LiveEventConsumer {
       next.set(trigger.event, [...(next.get(trigger.event) ?? []), trigger]);
     }
     this.byEvent = next;
+    this.lastPlayed.clear();
   }
 
   handle(event: LiveEvent): void {
     for (const trigger of this.byEvent.get(event.type) ?? []) {
-      this.execute(trigger, { eventId: event.id });
+      if (!this.shouldPlay(trigger)) continue;
+      if (this.execute(trigger, { eventId: event.id }) === 'queued')
+        this.lastPlayed.set(trigger.id, this.deps.clock.now());
     }
+  }
+
+  /** Cooldown first, so a trigger on cooldown does not spend its probability roll. */
+  private shouldPlay(trigger: Trigger): boolean {
+    const last = this.lastPlayed.get(trigger.id);
+    if (last !== undefined && this.deps.clock.now() - last < trigger.cooldownMs) return false;
+    return trigger.probability >= 1 || this.deps.random.next() < trigger.probability;
   }
 
   /** Validates the trigger and queues its sound; the URL is the one saved with the trigger. */
@@ -75,7 +90,7 @@ export class TriggerExecutor implements LiveEventConsumer {
       priority: 0,
       origin: { kind: 'trigger', id: trigger.id },
       eventId,
-      timeoutMs: DEFAULT_SOUND_TIMEOUT_MS + ACK_GRACE_MS,
+      timeoutMs: (trigger.maxMs ?? DEFAULT_SOUND_TIMEOUT_MS) + ACK_GRACE_MS,
       command: {
         type: 'action.play_sound',
         payload: {
@@ -83,6 +98,7 @@ export class TriggerExecutor implements LiveEventConsumer {
           url: trigger.soundUrl,
           volume: trigger.volume,
           triggerId: trigger.id,
+          ...(trigger.maxMs === undefined ? {} : { maxMs: trigger.maxMs }),
         },
       },
     };
