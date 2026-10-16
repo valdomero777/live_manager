@@ -24,6 +24,8 @@ import { ConfirmService } from '../../components/ui/confirm-dialog';
 import { ToastService } from '../../components/ui/toast';
 import { CopyButton } from '../../components/shared/copy-button';
 import { PageHeader } from '../../components/shared/page-header';
+import { PublicUrlField } from '../../components/shared/public-url-field';
+import { PublicUrlStore } from '../../core/public-url.store';
 import { UiButton } from '../../components/ui/button';
 import { UI_CARD } from '../../components/ui/card';
 import { UiFormField } from '../../components/ui/form-field';
@@ -65,6 +67,7 @@ function isTemplateType(id: string): id is OverlayTemplateType {
     UiNativeSelect,
     UiSwitch,
     UiTextarea,
+    PublicUrlField,
     ...UI_CARD,
     ...UI_TOGGLE_GROUP,
     LucideBookmark,
@@ -88,6 +91,7 @@ export class OverlaysPage {
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   protected readonly store = inject(OverlayTemplatesStore);
+  private readonly publicUrl = inject(PublicUrlStore);
   protected readonly types = OVERLAY_TYPES;
   protected readonly presets = OVERLAY_PRESETS;
 
@@ -124,7 +128,7 @@ export class OverlaysPage {
       this.type(),
       this.values(),
       this.overlayKey(),
-      `${location.protocol}//${this.host()}`,
+      this.linkOrigin(),
     ),
   );
   /** Same-origin preview so it works whatever LAN address is chosen for the copied URL. */
@@ -179,8 +183,13 @@ export class OverlaysPage {
       type,
       template.params,
       this.overlayKey(),
-      `${location.protocol}//${this.host()}`,
+      this.linkOrigin(),
     );
+  }
+
+  /** The tunnel address when one is set, otherwise the host chosen above. */
+  private linkOrigin(): string {
+    return this.publicUrl.origin() ?? `${location.protocol}//${this.host()}`;
   }
 
   protected loadTemplate(template: OverlayTemplate): void {
