@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, input, model } from '@angular/core';
 import { LucideDynamicIcon } from '@lucide/angular';
 import { LIVE_EVENT_TYPES, type LiveEventType } from '@tiklive/contracts';
+import { EVENT_DESCRIPTIONS } from '../../lib/labels';
+import { UiTooltip } from '../ui/tooltip';
 import { EVENT_META } from '../live/event-meta';
 
 /**
@@ -9,7 +11,7 @@ import { EVENT_META } from '../live/event-meta';
  */
 @Component({
   selector: 'app-trigger-selector',
-  imports: [LucideDynamicIcon],
+  imports: [LucideDynamicIcon, UiTooltip],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
@@ -19,6 +21,8 @@ import { EVENT_META } from '../live/event-meta';
         @for (type of types(); track type) {
           @let meta = eventMeta[type];
           <label
+            [uiTooltip]="descriptions[type]"
+            tooltipSide="bottom"
             class="relative flex cursor-pointer items-center gap-2 rounded-lg border bg-surface p-2 sm:gap-2.5 sm:p-2.5 transition-[border-color,background-color,box-shadow] hover:bg-surface-hover has-checked:border-primary has-checked:bg-primary/5 has-checked:ring-1 has-checked:ring-primary has-focus-visible:ring-[3px] has-focus-visible:ring-ring/40 has-disabled:cursor-not-allowed has-disabled:opacity-50"
           >
             <input
@@ -36,11 +40,9 @@ import { EVENT_META } from '../live/event-meta';
             >
               <svg [lucideIcon]="meta.icon" class="size-4" />
             </span>
-            <span
-              class="min-w-0 text-sm leading-tight font-medium break-words"
-              [title]="meta.label"
-              >{{ meta.label }}</span
-            >
+            <span class="min-w-0 text-sm leading-tight font-medium break-words">{{
+              meta.label
+            }}</span>
           </label>
         }
       </div>
@@ -54,4 +56,5 @@ export class TriggerSelector {
   readonly label = input($localize`Evento que lo activa`);
   readonly disabled = input(false);
   protected readonly eventMeta = EVENT_META;
+  protected readonly descriptions = EVENT_DESCRIPTIONS;
 }

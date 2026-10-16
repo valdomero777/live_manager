@@ -7,7 +7,7 @@ const LABELS: Readonly<Record<StatsField, string>> = {
   viewers: 'Espectadores',
   peakViewers: 'Pico',
   likes: 'Likes',
-  diamonds: 'Diamantes',
+  diamonds: 'Monedas',
   newFollowers: 'Nuevos seguidores',
   duration: 'En vivo',
 };

@@ -62,7 +62,7 @@ const STATS_LABELS: Readonly<Record<(typeof STATS_FIELDS)[number], string>> = {
   viewers: $localize`Espectadores`,
   peakViewers: $localize`Pico`,
   likes: $localize`Likes`,
-  diamonds: $localize`Diamantes`,
+  diamonds: $localize`Monedas`,
   newFollowers: $localize`Nuevos seguidores`,
   duration: $localize`Duración`,
 };
@@ -399,7 +399,7 @@ export const OVERLAY_PRESETS: readonly OverlayPreset[] = [
   {
     id: 'top-gifts',
     label: $localize`Top regalos del live`,
-    description: $localize`Los 5 espectadores que más diamantes enviaron en esta sesión.`,
+    description: $localize`Los 5 espectadores que más monedas enviaron en esta sesión.`,
     type: 'leaderboard',
     params: { metric: 'diamonds', scope: 'session', limit: '5' },
   },
@@ -448,7 +448,7 @@ export const OVERLAY_PRESETS: readonly OverlayPreset[] = [
   {
     id: 'stats-compact',
     label: $localize`Estadísticas compactas`,
-    description: $localize`Espectadores, likes y diamantes en columna.`,
+    description: $localize`Espectadores, likes y monedas en columna.`,
     type: 'stats',
     params: { fields: 'viewers,likes,diamonds', layout: 'column' },
   },

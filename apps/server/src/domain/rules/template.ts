@@ -16,7 +16,9 @@ export function templateVariables(event: LiveEvent): TemplateVariables {
     case 'gift':
       vars['giftName'] = event.giftName;
       vars['quantity'] = String(event.quantity);
-      vars['diamonds'] = String(event.diamondValue * event.quantity);
+      // TikTok's per-gift value is the coin price; {diamonds} stays as the old name of {coins}.
+      vars['coins'] = String(event.diamondValue * event.quantity);
+      vars['diamonds'] = vars['coins'];
       break;
     case 'like':
       vars['likes'] = String(event.likeDelta);

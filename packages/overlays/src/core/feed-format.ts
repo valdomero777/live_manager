@@ -18,7 +18,7 @@ export function feedAction(item: FeedItem): string {
     case 'gift': {
       const quantity = item.quantity && item.quantity > 1 ? `${item.quantity} × ` : '';
       const name = item.giftName ?? 'un regalo';
-      const worth = item.diamonds ? ` (${formatNumber(item.diamonds)} 💎)` : '';
+      const worth = item.diamonds ? ` (${formatNumber(item.diamonds)} 🪙)` : '';
       return `envió ${quantity}${name}${worth}`;
     }
     case 'follow':

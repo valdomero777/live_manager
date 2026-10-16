@@ -4,7 +4,7 @@ import type { SnapshotMessage } from '../core/snapshot-router.js';
 import type { OverlayPanel } from './panel.js';
 
 const METRIC_UNITS: Readonly<Record<GoalProgress['metric'], string>> = {
-  diamonds: '💎',
+  diamonds: '🪙',
   gifts: '🎁',
   likes: '❤',
 };

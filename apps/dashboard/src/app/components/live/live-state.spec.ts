@@ -46,7 +46,7 @@ describe('liveStateOf', () => {
 });
 
 describe('event formatting', () => {
-  it('describes a gift with its total diamonds', () => {
+  it('describes a gift with its total coins', () => {
     const gift = {
       id: 'g1',
       sessionId: 1,
@@ -62,7 +62,7 @@ describe('event formatting', () => {
     const item = toFeedItem(gift);
     expect(item.user).toBe('@ana');
     expect(item.action).toBe('envió 5 × Rose');
-    expect(item.detail).toBe('5 diamantes');
+    expect(item.detail).toBe('5 monedas');
   });
 
   it('counts interactions per minute and ignores older events', () => {

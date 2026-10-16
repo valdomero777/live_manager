@@ -12,8 +12,20 @@ export const EVENT_LABELS: Readonly<Record<LiveEventType, string>> = {
   streamEnd: $localize`Fin del live`,
 };
 
+/** What makes each event start an automation, shown when hovering its option. */
+export const EVENT_DESCRIPTIONS: Readonly<Record<LiveEventType, string>> = {
+  comment: $localize`Se activa cada vez que un espectador escribe un comentario en el chat.`,
+  gift: $localize`Se activa cuando un espectador envía un regalo. Una racha de regalos iguales cuenta una sola vez, al terminar.`,
+  like: $localize`Se activa con los toques de «me gusta» de los espectadores, agrupados en ventanas cortas de tiempo.`,
+  follow: $localize`Se activa cuando alguien empieza a seguir tu cuenta durante el live.`,
+  join: $localize`Se activa cuando un espectador entra a tu live.`,
+  share: $localize`Se activa cuando un espectador comparte tu live.`,
+  viewerCount: $localize`Se activa cada vez que TikTok actualiza el número de espectadores conectados.`,
+  streamEnd: $localize`Se activa una sola vez cuando termina el live.`,
+};
+
 export const METRIC_LABELS: Readonly<Record<Metric, string>> = {
-  diamonds: $localize`Diamantes`,
+  diamonds: $localize`Monedas`,
   gift_count: $localize`Cantidad de regalos`,
   likes: $localize`Likes`,
 };
@@ -25,7 +37,7 @@ export const SCOPE_LABELS: Readonly<Record<Scope, string>> = {
 };
 
 export const GOAL_METRIC_LABELS = {
-  diamonds: $localize`Diamantes`,
+  diamonds: $localize`Monedas`,
   gifts: $localize`Regalos`,
   likes: $localize`Likes`,
 } as const;
