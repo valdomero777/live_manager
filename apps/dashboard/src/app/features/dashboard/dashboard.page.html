@@ -52,7 +52,7 @@
     i18n-emptyHint
     i18n-hint
     i18n-label
-    label="Diamantes"
+    label="Monedas"
     tone="gift"
     [icon]="icons.diamonds"
     [loading]="statsLoading()"
@@ -188,7 +188,7 @@
           <dd class="truncate text-sm font-medium">
             @if (stats()?.topGift; as g) { &#64;{{ g.uniqueId }} · {{ g.quantity }} × {{ g.giftName
             }}
-            <span i18n class="text-gift-text">· {{ formatMetric(g.diamonds) }} diamantes</span>
+            <span i18n class="text-gift-text">· {{ formatMetric(g.diamonds) }} monedas</span>
             } @else {
             <span i18n class="text-muted-foreground">Todavía sin regalos</span>
             }

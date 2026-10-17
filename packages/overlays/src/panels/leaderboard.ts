@@ -10,7 +10,7 @@ export const METRIC_LABELS: Readonly<Record<Metric, string>> = {
 };
 
 const UNIT_LABELS: Readonly<Record<Metric, string>> = {
-  diamonds: '💎',
+  diamonds: '🪙',
   gift_count: '🎁',
   likes: '❤',
 };

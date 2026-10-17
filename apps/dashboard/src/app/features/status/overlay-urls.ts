@@ -31,7 +31,7 @@ const OVERLAYS: readonly OverlayLink[] = [
   },
   {
     name: $localize`Ranking de regalos`,
-    help: $localize`Top de diamantes de la sesión.`,
+    help: $localize`Top de monedas de la sesión.`,
     path: '/overlay/leaderboard/?metric=diamonds&limit=5',
   },
   {
@@ -46,7 +46,7 @@ const OVERLAYS: readonly OverlayLink[] = [
   },
   {
     name: $localize`Estadísticas`,
-    help: $localize`Espectadores, likes y diamantes.`,
+    help: $localize`Espectadores, likes y monedas.`,
     path: '/overlay/stats/?fields=viewers,likes,diamonds',
   },
 ];

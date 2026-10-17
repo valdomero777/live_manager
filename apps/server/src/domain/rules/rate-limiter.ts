@@ -24,6 +24,17 @@ export class RuleRateLimiter {
 
   /** Checks and, when allowed, records the execution atomically. */
   tryAcquire(policy: RateLimitPolicy, viewerId: string | undefined): LimitDecision {
+    const decision = this.check(policy, viewerId);
+    if (decision === 'allowed') this.commit(policy, viewerId);
+    return decision;
+  }
+
+  /**
+   * Whether the rule may run now, without starting its cooldowns. The caller commits only once an
+   * action was really queued, so a comment that moderation or the voice skips does not silence
+   * the viewer's next one.
+   */
+  check(policy: RateLimitPolicy, viewerId: string | undefined): LimitDecision {
     const now = this.clock.now();
     const userKey = viewerId === undefined ? undefined : `${policy.ruleId}:${viewerId}`;
 
@@ -34,10 +45,14 @@ export class RuleRateLimiter {
       return 'user_cooldown';
     }
     if (policy.probability < 1 && this.random.next() >= policy.probability) return 'probability';
-
-    this.lastGlobal.set(policy.ruleId, now);
-    if (userKey) this.lastPerUser.set(userKey, now);
     return 'allowed';
+  }
+
+  /** Starts the global and per-viewer cooldowns of an execution that really happened. */
+  commit(policy: RateLimitPolicy, viewerId: string | undefined): void {
+    const now = this.clock.now();
+    this.lastGlobal.set(policy.ruleId, now);
+    if (viewerId !== undefined) this.lastPerUser.set(`${policy.ruleId}:${viewerId}`, now);
   }
 
   /** Drops state for a rule, e.g. after it was edited. */

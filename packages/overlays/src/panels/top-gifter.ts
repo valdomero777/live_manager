@@ -3,7 +3,7 @@ import { avatar, el, formatNumber } from '../core/dom.js';
 import type { SnapshotMessage } from '../core/snapshot-router.js';
 import type { OverlayPanel } from './panel.js';
 
-const UNITS: Readonly<Record<Metric, string>> = { diamonds: '💎', gift_count: '🎁', likes: '❤' };
+const UNITS: Readonly<Record<Metric, string>> = { diamonds: '🪙', gift_count: '🎁', likes: '❤' };
 const DEFAULT_TITLES: Readonly<Record<Metric, string>> = {
   diamonds: 'Mejor donador',
   gift_count: 'Más regalos',

@@ -79,8 +79,8 @@ export const CONDITION_TYPES: readonly TypeDef[] = [
   },
   {
     type: 'diamondsTotal',
-    label: $localize`Diamantes del regalo`,
-    help: $localize`Diamantes por unidad × cantidad de la racha.`,
+    label: $localize`Monedas del regalo`,
+    help: $localize`Monedas por unidad × cantidad de la racha.`,
     appliesTo: ['gift'],
     params: [
       {
@@ -90,7 +90,7 @@ export const CONDITION_TYPES: readonly TypeDef[] = [
         default: 'gte',
         options: NUMERIC_OPS,
       },
-      { key: 'value', label: $localize`Diamantes`, kind: 'number', default: 100 },
+      { key: 'value', label: $localize`Monedas`, kind: 'number', default: 100 },
     ],
   },
   {
@@ -332,7 +332,7 @@ export const ACTION_TYPES: readonly TypeDef[] = [
 ];
 
 export const TEMPLATE_VARIABLES: Readonly<Partial<Record<LiveEventType, readonly string[]>>> = {
-  gift: ['{nickname}', '{uniqueId}', '{giftName}', '{quantity}', '{diamonds}'],
+  gift: ['{nickname}', '{uniqueId}', '{giftName}', '{quantity}', '{coins}'],
   comment: ['{nickname}', '{uniqueId}', '{comment}', '{commandArgs}'],
   like: ['{nickname}', '{uniqueId}', '{likes}', '{totalLikes}'],
   follow: ['{nickname}', '{uniqueId}'],

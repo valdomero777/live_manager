@@ -171,7 +171,7 @@ export class GoalForm {
   protected readonly metricLabels = GOAL_METRIC_LABELS;
   protected readonly error = signal<string | undefined>(undefined);
   protected readonly form = new FormGroup({
-    name: new FormControl($localize`Meta de diamantes`, { nonNullable: true }),
+    name: new FormControl($localize`Meta de monedas`, { nonNullable: true }),
     metric: new FormControl<(typeof GOAL_METRICS)[number]>('diamonds', { nonNullable: true }),
     target: new FormControl(100, { nonNullable: true }),
     scope: new FormControl<'session' | 'total'>('session', { nonNullable: true }),

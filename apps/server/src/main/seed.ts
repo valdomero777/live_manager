@@ -62,7 +62,7 @@ async function seedGoal(db: Kysely<Database>, dingId: number): Promise<void> {
   if ((await goals.listAll()).length > 0) return;
   await goals.create(
     GoalDefinitionSchema.parse({
-      name: 'Meta de diamantes',
+      name: 'Meta de monedas',
       metric: 'diamonds',
       target: 100,
       repeatFactor: 2,

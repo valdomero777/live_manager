@@ -4,7 +4,7 @@ test('a gift moves the ranking', async ({ page }) => {
   await page.goto('/admin/simulador');
   const form = page.getByRole('form', { name: 'Regalo' });
   await form.getByLabel('Usuario').fill('rank_e2e');
-  await form.getByLabel('Diamantes c/u').fill('7');
+  await form.getByLabel('Monedas c/u').fill('7');
   await form.getByLabel('Cantidad').fill('1');
   await form.getByRole('button', { name: 'Enviar regalo' }).click();
 

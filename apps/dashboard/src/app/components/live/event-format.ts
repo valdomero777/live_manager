@@ -42,7 +42,7 @@ function detailOf(e: LiveEvent): string {
     case 'comment':
       return e.text;
     case 'gift':
-      return $localize`${(e.diamondValue * e.quantity).toLocaleString(numberLocale())} diamantes`;
+      return $localize`${(e.diamondValue * e.quantity).toLocaleString(numberLocale())} monedas`;
     case 'like':
       return $localize`Total del live: ${e.totalLikes.toLocaleString(numberLocale())}`;
     default:
