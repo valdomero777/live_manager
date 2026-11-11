@@ -57,9 +57,23 @@ Alternativas:
 2. **Overlay `/overlay/spotify`** (portada, título, artista, barra de progreso extrapolada con
    `fetchedAt`) que consulta `/overlay-data/spotify/now-playing` cada ~5 s, solo mientras está
    abierto; plantilla en la galería de overlays.
-3. **Acciones de servidor** `spotifyQueue` (pedir canción: `search` con `limit` ≤ 10 + `POST
-   /me/player/queue`) y `spotifySkip`, con límite por usuario y lista de bloqueo, para comandos de
-   chat (`!sr`) y reglas por regalo. Requieren un dispositivo de Spotify activo.
+3. **Acciones de servidor** `spotifyQueue` y `spotifySkip` — rama
+   `feat/add-spotify-song-request-actions`. Se usan en cualquier regla (comentario con «empieza por
+   `!sr`», un regalo concreto…) y se ejecutan como `updateGoal`/`webhook`: sin pantalla, sin esperar
+   a la red y nunca en «Probar».
+   - `spotifyQueue` (`query`, por defecto `{commandArgs}`; `allowExplicit`, por defecto `false`;
+     `maxDurationS`, por defecto 600): busca con `market=from_token` y 5 resultados (Spotify admite
+     10), elige el primero que no sea explícito (si no se permiten) ni más largo que el máximo y
+     llama a `POST /me/player/queue`. Si ninguno sirve no pone nada. `{commandArgs}`/`{comment}`
+     pasan por la moderación del TTS (lista de bloqueo incluida) antes de buscar; un `!sr` vacío
+     no hace nada.
+   - `spotifySkip`: `POST /me/player/next` y olvida la caché de «qué suena».
+   - Límites: el enfriamiento por usuario y global de la regla, y además un máximo de 20 llamadas
+     de control por minuto en total, para que ninguna regla mal configurada sature la cuenta.
+   - Errores: sin dispositivo activo (404), sin Premium o con una conexión anterior a estos
+     permisos (403), Spotify sin conectar o el tope por minuto se avisan en el panel
+     (`error.reported`, módulo `spotify`); en el directo no se muestra nada.
+   - Pendiente: anunciar en pantalla la canción añadida (hoy solo queda en el log).
 
 ## Consecuencias
 

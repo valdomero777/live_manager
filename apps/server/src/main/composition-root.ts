@@ -24,6 +24,7 @@ import type { Logger } from '../application/ports/logger.js';
 import {
   ServerActionRunner,
   type GoalAdjuster,
+  type SpotifyPlaybackControl,
 } from '../application/actions/server-action-runner.js';
 import type { WebhookClient } from '../application/ports/webhook-client.js';
 import { meterNotifier } from '../application/metrics/metered-notifier.js';
@@ -77,7 +78,7 @@ import { SqliteRuleRepository } from '../infrastructure/sqlite/sqlite-rule-repos
 import { SqliteTriggerRepository } from '../infrastructure/sqlite/sqlite-trigger-repository.js';
 import { SqliteSettingsRepository } from '../infrastructure/sqlite/sqlite-settings-repository.js';
 import { SpotifyWebClient } from '../infrastructure/spotify/spotify-web-client.js';
-import { SpotifyService } from '../application/spotify/spotify-service.js';
+import { SpotifyConnectionError, SpotifyService } from '../application/spotify/spotify-service.js';
 import type { SpotifyApi, SpotifyAuthClient } from '../application/ports/spotify-client.js';
 import { SqliteSessionRepository } from '../infrastructure/sqlite/sqlite-session-repository.js';
 import { createLogger, createPinoInstance } from '../infrastructure/system/pino-logger.js';
@@ -152,19 +153,30 @@ function buildPersistence(cfg: AppConfig, rt: Runtime) {
 }
 type Persistence = ReturnType<typeof buildPersistence>;
 
-/** updateGoal and webhook. Goals are built after the engine, so they are linked in later. */
-function buildServerActions(cfg: AppConfig, hooks: AppHooks, rt: Runtime) {
+/**
+ * updateGoal, webhook and Spotify. Goals and Spotify are built after the engine, so they are
+ * linked in later.
+ */
+function buildServerActions(cfg: AppConfig, hooks: AppHooks, rt: Runtime, admin: AdminNotifier) {
   const goalLink: { current: GoalAdjuster | undefined } = { current: undefined };
+  const spotifyLink: { current: SpotifyPlaybackControl | undefined } = { current: undefined };
+  const notConnected = () => Promise.reject(new SpotifyConnectionError('not_connected'));
   const serverActions = new ServerActionRunner({
     goals: {
       adjust: (id, amount, eventId) =>
         goalLink.current?.adjust(id, amount, eventId) ?? Promise.resolve(false),
     },
     webhook: hooks.webhookClient ?? new HttpWebhookClient(cfg.webhookPolicy),
+    spotify: {
+      canControlPlayback: () => spotifyLink.current?.canControlPlayback() ?? false,
+      queueSong: (query, policy) => spotifyLink.current?.queueSong(query, policy) ?? notConnected(),
+      skip: () => spotifyLink.current?.skip() ?? notConnected(),
+    },
+    notifier: admin,
     clock: rt.clock,
     logger: rt.logger.child({ module: 'server-actions' }),
   });
-  return { serverActions, goalLink };
+  return { serverActions, goalLink, spotifyLink };
 }
 
 function buildActionScheduler(rt: Runtime, screens: ScreenSocketHub, metrics: MetricsRegistry) {
@@ -213,7 +225,7 @@ function buildReactions(
   const moderation = new ModerationService(db.settings, rt.clock);
   const tts = buildTts(rt, db);
   const handlers = createDefaultActionRegistry();
-  const { serverActions, goalLink } = buildServerActions(cfg, hooks, rt);
+  const { serverActions, goalLink, spotifyLink } = buildServerActions(cfg, hooks, rt, admin);
   const engine = new RuleEngine({
     serverActions,
     rules: db.rules,
@@ -238,7 +250,7 @@ function buildReactions(
     random: rt.random,
     logger: rt.logger.child({ module: 'triggers' }),
   });
-  return { actions, engine, handlers, moderation, tts, triggers, goalLink };
+  return { actions, engine, handlers, moderation, tts, triggers, goalLink, spotifyLink };
 }
 type Reactions = ReturnType<typeof buildReactions>;
 
@@ -567,6 +579,7 @@ function buildSpotify(p: ServiceParts): SpotifyService {
 function buildServices(p: ServiceParts): HttpServices {
   const health = buildHealth(p);
   const spotify = buildSpotify(p);
+  p.reactions.spotifyLink.current = spotify;
   return {
     health,
     supervisor: p.supervisor,

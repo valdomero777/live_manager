@@ -111,6 +111,16 @@ export const ServerActionConfigSchema = z.discriminatedUnion('type', [
     /** JSON text with {placeholders}; each value is escaped so the result stays valid JSON. */
     body: z.string().max(WEBHOOK_BODY_MAX).default('{}'),
   }),
+  z.object({
+    type: z.literal('spotifyQueue'),
+    /** What to search on Spotify; usually the viewer's words after the command (!sr …). */
+    query: z.string().trim().min(1).max(200).default('{commandArgs}'),
+    /** Explicit songs are skipped by default: a LIVE is public. */
+    allowExplicit: z.boolean().default(false),
+    /** Longer songs are skipped so one request cannot take over the stream. */
+    maxDurationS: z.number().int().min(30).max(3600).default(600),
+  }),
+  z.object({ type: z.literal('spotifySkip') }),
 ]);
 export type ServerActionConfig = z.infer<typeof ServerActionConfigSchema>;
 

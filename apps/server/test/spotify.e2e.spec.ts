@@ -5,6 +5,9 @@ import { startTestApp, TEST_OVERLAY_KEY as KEY, type TestApp } from './support/t
 
 const CLIENT_ID = '0123456789abcdef0123456789abcdef';
 
+/** Calls the fake received on the player endpoints, newest last. */
+const playback: string[] = [];
+
 const fakeSpotify: SpotifyAuthClient & SpotifyApi = {
   pkce: () => ({ verifier: 'v'.repeat(43), challenge: 'c' }),
   state: (() => {
@@ -32,6 +35,26 @@ const fakeSpotify: SpotifyAuthClient & SpotifyApi = {
         url: null,
       },
     }),
+  searchTracks: (_token, query) => {
+    playback.push(`search:${query}`);
+    return Promise.resolve([
+      {
+        uri: 'spotify:track:abc',
+        title: 'Song',
+        artists: ['Artist'],
+        durationMs: 200_000,
+        explicit: false,
+      },
+    ]);
+  },
+  addToQueue: (_token, uri) => {
+    playback.push(`queue:${uri}`);
+    return Promise.resolve();
+  },
+  skipToNext: () => {
+    playback.push('next');
+    return Promise.resolve();
+  },
 };
 
 describe('Spotify connection', () => {
@@ -115,5 +138,35 @@ describe('Spotify connection', () => {
     });
     const status = (await t.api({ url: `${API_PREFIX}/spotify/status` })).json<SpotifyStatus>();
     expect(status.connected).toBe(false);
+  });
+
+  it('queues the song a viewer asks for with !sr, after moderation', async () => {
+    await start();
+    playback.length = 0;
+    const state = await authorize();
+    await t.app.http.inject({ url: `/spotify/callback?code=abc&state=${state}` });
+    const rule = await t.api({
+      method: 'POST',
+      url: `${API_PREFIX}/rules`,
+      payload: {
+        name: 'Pedir canción',
+        trigger: 'comment',
+        conditions: [{ type: 'keyword', match: 'startsWith', value: '!sr' }],
+        actions: [{ type: 'spotifyQueue' }],
+      },
+    });
+    expect(rule.statusCode).toBe(201);
+    const emit = (text: string) =>
+      t.api({
+        method: 'POST',
+        url: `${API_PREFIX}/simulator/emit`,
+        payload: { kind: 'comment', user: 'ana', text },
+      });
+    await emit('!sr bohemian rhapsody');
+    await emit('!sr');
+    for (let i = 0; i < 40 && !playback.includes('queue:spotify:track:abc'); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    expect(playback).toEqual(['search:bohemian rhapsody', 'queue:spotify:track:abc']);
   });
 });

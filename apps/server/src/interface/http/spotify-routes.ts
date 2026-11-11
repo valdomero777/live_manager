@@ -18,6 +18,7 @@ const CONNECTION_ERROR: Readonly<
 > = {
   not_configured: { status: 409, title: 'Falta el Client ID de Spotify en Ajustes' },
   not_connected: { status: 409, title: 'Spotify no está conectado; conéctalo en Ajustes' },
+  busy: { status: 429, title: 'Demasiadas peticiones a Spotify en el último minuto' },
   invalid_state: {
     status: 400,
     title: 'El inicio de sesión con Spotify caducó o no se inició aquí; vuelve a intentarlo',

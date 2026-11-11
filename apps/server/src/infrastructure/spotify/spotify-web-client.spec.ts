@@ -167,4 +167,54 @@ describe('SpotifyWebClient', () => {
     expect(error).toBeInstanceOf(SpotifyError);
     expect(error).toMatchObject({ reason: 'unavailable' });
   });
+
+  it('searches tracks in the account market, capped at 10, and drops malformed hits', async () => {
+    const { c, sent } = client(() =>
+      json({
+        tracks: {
+          items: [
+            {
+              uri: 'spotify:track:abc',
+              name: 'Song',
+              duration_ms: 1000,
+              explicit: true,
+              artists: [{ name: 'A' }],
+            },
+            { uri: 'spotify:episode:x', name: 'Podcast', duration_ms: 1 },
+          ],
+        },
+      }),
+    );
+    const hits = await c.searchTracks('at', 'my song', 50);
+    const url = new URL(sent[0]!.url);
+    expect(url.pathname).toBe('/v1/search');
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      q: 'my song',
+      type: 'track',
+      limit: '10',
+      market: 'from_token',
+    });
+    expect(hits).toEqual([
+      { uri: 'spotify:track:abc', title: 'Song', artists: ['A'], durationMs: 1000, explicit: true },
+    ]);
+  });
+
+  it('queues and skips with POST on the player endpoints', async () => {
+    const { c, sent } = client(() => new Response(null, { status: 204 }));
+    await c.addToQueue('at', 'spotify:track:abc');
+    await c.skipToNext('at');
+    expect(sent.map((s) => [s.init?.method, s.url])).toEqual([
+      ['POST', 'https://api.test/v1/me/player/queue?uri=spotify%3Atrack%3Aabc'],
+      ['POST', 'https://api.test/v1/me/player/next'],
+    ]);
+  });
+
+  it('maps no active device and missing Premium to their own errors', async () => {
+    await expect(
+      client(() => json({}, 404)).c.addToQueue('at', 'spotify:track:abc'),
+    ).rejects.toMatchObject({ reason: 'no_device' });
+    await expect(client(() => json({}, 403)).c.skipToNext('at')).rejects.toMatchObject({
+      reason: 'forbidden',
+    });
+  });
 });

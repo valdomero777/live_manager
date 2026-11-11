@@ -329,6 +329,38 @@ export const ACTION_TYPES: readonly TypeDef[] = [
       },
     ],
   },
+  {
+    type: 'spotifyQueue',
+    label: $localize`Pedir canción en Spotify`,
+    help: $localize`Busca la canción y la pone en la cola de tu Spotify. Usa el disparador Comentario con la condición «empieza por !sr»; {commandArgs} es lo que escribe el espectador después del comando y pasa por la moderación. Necesita Spotify conectado en Ajustes, Premium y un dispositivo sonando. Limita a los espectadores con el enfriamiento por usuario de la regla.`,
+    params: [
+      {
+        key: 'query',
+        label: $localize`Qué buscar`,
+        kind: 'text',
+        default: '{commandArgs}',
+      },
+      {
+        key: 'allowExplicit',
+        label: $localize`Permitir canciones explícitas`,
+        kind: 'boolean',
+        default: false,
+      },
+      {
+        key: 'maxDurationS',
+        label: $localize`Duración máxima (s)`,
+        kind: 'number',
+        default: 600,
+        help: $localize`Las canciones más largas se saltan.`,
+      },
+    ],
+  },
+  {
+    type: 'spotifySkip',
+    label: $localize`Saltar canción en Spotify`,
+    help: $localize`Pasa a la siguiente canción de tu Spotify, por ejemplo con un regalo grande. Necesita Spotify conectado, Premium y un dispositivo sonando.`,
+    params: [],
+  },
 ];
 
 export const TEMPLATE_VARIABLES: Readonly<Partial<Record<LiveEventType, readonly string[]>>> = {
@@ -375,6 +407,8 @@ export function describeAction(
     return $localize`Meta #${a.goalId}\: ${a.amount > 0 ? '+' : ''}${a.amount}`;
   if (a.type === 'webhook')
     return $localize`Webhook: ${URL.canParse(a.url) ? new URL(a.url).host : a.url}`;
+  if (a.type === 'spotifyQueue') return $localize`Spotify: pedir «${a.query}»`;
+  if (a.type === 'spotifySkip') return $localize`Spotify: saltar canción`;
   return $localize`Voz: ${a.text}`;
 }
 

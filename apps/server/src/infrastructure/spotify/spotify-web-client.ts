@@ -8,6 +8,7 @@ import {
   type SpotifyAuthClient,
   type SpotifyPlayback,
   type SpotifyProfile,
+  type SpotifyTrackHit,
   type SpotifyTokens,
 } from '../../application/ports/spotify-client.js';
 
@@ -44,6 +45,20 @@ const TrackSchema = z.object({
   album: z.object({ name: z.string(), images: z.array(ImageSchema).default([]) }),
   external_urls: z.object({ spotify: z.string().optional() }).default({}),
 });
+const SearchHitSchema = z.object({
+  uri: z.string().regex(/^spotify:track:[A-Za-z0-9]+$/),
+  name: z.string(),
+  duration_ms: z.number().int().nonnegative(),
+  explicit: z.boolean().default(false),
+  artists: z.array(z.object({ name: z.string() })).default([]),
+});
+const SearchResponseSchema = z.object({
+  tracks: z.object({ items: z.array(z.unknown()).default([]) }),
+});
+
+/** Spotify's own cap for search since February 2026. */
+export const SPOTIFY_SEARCH_MAX_LIMIT = 10;
+
 const CurrentlyPlayingSchema = z.object({
   is_playing: z.boolean(),
   progress_ms: z.number().int().nonnegative().nullish(),
@@ -175,6 +190,44 @@ export class SpotifyWebClient implements SpotifyAuthClient, SpotifyApi {
     };
   }
 
+  async searchTracks(
+    accessToken: string,
+    query: string,
+    limit: number,
+  ): Promise<SpotifyTrackHit[]> {
+    const params = new URLSearchParams({
+      q: query,
+      type: 'track',
+      limit: String(Math.min(Math.max(1, limit), SPOTIFY_SEARCH_MAX_LIMIT)),
+      market: 'from_token',
+    });
+    const response = await this.api(`/v1/search?${params.toString()}`, accessToken);
+    const parsed = SearchResponseSchema.safeParse(await this.json(response));
+    if (!parsed.success) throw new SpotifyError('Unexpected search from Spotify', 'unavailable');
+    return parsed.data.tracks.items.flatMap((item) => {
+      const hit = SearchHitSchema.safeParse(item);
+      if (!hit.success) return [];
+      return [
+        {
+          uri: hit.data.uri,
+          title: hit.data.name,
+          artists: hit.data.artists.map((a) => a.name),
+          durationMs: hit.data.duration_ms,
+          explicit: hit.data.explicit,
+        },
+      ];
+    });
+  }
+
+  async addToQueue(accessToken: string, uri: string): Promise<void> {
+    const params = new URLSearchParams({ uri });
+    await this.api(`/v1/me/player/queue?${params.toString()}`, accessToken, 'POST');
+  }
+
+  async skipToNext(accessToken: string): Promise<void> {
+    await this.api('/v1/me/player/next', accessToken, 'POST');
+  }
+
   private async token(form: Record<string, string>): Promise<SpotifyTokens> {
     const url = new URL('/api/token', this.accountsUrl);
     const response = await this.send(url, {
@@ -199,12 +252,20 @@ export class SpotifyWebClient implements SpotifyAuthClient, SpotifyApi {
     };
   }
 
-  private async api(path: string, accessToken: string): Promise<Response> {
+  private async api(path: string, accessToken: string, method = 'GET'): Promise<Response> {
     const url = new URL(path, this.apiUrl);
     const response = await this.send(url, {
+      method,
       headers: { authorization: `Bearer ${accessToken}`, accept: 'application/json' },
     });
     if (response.status === 401) throw new SpotifyError('Spotify token rejected', 'unauthorized');
+    if (response.status === 403) {
+      this.logger.warn({ path: url.pathname }, 'spotify refused the request (Premium or scope)');
+      throw new SpotifyError('Spotify refused the request', 'forbidden');
+    }
+    if (response.status === 404 && url.pathname.startsWith('/v1/me/player')) {
+      throw new SpotifyError('No active Spotify device', 'no_device');
+    }
     this.raiseForStatus(response, url);
     return response;
   }

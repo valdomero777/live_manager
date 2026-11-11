@@ -9,6 +9,7 @@ import {
   type SpotifyAuthClient,
   type SpotifyPlayback,
   type SpotifyTokens,
+  type SpotifyTrackHit,
 } from '../ports/spotify-client.js';
 import {
   NOW_PLAYING_CACHE_MS,
@@ -16,6 +17,8 @@ import {
   SPOTIFY_CONNECTION_KEY,
   SpotifyConnectionError,
   SpotifyService,
+  PLAYBACK_CALLS_PER_MINUTE,
+  pickTrack,
 } from './spotify-service.js';
 
 const CLIENT_ID = 'a'.repeat(32);
@@ -64,6 +67,7 @@ function setup(options: { clientId?: string } = {}) {
     refreshFailure: undefined as SpotifyError | undefined,
     playFailures: [] as SpotifyError[],
     rotatedRefresh: undefined as string | undefined,
+    hits: [] as SpotifyTrackHit[],
   };
   const auth: SpotifyAuthClient = {
     pkce: () => ({ verifier: 'verifier', challenge: 'challenge' }),
@@ -85,6 +89,18 @@ function setup(options: { clientId?: string } = {}) {
       calls.push(`play:${token}`);
       const failure = fake.playFailures.shift();
       return failure ? Promise.reject(failure) : Promise.resolve(SONG);
+    },
+    searchTracks: (token, query, limit) => {
+      calls.push(`search:${token}:${query}:${limit}`);
+      return Promise.resolve(fake.hits);
+    },
+    addToQueue: (token, uri) => {
+      calls.push(`queue:${token}:${uri}`);
+      return Promise.resolve();
+    },
+    skipToNext: (token) => {
+      calls.push(`next:${token}`);
+      return Promise.resolve();
     },
   };
   const access = { clientId: options.clientId ?? CLIENT_ID };
@@ -236,5 +252,61 @@ describe('SpotifyService', () => {
     expect(store.values.get(SPOTIFY_CONNECTION_KEY)).toBeNull();
     expect((await service.status()).connected).toBe(false);
     await expect(service.nowPlaying()).rejects.toThrow('not_connected');
+  });
+
+  const hit = (over: Partial<SpotifyTrackHit> = {}): SpotifyTrackHit => ({
+    uri: 'spotify:track:ok',
+    title: 'Ok',
+    artists: ['A'],
+    durationMs: 200_000,
+    explicit: false,
+    ...over,
+  });
+  const POLICY = { allowExplicit: false, maxDurationMs: 600_000 };
+
+  it('picks the best hit that is not explicit and not too long', () => {
+    const explicit = hit({ uri: 'spotify:track:x', explicit: true });
+    const long = hit({ uri: 'spotify:track:l', durationMs: 900_000 });
+    expect(pickTrack([explicit, long, hit()], POLICY)?.uri).toBe('spotify:track:ok');
+    expect(pickTrack([explicit], { ...POLICY, allowExplicit: true })?.uri).toBe('spotify:track:x');
+    expect(pickTrack([explicit, long], POLICY)).toBeUndefined();
+  });
+
+  it('queues the chosen song with a fresh token', async () => {
+    const { service, calls, fake, connect } = setup();
+    await connect();
+    fake.hits = [hit({ uri: 'spotify:track:x', explicit: true }), hit()];
+    expect((await service.queueSong('song', POLICY))?.uri).toBe('spotify:track:ok');
+    expect(calls).toContain('search:access-1:song:5');
+    expect(calls).toContain('queue:access-1:spotify:track:ok');
+  });
+
+  it('queues nothing when no hit is acceptable', async () => {
+    const { service, calls, fake, connect } = setup();
+    await connect();
+    fake.hits = [hit({ explicit: true })];
+    expect(await service.queueSong('song', POLICY)).toBeUndefined();
+    expect(calls.some((c) => c.startsWith('queue:'))).toBe(false);
+  });
+
+  it('skips and caps playback calls per minute', async () => {
+    const { service, calls, clock, connect } = setup();
+    await connect();
+    for (let i = 0; i < PLAYBACK_CALLS_PER_MINUTE; i++) await service.skip();
+    await expect(service.skip()).rejects.toThrow('busy');
+    expect(calls.filter((c) => c.startsWith('next:'))).toHaveLength(PLAYBACK_CALLS_PER_MINUTE);
+    clock.advance(60_000);
+    await service.skip();
+  });
+
+  it('allows playback control only with a Client ID and a connection not revoked', async () => {
+    expect(setup({ clientId: '' }).service.canControlPlayback()).toBe(false);
+    const { service, fake, clock, connect } = setup();
+    await connect();
+    expect(service.canControlPlayback()).toBe(true);
+    fake.refreshFailure = new SpotifyError('bad', 'invalid_grant');
+    clock.advance(3600_000);
+    await expect(service.nowPlaying()).rejects.toThrow('not_connected');
+    expect(service.canControlPlayback()).toBe(false);
   });
 });

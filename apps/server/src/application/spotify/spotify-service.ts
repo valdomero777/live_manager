@@ -13,6 +13,7 @@ import {
   type SpotifyApi,
   type SpotifyAuthClient,
   type SpotifyPlayback,
+  type SpotifyTrackHit,
   type SpotifyTokens,
 } from '../ports/spotify-client.js';
 
@@ -25,6 +26,30 @@ const MAX_PENDING_AUTH = 5;
 const TOKEN_EXPIRY_MARGIN_MS = 60_000;
 /** Several overlays or panel tabs asking at once share one call to Spotify. */
 export const NOW_PLAYING_CACHE_MS = 2_000;
+
+/** Search results looked at per song request (Spotify allows at most 10). */
+export const SONG_REQUEST_CANDIDATES = 5;
+/** Queue and skip calls allowed per minute, whatever the rules say: protects the stream. */
+export const PLAYBACK_CALLS_PER_MINUTE = 20;
+const MINUTE_MS = 60_000;
+
+export interface SongRequestPolicy {
+  readonly allowExplicit: boolean;
+  readonly maxDurationMs: number;
+}
+
+/** The best search hit the policy accepts (Spotify returns the best match first). */
+export function pickTrack(
+  hits: readonly SpotifyTrackHit[],
+  policy: SongRequestPolicy,
+): SpotifyTrackHit | undefined {
+  return hits.find(
+    (hit) =>
+      (policy.allowExplicit || !hit.explicit) &&
+      hit.durationMs > 0 &&
+      hit.durationMs <= policy.maxDurationMs,
+  );
+}
 
 /** Used when a 429 comes without Retry-After. */
 const DEFAULT_RETRY_AFTER_MS = 5_000;
@@ -50,7 +75,7 @@ const StoredConnectionSchema = z.object({
 type StoredConnection = z.infer<typeof StoredConnectionSchema>;
 
 export type SpotifyConnectionFailure =
-  'not_configured' | 'not_connected' | 'invalid_state' | 'denied' | 'invalid_callback';
+  'not_configured' | 'not_connected' | 'invalid_state' | 'denied' | 'invalid_callback' | 'busy';
 
 /** A request the user can fix (connect first, retry the login); mapped to 4xx by the routes. */
 export class SpotifyConnectionError extends Error {
@@ -89,6 +114,7 @@ export class SpotifyService {
   private problem: SpotifyProblem | null = null;
   private cached: SpotifyNowPlaying | undefined;
   private blockedUntil = 0;
+  private playbackCalls: number[] = [];
 
   constructor(private readonly deps: SpotifyDeps) {}
 
@@ -191,6 +217,44 @@ export class SpotifyService {
     this.cached = undefined;
     this.problem = null;
     this.deps.logger.info({}, 'spotify disconnected');
+  }
+
+  /**
+   * Cheap synchronous check for rule actions: a Client ID is set and the last refresh was not
+   * refused. Whether a connection is stored is only known when the call runs.
+   */
+  canControlPlayback(): boolean {
+    return this.deps.clientId() !== '' && this.problem !== 'revoked';
+  }
+
+  /**
+   * Searches the request and queues the first acceptable song. Undefined when nothing found is
+   * acceptable (explicit or too long). Needs an active Spotify device and Premium.
+   */
+  async queueSong(query: string, policy: SongRequestPolicy): Promise<SpotifyTrackHit | undefined> {
+    this.takePlaybackSlot();
+    return this.withToken(async (token) => {
+      const hits = await this.deps.api.searchTracks(token, query, SONG_REQUEST_CANDIDATES);
+      const track = pickTrack(hits, policy);
+      if (track) await this.deps.api.addToQueue(token, track.uri);
+      return track;
+    });
+  }
+
+  async skip(): Promise<void> {
+    this.takePlaybackSlot();
+    await this.withToken((token) => this.deps.api.skipToNext(token));
+    this.cached = undefined; // the overlay should show the next song at its next poll
+  }
+
+  /** Sliding one-minute window shared by queue and skip. */
+  private takePlaybackSlot(): void {
+    const now = this.deps.clock.now();
+    this.playbackCalls = this.playbackCalls.filter((t) => now - t < MINUTE_MS);
+    if (this.playbackCalls.length >= PLAYBACK_CALLS_PER_MINUTE) {
+      throw new SpotifyConnectionError('busy');
+    }
+    this.playbackCalls.push(now);
   }
 
   /** A token issued to another Client ID must not keep working after the ID changes. */

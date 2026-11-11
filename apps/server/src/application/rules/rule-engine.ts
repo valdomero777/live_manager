@@ -77,6 +77,7 @@ class CommentVariables {
 /** The template of an action that can carry viewer text: screen text or webhook body. */
 function viewerTemplate(action: ActionConfig): string {
   if (action.type === 'webhook') return action.body;
+  if (action.type === 'spotifyQueue') return action.query;
   return 'text' in action ? action.text : '';
 }
 
@@ -103,7 +104,12 @@ function speechIn(voice: SpeechVoice, lang: string): SpeechVoice {
     : { ...rest, lang };
 }
 
-const SERVER_ACTION_TYPES: readonly string[] = ['updateGoal', 'webhook'];
+const SERVER_ACTION_TYPES: readonly string[] = [
+  'updateGoal',
+  'webhook',
+  'spotifyQueue',
+  'spotifySkip',
+];
 
 function isServerAction(action: ActionConfig): action is ServerActionConfig {
   return SERVER_ACTION_TYPES.includes(action.type);
