@@ -84,12 +84,13 @@ async function setup() {
     newSession: async () => {
       sessionId = (await sessions.start('alan', NOW)).id;
     },
-    gift: (user: string, diamonds: number, quantity = 1) =>
+    gift: (user: string, diamonds: number, quantity = 1, giftId = 5655) =>
       ingestEvent(
         aGiftEvent({
           viewer: aViewer({ tiktokUserId: user, uniqueId: user }),
           diamondValue: diamonds,
           quantity,
+          giftId,
         }),
       ),
     like: (user: string, likeDelta: number) =>
@@ -237,6 +238,63 @@ describe('goals', () => {
     await t.gift('leo', 5);
     expect(t.planned).toHaveLength(1);
     expect(await t.goals.progress(goal.id)).toMatchObject({ ratio: 1, reached: true });
+  });
+
+  describe('gift challenges', () => {
+    const challenge = (extra: Partial<GoalDefinitionInput> = {}) =>
+      define({
+        ...{ name: 'Rosas', metric: 'gifts' as const, target: 5, giftId: 5655, giftName: 'Rose' },
+        ...extra,
+      });
+
+    it('count only the chosen gift, in units or in diamonds', async () => {
+      const t = await setup();
+      const units = await t.goals.create(challenge({ onReach: celebrate }));
+      const diamonds = await t.goals.create(challenge({ metric: 'diamonds', target: 100 }));
+      await t.gift('ana', 1, 3);
+      await t.gift('leo', 50, 2, 77); // another gift: does not count
+      expect(await t.goals.progress(units.id)).toMatchObject({
+        current: 3,
+        giftId: 5655,
+        giftName: 'Rose',
+        reached: false,
+      });
+      expect(await t.goals.progress(diamonds.id)).toMatchObject({ current: 3 });
+      expect(t.planned).toHaveLength(0);
+
+      await t.gift('leo', 1, 2);
+      expect(await t.goals.progress(units.id)).toMatchObject({ current: 5, reached: true });
+      expect(t.planned).toHaveLength(1);
+    });
+
+    it('keep their tally after a restart and per live session', async () => {
+      const t = await setup();
+      const goal = await t.goals.create(challenge({ target: 100 }));
+      await t.gift('ana', 1, 4);
+      await t.restartGoals();
+      expect(await t.goals.progress(goal.id)).toMatchObject({ current: 4 });
+      await t.newSession();
+      expect(await t.goals.progress(goal.id)).toMatchObject({ current: 0 });
+    });
+
+    it('forget the tally when the goal switches to another gift', async () => {
+      const t = await setup();
+      const goal = await t.goals.create(challenge({ target: 100 }));
+      await t.gift('ana', 1, 4);
+      await t.goals.update(goal.id, challenge({ target: 100, giftId: 77, giftName: 'Lion' }));
+      expect(await t.goals.progress(goal.id)).toMatchObject({ current: 0, giftName: 'Lion' });
+      await t.gift('ana', 1, 2, 77);
+      expect(await t.goals.progress(goal.id)).toMatchObject({ current: 2 });
+    });
+
+    it('leave ordinary goals without gift fields', async () => {
+      const t = await setup();
+      const goal = await t.goals.create(define({ name: 'Todo', metric: 'gifts', target: 5 }));
+      await t.gift('ana', 1, 2, 77);
+      const progress = await t.goals.progress(goal.id);
+      expect(progress).toMatchObject({ current: 2 });
+      expect(progress).not.toHaveProperty('giftId');
+    });
   });
 
   it('manual progress counts toward the goal and celebrates once (updateGoal)', async () => {

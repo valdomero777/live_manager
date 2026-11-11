@@ -14,6 +14,8 @@ function toRow(def: GoalDefinition) {
     on_reach: JSON.stringify(def.onReach),
     repeat_factor: def.repeatFactor,
     active: def.active ? 1 : 0,
+    gift_id: def.giftId,
+    gift_name: def.giftName,
   };
 }
 
@@ -28,6 +30,8 @@ function fromRow(row: GoalRow): Goal {
     onReach: row.on_reach === null ? [] : (JSON.parse(row.on_reach) as unknown),
     repeatFactor: row.repeat_factor,
     active: row.active === 1,
+    giftId: row.gift_id,
+    giftName: row.gift_name,
   });
 }
 
@@ -104,6 +108,32 @@ export class SqliteGoalRepository implements GoalRepository {
       .where('scope_key', '=', scopeKey)
       .executeTakeFirst();
     return row?.amount ?? 0;
+  }
+
+  async giftTotal(goalId: number, scopeKey: string): Promise<number> {
+    const row = await this.db
+      .selectFrom('goal_gift_total')
+      .select('value')
+      .where('goal_id', '=', goalId)
+      .where('scope_key', '=', scopeKey)
+      .executeTakeFirst();
+    return row?.value ?? 0;
+  }
+
+  async addGiftTotal(goalId: number, scopeKey: string, amount: number): Promise<void> {
+    await this.db
+      .insertInto('goal_gift_total')
+      .values({ goal_id: goalId, scope_key: scopeKey, value: amount })
+      .onConflict((oc) =>
+        oc.columns(['goal_id', 'scope_key']).doUpdateSet((eb) => ({
+          value: eb('goal_gift_total.value', '+', amount),
+        })),
+      )
+      .execute();
+  }
+
+  async clearGiftTotals(goalId: number): Promise<void> {
+    await this.db.deleteFrom('goal_gift_total').where('goal_id', '=', goalId).execute();
   }
 
   async addAdjustment(goalId: number, scopeKey: string, amount: number): Promise<number> {

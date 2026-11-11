@@ -54,6 +54,9 @@ Overlays de datos (misma `key`; todos aceptan `theme=card|clear|light`, `scale`,
 | `/overlay/topgifter/` | `metric=diamonds\|gift_count\|likes`, `scope=session\|week\|total`, `title`, `name=alias` (líder del ranking) |
 | `/overlay/ticker/` | `messages=uno\|dos`, `speed` (px/s), `pause` (s); no usa WebSocket |
 | `/overlay/feed/` | `types=gift,follow,share,join`, `limit` (1–15), `title`, `name=alias` (últimos eventos del directo, más reciente arriba) |
+| `/overlay/streak/` | `title`, `name=alias` (racha de regalos más larga de la sesión; una racha son 2 o más unidades seguidas del mismo regalo) |
+| `/overlay/giftguide/` | `layout=column\|row`, `speed` (px/s, 0 = quieto), `title` (guía regalo -> reacción, armada con las reglas activas de un regalo concreto) |
+| `/overlay/challenge/` | `goalId`, `reward` (mensaje al completarse), `showNumbers=0` (desafío: meta que solo cuenta un regalo; se crea con `giftId`/`giftName` en `POST /api/v1/goals`) |
 | `/overlay/social/` | `profiles=youtube:@canal\|kick:usuario`, `interval` (s); no usa WebSocket |
 
 Para ensayar:

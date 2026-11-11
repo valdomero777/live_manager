@@ -62,9 +62,23 @@ export const GoalDefinitionSchema = z.object({
   /** When set, a reached goal starts a new cycle with target x repeatFactor. */
   repeatFactor: z.number().min(1.01).max(100).nullable().default(null),
   active: z.boolean().default(true),
+  /**
+   * Gift challenge: when set, only that gift counts (by diamonds or by units; never likes).
+   * Counting starts when the goal is saved with this filter; past gifts are not recounted.
+   */
+  giftId: z.number().int().nullable().default(null),
+  /** Display name of the filtered gift, so the overlay needs no catalog. */
+  giftName: z.string().trim().min(1).max(60).nullable().default(null),
 });
 export type GoalDefinition = z.infer<typeof GoalDefinitionSchema>;
 export type GoalDefinitionInput = z.input<typeof GoalDefinitionSchema>;
+
+/** What the API accepts: a gift filter needs a metric that gifts can feed. */
+export const GoalRequestSchema = GoalDefinitionSchema.superRefine((g, ctx) => {
+  if (g.giftId !== null && g.metric === 'likes') {
+    ctx.addIssue({ code: 'custom', path: ['giftId'], message: 'A gift filter cannot count likes' });
+  }
+});
 
 export const GoalSchema = GoalDefinitionSchema.extend({ id: z.number().int().positive() });
 export type Goal = z.infer<typeof GoalSchema>;
@@ -78,6 +92,9 @@ export const GoalProgressSchema = z.object({
   ratio: z.number().min(0).max(1),
   cycle: z.number().int().positive(),
   reached: z.boolean(),
+  /** Set for a gift challenge: the only gift that counts. */
+  giftId: z.number().int().nullable().optional(),
+  giftName: z.string().nullable().optional(),
   seq: z.number().int().nonnegative(),
 });
 export type GoalProgress = z.infer<typeof GoalProgressSchema>;
@@ -146,6 +163,62 @@ export const FeedSnapshotSchema = z.object({
 });
 export type FeedSnapshot = z.infer<typeof FeedSnapshotSchema>;
 
+// ---------- Top streak ----------
+
+/** A gift streak is a consolidated gift of at least this many units sent in a row. */
+export const MIN_STREAK_COUNT = 2;
+
+export const StreakEntrySchema = z.object({
+  nickname: z.string(),
+  uniqueId: z.string(),
+  avatarUrl: z.string().optional(),
+  giftName: z.string(),
+  giftImageUrl: z.string().optional(),
+  /** Units of the gift sent in one uninterrupted streak. */
+  count: z.number().int().min(MIN_STREAK_COUNT),
+  achievedAt: z.number().int().nonnegative(),
+});
+export type StreakEntry = z.infer<typeof StreakEntrySchema>;
+
+export const StreakSnapshotSchema = z.object({
+  seq: z.number().int().nonnegative(),
+  /** The longest streak of the session; null while nobody has completed one. */
+  leader: StreakEntrySchema.nullable(),
+});
+export type StreakSnapshot = z.infer<typeof StreakSnapshotSchema>;
+
+// ---------- Gift -> action guide ----------
+
+export const GUIDE_ACTION_KINDS = ['sound', 'speech', 'alert'] as const;
+export const GuideActionKindSchema = z.enum(GUIDE_ACTION_KINDS);
+export type GuideActionKind = z.infer<typeof GuideActionKindSchema>;
+
+export const MAX_GUIDE_ENTRIES = 100;
+
+export const GuideActionSchema = z.object({
+  kind: GuideActionKindSchema,
+  /** What is said or shown; absent for a sound. Viewer placeholders are already removed. */
+  text: z.string().max(200).optional(),
+});
+export type GuideAction = z.infer<typeof GuideActionSchema>;
+
+export const GuideEntrySchema = z.object({
+  giftId: z.number().int().optional(),
+  giftName: z.string(),
+  imageUrl: z.string().optional(),
+  diamonds: z.number().int().nonnegative().optional(),
+  /** True when every rule behind this gift also has other conditions (quantity, role, ...). */
+  conditional: z.boolean(),
+  actions: z.array(GuideActionSchema).min(1),
+});
+export type GuideEntry = z.infer<typeof GuideEntrySchema>;
+
+export const GiftGuideSnapshotSchema = z.object({
+  seq: z.number().int().nonnegative(),
+  entries: z.array(GuideEntrySchema).max(MAX_GUIDE_ENTRIES),
+});
+export type GiftGuideSnapshot = z.infer<typeof GiftGuideSnapshotSchema>;
+
 // ---------- Subscriptions (overlay -> server, inside client.hello) ----------
 
 export const SubscriptionSchema = z.discriminatedUnion('kind', [
@@ -153,6 +226,8 @@ export const SubscriptionSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('goal'), goalId: z.number().int().positive() }),
   z.object({ kind: z.literal('stats') }),
   z.object({ kind: z.literal('feed') }),
+  z.object({ kind: z.literal('streak') }),
+  z.object({ kind: z.literal('giftguide') }),
 ]);
 export type Subscription = z.infer<typeof SubscriptionSchema>;
 
@@ -161,6 +236,8 @@ export function channelOf(s: Subscription): string {
   if (s.kind === 'leaderboard') return `leaderboard:${s.metric}:${s.scope}`;
   if (s.kind === 'goal') return `goal:${s.goalId}`;
   if (s.kind === 'feed') return 'feed';
+  if (s.kind === 'streak') return 'streak';
+  if (s.kind === 'giftguide') return 'giftguide';
   return 'stats';
 }
 
