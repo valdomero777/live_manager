@@ -37,6 +37,7 @@ export const DEFAULT_SETTINGS: SettingsValues = {
   simulate: false,
   signApiKey: '',
   freesoundApiKey: '',
+  spotifyClientId: '',
   overlayKey: '',
   logLevel: 'info',
 };

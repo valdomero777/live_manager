@@ -1,7 +1,7 @@
 import { dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
-import type { SoundSource } from '@tiklive/contracts';
+import { SPOTIFY_CALLBACK_PATH, type SoundSource } from '@tiklive/contracts';
 import type { FastifyInstance } from 'fastify';
 import { ActionScheduler } from '../application/actions/action-scheduler.js';
 import { AuthService } from '../application/auth/auth-service.js';
@@ -76,6 +76,9 @@ import { SqliteLeaderboardRepository } from '../infrastructure/sqlite/sqlite-lea
 import { SqliteRuleRepository } from '../infrastructure/sqlite/sqlite-rule-repository.js';
 import { SqliteTriggerRepository } from '../infrastructure/sqlite/sqlite-trigger-repository.js';
 import { SqliteSettingsRepository } from '../infrastructure/sqlite/sqlite-settings-repository.js';
+import { SpotifyWebClient } from '../infrastructure/spotify/spotify-web-client.js';
+import { SpotifyService } from '../application/spotify/spotify-service.js';
+import type { SpotifyApi, SpotifyAuthClient } from '../application/ports/spotify-client.js';
 import { SqliteSessionRepository } from '../infrastructure/sqlite/sqlite-session-repository.js';
 import { createLogger, createPinoInstance } from '../infrastructure/system/pino-logger.js';
 import {
@@ -403,6 +406,8 @@ export interface AppHooks {
   readonly soundProviders?: Partial<Record<SoundSource, SoundProvider>>;
   /** Tests replace outbound HTTP for the webhook action. */
   readonly webhookClient?: WebhookClient;
+  /** Tests replace accounts.spotify.com and api.spotify.com with a fake. */
+  readonly spotifyClient?: SpotifyAuthClient & SpotifyApi;
 }
 
 export function createAuthService(cfg: AppConfig, logger: Logger): AuthService {
@@ -434,12 +439,14 @@ interface ServiceParts {
   overlayAccess: { key: string };
   /** Read on every Freesound search, so a new key from Settings applies at once. */
   freesoundAccess: { key: string };
+  /** Read on every Spotify call, so a new Client ID from Settings applies at once. */
+  spotifyAccess: { clientId: string };
   requestRestart: () => void;
   hooks: AppHooks;
 }
 
 /** Settings that apply without a restart (spec: no reconnect storms during a live). */
-function buildSettings(p: ServiceParts): SettingsService {
+function buildSettings(p: ServiceParts, spotify: SpotifyService): SettingsService {
   return new SettingsService({
     store: p.cfg.configStore,
     defaults: DEFAULT_SETTINGS,
@@ -458,6 +465,10 @@ function buildSettings(p: ServiceParts): SettingsService {
       },
       freesoundApiKey: (key) => {
         p.freesoundAccess.key = key;
+      },
+      spotifyClientId: (clientId) => {
+        p.spotifyAccess.clientId = clientId;
+        spotify.forgetSession();
       },
       tiktokUsername: (user, all) => {
         if (all.simulate) return;
@@ -538,8 +549,24 @@ function buildHealth(p: ServiceParts): HealthService {
   });
 }
 
+/** Spotify login (PKCE) and now playing; the redirect must hit this machine's loopback. */
+function buildSpotify(p: ServiceParts): SpotifyService {
+  const client =
+    p.hooks.spotifyClient ?? new SpotifyWebClient(p.rt.logger.child({ module: 'spotify' }));
+  return new SpotifyService({
+    clientId: () => p.spotifyAccess.clientId,
+    redirectUri: () => `http://127.0.0.1:${p.cfg.port}${SPOTIFY_CALLBACK_PATH}`,
+    auth: client,
+    api: client,
+    store: p.db.settings,
+    clock: p.rt.clock,
+    logger: p.rt.logger.child({ module: 'spotify' }),
+  });
+}
+
 function buildServices(p: ServiceParts): HttpServices {
   const health = buildHealth(p);
+  const spotify = buildSpotify(p);
   return {
     health,
     supervisor: p.supervisor,
@@ -560,7 +587,8 @@ function buildServices(p: ServiceParts): HttpServices {
     admin: p.admin,
     projections: p.projections,
     auth: p.auth,
-    settings: buildSettings(p),
+    settings: buildSettings(p, spotify),
+    spotify,
     moderation: p.reactions.moderation,
     tts: p.reactions.tts,
     gifts: p.projections.giftCatalog,
@@ -659,6 +687,7 @@ export async function buildApp(cfg: AppConfig, hooks: AppHooks = {}): Promise<Ap
   const auth = hooks.auth ?? createAuthService(cfg, rt.logger);
   const overlayAccess = { key: cfg.overlayKey };
   const freesoundAccess = { key: cfg.settings.freesoundApiKey };
+  const spotifyAccess = { clientId: cfg.settings.spotifyClientId };
   const requestRestart =
     hooks.requestRestart ?? (() => rt.logger.warn({}, 'restart is not available in this mode'));
   const services = buildServices({
@@ -668,6 +697,7 @@ export async function buildApp(cfg: AppConfig, hooks: AppHooks = {}): Promise<Ap
     auth,
     overlayAccess,
     freesoundAccess,
+    spotifyAccess,
     requestRestart,
   });
   const http = await buildHttpServer(services, httpOptions(cfg, overlayAccess), rt.pino);

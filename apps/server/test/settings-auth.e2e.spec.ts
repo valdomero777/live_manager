@@ -147,6 +147,7 @@ describe('settings from the UI', () => {
         'port',
         'signApiKey',
         'simulate',
+        'spotifyClientId',
         'tiktokUsername',
       ].sort(),
     );
