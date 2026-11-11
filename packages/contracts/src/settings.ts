@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SpotifyClientIdSchema } from './spotify.js';
 
 export const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const;
 
@@ -26,6 +27,7 @@ export const SettingsValuesSchema = z.object({
   simulate: z.boolean(),
   signApiKey: z.string().trim().max(200),
   freesoundApiKey: z.string().trim().max(200),
+  spotifyClientId: SpotifyClientIdSchema,
   overlayKey: z
     .string()
     .trim()
@@ -57,6 +59,7 @@ export const SETTING_FIELDS: Readonly<Record<SettingKey, SettingFieldMeta>> = {
   simulate: { env: 'SIMULATE', apply: 'restart', secret: false },
   signApiKey: { env: 'TIKTOK_SIGN_API_KEY', apply: 'restart', secret: true },
   freesoundApiKey: { env: 'FREESOUND_API_KEY', apply: 'live', secret: true },
+  spotifyClientId: { env: 'SPOTIFY_CLIENT_ID', apply: 'live', secret: false },
   overlayKey: { env: 'OVERLAY_KEY', apply: 'live', secret: false },
   logLevel: { env: 'LOG_LEVEL', apply: 'live', secret: false },
 };

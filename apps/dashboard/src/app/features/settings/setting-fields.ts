@@ -72,6 +72,19 @@ export const SETTING_SECTIONS: readonly FieldSection[] = [
     ],
   },
   {
+    id: 'spotify',
+    title: $localize`Spotify`,
+    description: $localize`Conecta tu cuenta de Spotify para mostrar la canción que suena.`,
+    fields: [
+      {
+        key: 'spotifyClientId',
+        label: $localize`Client ID de tu app de Spotify`,
+        help: $localize`32 caracteres, en developer.spotify.com → tu app → Settings. No hace falta el Client Secret. Se aplica al guardar.`,
+        kind: 'text',
+      },
+    ],
+  },
+  {
     id: 'overlays',
     title: $localize`Overlays`,
     description: $localize`Clave de solo lectura que va en las URLs de los overlays (?key=).`,

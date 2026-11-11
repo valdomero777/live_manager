@@ -27,6 +27,7 @@ import { ApiError } from '../../core/api-client';
 import { ModerationForm } from './moderation-form';
 import { TtsForm } from './tts-form';
 import { PasswordForm } from './password-form';
+import { SpotifyConnection } from './spotify-connection';
 import {
   APPLY_LABELS,
   SETTING_SECTIONS,
@@ -50,6 +51,7 @@ const LABELS = new Map(SETTING_SECTIONS.flatMap((s) => s.fields).map((f) => [f.k
     ModerationForm,
     TtsForm,
     PasswordForm,
+    SpotifyConnection,
     PageHeader,
     UiBadge,
     UiButton,

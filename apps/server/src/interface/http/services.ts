@@ -24,6 +24,7 @@ import type { TtsService } from '../../application/tts/tts-service.js';
 import type { SoundSearchService } from '../../application/sounds/sound-search-service.js';
 import type { TriggerService } from '../../application/triggers/trigger-service.js';
 import type { SimulatorService } from '../../application/simulator/simulator-service.js';
+import type { SpotifyService } from '../../application/spotify/spotify-service.js';
 
 /** Everything the interface layer may talk to; assembled by the composition root. */
 export interface HttpServices {
@@ -46,6 +47,7 @@ export interface HttpServices {
   readonly gifts: GiftCatalogService;
   readonly sounds: SoundSearchService;
   readonly triggers: TriggerService;
+  readonly spotify: SpotifyService;
   readonly maintenance: MaintenanceService;
   readonly metrics: Pick<MetricsRegistry, 'render'>;
 }

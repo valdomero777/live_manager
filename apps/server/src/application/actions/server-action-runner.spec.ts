@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FakeClock } from '../../domain/shared/time.js';
 import { BREAKER_FAILURE_LIMIT } from '../../domain/webhook/circuit-breaker.js';
 import { silentLogger } from '../ports/logger.js';
+import { SpotifyError } from '../ports/spotify-client.js';
 import type { WebhookRequest } from '../ports/webhook-client.js';
 import { ServerActionRunner } from './server-action-runner.js';
 
@@ -10,9 +11,19 @@ const hook = (body = '{"u":"{nickname}"}') =>
 const ctx = { vars: { nickname: 'Ana "la" mejor' }, eventId: 'e1', ruleId: 7 };
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 
-function setup(options: { allowed?: boolean; fail?: boolean } = {}) {
+interface SetupOptions {
+  allowed?: boolean;
+  fail?: boolean;
+  spotifyConnected?: boolean;
+  spotifyFailure?: Error;
+  noMatch?: boolean;
+}
+
+function setup(options: SetupOptions = {}) {
   const sent: WebhookRequest[] = [];
   const adjusted: [number, number][] = [];
+  const spotifyCalls: string[] = [];
+  const notices: string[] = [];
   const runner = new ServerActionRunner({
     goals: {
       adjust: async (id, amount) => {
@@ -27,10 +38,25 @@ function setup(options: { allowed?: boolean; fail?: boolean } = {}) {
         if (options.fail) throw new Error('boom');
       },
     },
+    spotify: {
+      canControlPlayback: () => options.spotifyConnected ?? true,
+      queueSong: async (query, policy) => {
+        spotifyCalls.push(`queue:${query}:${policy.allowExplicit}:${policy.maxDurationMs}`);
+        if (options.spotifyFailure) throw options.spotifyFailure;
+        return options.noMatch ? undefined : { title: 'Song', artists: ['A'] };
+      },
+      skip: async () => {
+        spotifyCalls.push('skip');
+        if (options.spotifyFailure) throw options.spotifyFailure;
+      },
+    },
+    notifier: {
+      publish: (_type, payload) => notices.push((payload as { message: string }).message),
+    },
     clock: new FakeClock(0),
     logger: silentLogger,
   });
-  return { runner, sent, adjusted };
+  return { runner, sent, adjusted, spotifyCalls, notices };
 }
 
 describe('ServerActionRunner', () => {
@@ -66,5 +92,54 @@ describe('ServerActionRunner', () => {
     }
     expect(runner.run(hook(), ctx)).toBe(false);
     expect(sent).toHaveLength(BREAKER_FAILURE_LIMIT);
+  });
+
+  const request = {
+    type: 'spotifyQueue',
+    query: '{commandArgs}',
+    allowExplicit: false,
+    maxDurationS: 600,
+  } as const;
+  const chat = { vars: { commandArgs: 'bohemian rhapsody' }, eventId: 'e2', ruleId: 9 };
+
+  it('given a song request, then searches the viewer text with the rule policy', async () => {
+    const { runner, spotifyCalls, notices } = setup();
+    expect(runner.run(request, chat)).toBe(true);
+    await flush();
+    expect(spotifyCalls).toEqual(['queue:bohemian rhapsody:false:600000']);
+    expect(notices).toEqual([]);
+  });
+
+  it('given no usable search text or no Spotify, then refuses without calling Spotify', () => {
+    const { runner, spotifyCalls } = setup();
+    expect(runner.run(request, { ...chat, vars: { commandArgs: '   ' } })).toBe(false);
+    expect(runner.run(request, { ...chat, vars: {} })).toBe(false);
+    const off = setup({ spotifyConnected: false });
+    expect(off.runner.run(request, chat)).toBe(false);
+    expect(off.runner.run({ type: 'spotifySkip' }, chat)).toBe(false);
+    expect([...spotifyCalls, ...off.spotifyCalls]).toEqual([]);
+  });
+
+  it('given a skip, then skips to the next song', async () => {
+    const { runner, spotifyCalls } = setup();
+    expect(runner.run({ type: 'spotifySkip' }, chat)).toBe(true);
+    await flush();
+    expect(spotifyCalls).toEqual(['skip']);
+  });
+
+  it('given no active device, then tells the streamer in the panel', async () => {
+    const { runner, notices } = setup({
+      spotifyFailure: new SpotifyError('no device', 'no_device'),
+    });
+    runner.run(request, chat);
+    await flush();
+    expect(notices).toEqual([expect.stringContaining('dispositivo activo')]);
+  });
+
+  it('given no acceptable song, then does not report an error', async () => {
+    const { runner, notices } = setup({ noMatch: true });
+    expect(runner.run(request, chat)).toBe(true);
+    await flush();
+    expect(notices).toEqual([]);
   });
 });
