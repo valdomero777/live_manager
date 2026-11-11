@@ -368,7 +368,107 @@
   white-space: nowrap;
 }
 
+/* ---- spotify now playing ---- */
+.spotify {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.8em;
+  transition: opacity 400ms ease;
+}
+.spotify--hidden {
+  opacity: 0;
+}
+.spotify--new {
+  animation: row-in 400ms ease-out both;
+}
+.spotify__art {
+  display: block;
+  width: 4.2em;
+  height: 4.2em;
+  border-radius: 0.5em;
+  object-fit: cover;
+}
+.spotify__art--empty {
+  display: grid;
+  place-items: center;
+  background: var(--panel-accent-2);
+  color: #16161a;
+  font-size: 1.6em;
+  width: 2.6em;
+  height: 2.6em;
+}
+.spotify__info {
+  display: grid;
+  min-width: 0;
+  gap: 0.15em;
+}
+.spotify__label {
+  color: var(--panel-accent-2);
+  font-size: 0.7em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.spotify__title,
+.spotify__artists {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.spotify__title {
+  font-weight: 800;
+}
+.spotify__artists {
+  color: var(--panel-muted);
+  font-size: 0.85em;
+}
+.spotify__bar {
+  height: 0.3em;
+  margin-top: 0.35em;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(127 127 127 / 35%);
+}
+.spotify__fill {
+  height: 100%;
+  background: var(--panel-accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 1s linear;
+}
+.spotify__time {
+  color: var(--panel-muted);
+  font-size: 0.7em;
+  font-variant-numeric: tabular-nums;
+}
+.spotify--paused .spotify__fill {
+  opacity: 0.5;
+}
+/* compact: one line, small art, no bar */
+.spotify--compact {
+  width: auto;
+  max-width: calc(48vw * var(--scale));
+  grid-template-columns: auto minmax(0, 1fr);
+}
+.spotify--compact .spotify__art {
+  width: 2em;
+  height: 2em;
+  font-size: 1em;
+}
+.spotify--compact .spotify__info {
+  grid-auto-flow: column;
+  justify-content: start;
+  align-items: baseline;
+  gap: 0.5em;
+}
+.spotify--compact .spotify__bar,
+.spotify--compact .spotify__time {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .spotify--new,
   .topgifter__body--new,
   .feed__row--new,
   .social--in {
@@ -376,6 +476,7 @@
   }
   .leaderboard__row,
   .goal__fill,
+  .spotify__fill,
   .rotator__panel {
     transition: none;
   }

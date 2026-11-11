@@ -1,6 +1,6 @@
 # ADR 0014 — Conexión con Spotify
 
-Fecha: 2026-11-10 · Estado: aceptada (fase 1 de 3 implementada)
+Fecha: 2026-11-10 · Estado: aceptada (fases 1 y 2 de 3 implementadas)
 
 ## Contexto
 
@@ -54,9 +54,13 @@ Alternativas:
 ## Plan por fases
 
 1. **Conexión y «qué suena»** — esta ADR, rama `feat/add-spotify-connection`.
-2. **Overlay `/overlay/spotify`** (portada, título, artista, barra de progreso extrapolada con
-   `fetchedAt`) que consulta `/overlay-data/spotify/now-playing` cada ~5 s, solo mientras está
-   abierto; plantilla en la galería de overlays.
+2. **Overlay `/overlay/spotify`** — rama `feat/add-spotify-now-playing-overlay`. Consulta
+   `/overlay-data/spotify/now-playing` cada 5 s (3–30, `interval`), solo mientras está abierto, y
+   entre consultas extrapola la barra con el reloj del navegador (no con `fetchedAt`, que es la hora
+   del servidor). Tarjeta (`layout=card`) o una línea (`compact`); portada, barra y etiqueta
+   opcionales. Sin nada sonando, o en pausa con `paused=hide` (por defecto), la tarjeta se oculta;
+   con Spotify sin conectar (409) también, y solo `?debug=1` explica por qué. Un 429 respeta
+   `Retry-After` y otros errores duplican la espera (máx. 60 s). Dos plantillas en la galería.
 3. **Acciones de servidor** `spotifyQueue` (pedir canción: `search` con `limit` ≤ 10 + `POST
    /me/player/queue`) y `spotifySkip`, con límite por usuario y lista de bloqueo, para comandos de
    chat (`!sr`) y reglas por regalo. Requieren un dispositivo de Spotify activo.
