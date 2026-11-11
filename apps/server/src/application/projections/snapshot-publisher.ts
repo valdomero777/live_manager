@@ -10,6 +10,7 @@ import {
 } from '@tiklive/contracts';
 import { metricDeltas } from '../../domain/projections/scopes.js';
 import type { FeedProjection } from '../../domain/projections/feed-projection.js';
+import type { StreakProjection } from '../../domain/projections/streak-projection.js';
 import type { StatsProjection } from '../../domain/projections/stats-projection.js';
 import type { Clock } from '../../domain/shared/time.js';
 import type { LiveEventConsumer } from '../ingest/ingest-live-event.js';
@@ -17,6 +18,7 @@ import type { ChannelGateway } from '../ports/channel-gateway.js';
 import type { Logger } from '../ports/logger.js';
 import type { Cancel, Scheduler } from '../ports/scheduler.js';
 import type { SocketConnection } from '../ports/socket-connection.js';
+import type { GiftGuideSource } from './gift-guide-service.js';
 import type { GoalService } from './goal-service.js';
 import type { LeaderboardService } from './leaderboard-service.js';
 
@@ -29,6 +31,8 @@ interface PublisherDeps {
   readonly goals: GoalService;
   readonly stats: StatsProjection;
   readonly feed: FeedProjection;
+  readonly streak: StreakProjection;
+  readonly guide: GiftGuideSource;
   readonly scheduler: Scheduler;
   readonly clock: Clock;
   readonly logger: Logger;
@@ -51,6 +55,7 @@ export class SnapshotPublisher implements LiveEventConsumer {
   async handle(event: LiveEvent): Promise<void> {
     if (this.deps.stats.apply(event)) this.markDirty('stats');
     if (this.deps.feed.apply(event)) this.markDirty('feed');
+    if (this.deps.streak.apply(event)) this.markDirty('streak');
     const metrics = metricDeltas(event).map((d) => d.metric);
     if (metrics.length === 0) return;
     this.deps.leaderboards.invalidate(metrics);
@@ -66,6 +71,8 @@ export class SnapshotPublisher implements LiveEventConsumer {
     this.deps.goals.list().forEach((g) => this.markDirty(`goal:${g.id}`));
     this.markDirty('stats');
     this.markDirty('feed');
+    this.markDirty('streak');
+    this.markDirty('giftguide');
   }
 
   markDirty(channel: string): void {
@@ -116,6 +123,14 @@ export class SnapshotPublisher implements LiveEventConsumer {
     if (kind === 'feed') {
       const payload = { items: [...this.deps.feed.snapshot()], seq: this.nextSeq(channel) };
       return makeEnvelope('feed.snapshot', payload, now);
+    }
+    if (kind === 'giftguide') {
+      const entries = await this.deps.guide.entries();
+      return makeEnvelope('giftguide.snapshot', { entries, seq: this.nextSeq(channel) }, now);
+    }
+    if (kind === 'streak') {
+      const payload = { leader: this.deps.streak.leader(), seq: this.nextSeq(channel) };
+      return makeEnvelope('streak.snapshot', payload, now);
     }
     if (kind === 'goal') {
       const progress = await this.deps.goals.progress(Number(a));
