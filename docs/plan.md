@@ -95,8 +95,19 @@ en el navegador):
   predefinidas en la página Overlays (catálogo en el panel, editable y guardable como plantilla propia).
   Overlay `/overlay/feed` (últimos eventos): canal `feed` del servidor (`FeedProjection`, últimos 30
   regalos consolidados, seguidores, compartidos y entradas de la sesión, sin duplicados por id).
-  Pendientes de la especificación de overlays que necesitan proyecciones nuevas en el servidor: racha
-  más larga, desafíos de regalos con filtro por regalo y guía regalo→acción;
+  Overlay `/overlay/streak` (racha más larga): canal `streak` (`StreakProjection`). El pipeline solo
+  entrega una racha al cerrarse, así que «racha» = regalo consolidado de 2 o más unidades y la «activa»
+  es la mejor de la sesión; sin rachas el overlay muestra el estado vacío (no se infiere nada).
+  Overlay `/overlay/giftguide` (guía regalo→acción): canal `giftguide` (`GiftGuideService`), armado
+  con las reglas activas con condición `giftId`/`giftName` igual a un regalo; las reglas para «cualquier
+  regalo», las condiciones «contiene/distinto» y las acciones solo de servidor (metas, webhooks) no
+  aparecen; el catálogo de regalos solo aporta imagen y precio. Se actualiza al recargar las reglas.
+  Overlay `/overlay/challenge` (desafíos de regalos): las metas aceptan `giftId`/`giftName` (migración
+  0007, tabla `goal_gift_total`); una meta con filtro solo suma regalos finales de ese regalo (por unidades
+  o diamantes, nunca likes), cuenta desde que se guarda con el filtro, conserva su total entre reinicios
+  y lo olvida al cambiar de regalo; reutiliza el canal `goal:<id>` y la celebración `onReach` (la
+  recompensa del overlay es solo un mensaje).
+  Pendientes de la especificación de overlays que necesitan proyecciones nuevas en el servidor: ninguno;
   y los que necesitan integración o motor propio: Spotify, subasta y ruleta.
 - API: `GET /leaderboards/:metric`, `POST /leaderboards/reset`, `GET|PUT /settings/leaderboard`,
   CRUD `/goals`, `GET /stats`, `GET|PUT /rotators/:id` y `GET /overlay-data/rotators/:id?key=`.
