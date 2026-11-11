@@ -18,6 +18,7 @@ import { problemErrorHandler } from './problem.js';
 import { registerApiRoutes } from './routes.js';
 import type { HttpOptions, HttpServices } from './services.js';
 import { registerSettingsRoutes } from './settings-routes.js';
+import { registerSpotifyApiRoutes, registerSpotifyPublicRoutes } from './spotify-routes.js';
 import { registerTtsRoutes } from './tts-routes.js';
 import { registerTriggerRoutes } from './trigger-routes.js';
 
@@ -102,6 +103,7 @@ export async function buildHttpServer(
       registerSettingsRoutes(api, services);
       registerTtsRoutes(api, services);
       registerTriggerRoutes(api, services);
+      registerSpotifyApiRoutes(api, services.spotify);
       await registerAssetRoutes(api, services);
     },
     { prefix: API_PREFIX },
@@ -111,6 +113,7 @@ export async function buildHttpServer(
     preloadUrls: () => services.assets.audioUrls(),
   });
   registerOverlayRoutes(app, services.projections, options.overlayKey, services.tts);
+  registerSpotifyPublicRoutes(app, services.spotify, options.overlayKey);
   await registerStaticFiles(app, options, logger);
   return app;
 }

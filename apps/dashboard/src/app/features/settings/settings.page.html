@@ -154,7 +154,9 @@
             </button>
             }
           </div>
-          } } @if (section.id === 'overlays') {
+          } } @if (section.id === 'spotify') {
+          <app-spotify-connection [clientId]="field('spotifyClientId')?.value" />
+          } @if (section.id === 'overlays') {
           <div class="flex flex-wrap items-center gap-3 rounded-lg bg-muted p-3">
             <button
               i18n

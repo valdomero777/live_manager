@@ -11,3 +11,4 @@ export * from './gifts.js';
 export * from './sounds.js';
 export * from './tts.js';
 export * from './overlay-templates.js';
+export * from './spotify.js';

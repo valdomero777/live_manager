@@ -57,6 +57,7 @@ Overlays de datos (misma `key`; todos aceptan `theme=card|clear|light`, `scale`,
 | `/overlay/streak/` | `title`, `name=alias` (racha de regalos más larga de la sesión; una racha son 2 o más unidades seguidas del mismo regalo) |
 | `/overlay/giftguide/` | `layout=column\|row`, `speed` (px/s, 0 = quieto), `title` (guía regalo -> reacción, armada con las reglas activas de un regalo concreto) |
 | `/overlay/challenge/` | `goalId`, `reward` (mensaje al completarse), `showNumbers=0` (desafío: meta que solo cuenta un regalo; se crea con `giftId`/`giftName` en `POST /api/v1/goals`) |
+| `/overlay/spotify/` | `layout=card\|compact`, `title`, `art=0`, `progress=0`, `paused=hide\|show`, `interval` (3–30 s) (canción que suena en Spotify; requiere conectar Spotify en Ajustes) |
 | `/overlay/social/` | `profiles=youtube:@canal\|kick:usuario`, `interval` (s); no usa WebSocket |
 
 Para ensayar:

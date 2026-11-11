@@ -24,6 +24,7 @@ export default defineConfig({
         streak: resolve(import.meta.dirname, 'overlay/streak/index.html'),
         giftguide: resolve(import.meta.dirname, 'overlay/giftguide/index.html'),
         challenge: resolve(import.meta.dirname, 'overlay/challenge/index.html'),
+        spotify: resolve(import.meta.dirname, 'overlay/spotify/index.html'),
       },
     },
   },
