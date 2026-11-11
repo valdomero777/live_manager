@@ -97,7 +97,9 @@ en el navegador):
   regalos consolidados, seguidores, compartidos y entradas de la sesión, sin duplicados por id).
   Pendientes de la especificación de overlays que necesitan proyecciones nuevas en el servidor: racha
   más larga, desafíos de regalos con filtro por regalo y guía regalo→acción;
-  y los que necesitan integración o motor propio: Spotify, subasta y ruleta.
+  y los que necesitan integración o motor propio: Spotify, subasta y ruleta. Spotify: conexión y
+  «qué suena» hechos (2026-11-10, [ADR 0014](adr/0014-spotify-connection.md)); faltan el overlay y
+  las acciones de pedir/saltar canción.
 - API: `GET /leaderboards/:metric`, `POST /leaderboards/reset`, `GET|PUT /settings/leaderboard`,
   CRUD `/goals`, `GET /stats`, `GET|PUT /rotators/:id` y `GET /overlay-data/rotators/:id?key=`.
 - `npm run load-test`: el gate de carga contra los 500 ms de desfase.
@@ -195,6 +197,8 @@ De código, sin urgencia:
   (F-07), `Origin` en `/ws/admin` (SEC-05), intentos de `setup` sin límite (SEC-06),
   `frame-ancestors` (SEC-04), mensajes del servidor sin traducir.
 - Fase 5 (v2/v3): definir su alcance.
+- Spotify, fases 2 y 3 de [ADR 0014](adr/0014-spotify-connection.md): overlay `/overlay/spotify` y
+  acciones `spotifyQueue`/`spotifySkip`.
 
 ## TTS: voces, audiencia e idioma — 2026-10-14
 
